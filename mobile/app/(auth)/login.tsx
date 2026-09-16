@@ -90,9 +90,10 @@ export default function LoginScreen() {
             <View style={styles.setupBox}>
               <Text style={styles.setupTitle}>Privy not configured</Text>
               <Text style={styles.hint}>
-                Copy mobile/.env.example → mobile/.env and set EXPO_PUBLIC_PRIVY_APP_ID +
-                EXPO_PUBLIC_PRIVY_CLIENT_ID. Or set EXPO_PUBLIC_USE_DEMO_AUTH=1 for local demo
-                login.
+                Copy mobile/.env.example → mobile/.env, then set EXPO_PUBLIC_PRIVY_APP_ID and
+                EXPO_PUBLIC_PRIVY_CLIENT_ID from dashboard.privy.io (Email OTP + embedded wallet +
+                App Client for com.hunch.app). Restart Metro after saving. For local UI only:
+                EXPO_PUBLIC_USE_DEMO_AUTH=1.
               </Text>
             </View>
           ) : null}

@@ -82,8 +82,11 @@ npm run api            # http://localhost:8787
 cd mobile
 cp .env.example .env   # set EXPO_PUBLIC_API_URL + Privy IDs
 npm install
-npx expo start --dev-client
+npx expo start --dev-client   # NOT Expo Go — Privy needs native modules
 ```
+
+Full mobile runbook (Privy verify, EAS, TestFlight): **[mobile/README.md](mobile/README.md)**  
+5-minute judge path: **[mobile/DEMO.md](mobile/DEMO.md)**
 
 `mobile/.env`:
 
@@ -96,19 +99,42 @@ npx expo start --dev-client
 
 **Privy Dashboard setup:** enable **Email OTP** + **Embedded wallets (Ethereum → create on login)** + add an App Client for iOS bundle `com.hunch.app`.
 
-> Privy needs a **development build** (`npx expo run:ios` or EAS dev client). Expo Go will not load native Privy modules.
-
-### 3. Judges on a different network
-
-Point `EXPO_PUBLIC_API_URL` at a public host:
+### 2b. EAS / TestFlight
 
 ```bash
-# from repo root, while API runs on :8787
-ngrok http 8787
-# then EXPO_PUBLIC_API_URL=https://<ngrok-host>
+npm i -g eas-cli && eas login
+cd mobile
+eas build:configure          # first time
+npm run eas:dev              # development client (internal)
+npm run eas:preview          # TestFlight / ad-hoc binary
+eas submit --platform ios --profile preview
 ```
 
-Never hardcode a single machine IP as the only path — document LAN *and* public options.
+Profiles live in `mobile/eas.json`. You need an Expo account and (for TestFlight) an Apple Developer account. Do not commit secrets; `EXPO_PUBLIC_*` is inlined at build time from the profile env or local `.env`.
+
+> Privy needs a **development build** (`npx expo run:ios` or EAS dev client). Expo Go will not load native Privy modules.
+
+### 3. API reachability (LAN + public)
+
+**Same Wi‑Fi as the PC**
+
+```powershell
+ipconfig | findstr IPv4
+# set mobile/.env → EXPO_PUBLIC_API_URL=http://<that-ip>:8787
+```
+
+Windows Firewall: allow inbound TCP **8787** on Private networks (or use a tunnel).
+
+**Judges off-LAN**
+
+```bash
+# while API runs on :8787
+ngrok http 8787
+# mobile/.env → EXPO_PUBLIC_API_URL=https://xxxx.ngrok-free.app
+# restart Metro / rebuild EAS preview with the public URL
+```
+
+Keeper must be running or HUNCH will show no live round.
 
 ---
 
@@ -168,3 +194,7 @@ npm run simulate
 **HUNCH** (play) · **BOOK** (positions / claim) · **YOU** (wallet, faucet, logout)
 
 Auth lives under `mobile/app/(auth)`.
+
+## Judge try path
+
+See [mobile/DEMO.md](mobile/DEMO.md) — email OTP → fund → swipe → resolve → claim.

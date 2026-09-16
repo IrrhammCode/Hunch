@@ -8,5 +8,10 @@ dist
 .env
 .env.*
 !.env.example
+# Expo / EAS local junk
+mobile/.expo
+mobile/ios/Pods
+mobile/android/.gradle
 *.log
 .DS_Store
+
