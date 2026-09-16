@@ -1,10 +1,11 @@
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
-import { Alert, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { API_URL, demoFaucet } from "@/src/api/client";
+import { demoFaucet } from "@/src/api/client";
 import { useAuth } from "@/src/auth/AuthContext";
 import { Screen } from "@/src/components/Screen";
+import { useToast } from "@/src/components/Toast";
 import { PrimaryButton, StatusPill } from "@/src/components/ui";
 import { fundPrivyWallet } from "@/src/wallet/privyTrade";
 import { useWallet } from "@/src/wallet/WalletContext";
@@ -18,7 +19,9 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { user, logout, privyMode } = useAuth();
   const { me, error, refresh } = useWallet();
+  const toast = useToast();
   const [busy, setBusy] = useState(false);
+  const [showDev, setShowDev] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -37,17 +40,17 @@ export default function ProfileScreen() {
       if (privyMode && user?.address) {
         const r = await fundPrivyWallet(user.address);
         await refresh();
-        Alert.alert(
+        toast.success(
           "Funded",
           `AUSD ${Number(r.ausd).toFixed(2)} · MON ${Number(r.mon).toFixed(3)}`,
         );
       } else {
         const r = await demoFaucet("1000");
         await refresh();
-        Alert.alert("Faucet", `+1000 MockAUSD\nBalance ${Number(r.ausd).toFixed(2)}`);
+        toast.success("Faucet", `+1000 AUSD · balance ${Number(r.ausd).toFixed(2)}`);
       }
     } catch (e) {
-      Alert.alert("Faucet failed", e instanceof Error ? e.message : String(e));
+      toast.error("Faucet failed", e instanceof Error ? e.message : String(e));
     } finally {
       setBusy(false);
     }
@@ -57,29 +60,37 @@ export default function ProfileScreen() {
 
   return (
     <Screen>
-      <View style={[styles.wrap, { paddingTop: insets.top + 18, paddingBottom: insets.bottom + 12 }]}>
+      <View
+        style={[
+          styles.wrap,
+          { paddingTop: insets.top + 18, paddingBottom: insets.bottom + 12 },
+        ]}
+      >
+        {/* Identity */}
         <View style={{ gap: 6 }}>
           <Text style={styles.title}>YOU</Text>
           <Text style={styles.name}>{user?.displayName}</Text>
           <Text style={styles.meta}>{user?.email}</Text>
           <View style={{ marginTop: 6 }}>
             <StatusPill
-              label={privyMode ? "Privy embedded wallet" : "Demo wallet"}
+              label={privyMode ? "Privy wallet" : "Demo wallet"}
               tone={privyMode ? "brand" : "muted"}
             />
           </View>
         </View>
 
+        {/* Wallet */}
         <View style={styles.card}>
           <Text style={styles.cardLabel}>Wallet</Text>
           <Text style={styles.addr}>{address ? shortAddr(address) : "…"}</Text>
           <Text style={styles.cardHint}>
             {privyMode
-              ? "Email OTP · self-custodial on Monad testnet."
-              : "Shared hot wallet. Enable Privy App ID for real trader identity."}
+              ? "Email OTP · self-custodial on Monad."
+              : "Shared hot wallet for local testing."}
           </Text>
         </View>
 
+        {/* Balances */}
         <View style={styles.balRow}>
           <View style={[styles.card, styles.half]}>
             <Text style={styles.cardLabel}>AUSD</Text>
@@ -93,16 +104,10 @@ export default function ProfileScreen() {
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
-        <View style={styles.apiRow}>
-          <Text style={styles.apiText} numberOfLines={1}>
-            {API_URL}
-          </Text>
-          <Text style={styles.cardHint}>rounds {me?.roundCount ?? "—"}</Text>
-        </View>
-
+        {/* Actions */}
         <View style={{ gap: 10, marginTop: 4 }}>
           <PrimaryButton
-            label={busy ? "Funding…" : privyMode ? "Faucet AUSD + MON" : "Faucet +1000 AUSD"}
+            label={busy ? "Funding…" : privyMode ? "Fund wallet" : "Faucet +1000 AUSD"}
             onPress={onFaucet}
             disabled={busy || !user}
           />
@@ -110,6 +115,22 @@ export default function ProfileScreen() {
         </View>
 
         <View style={{ flex: 1 }} />
+
+        {/* Collapsed debug — judges never see API URL by default */}
+        <Pressable onPress={() => setShowDev((v) => !v)} style={styles.devToggle}>
+          <Text style={styles.devToggleText}>{showDev ? "Hide dev" : "Dev"}</Text>
+        </Pressable>
+        {showDev ? (
+          <View style={styles.devBox}>
+            <Text style={styles.devLabel}>API</Text>
+            <Text style={styles.devValue} numberOfLines={2}>
+              {process.env.EXPO_PUBLIC_API_URL ?? "localhost:8787"}
+            </Text>
+            <Text style={styles.devLabel}>Rounds</Text>
+            <Text style={styles.devValue}>{me?.roundCount ?? "—"}</Text>
+          </View>
+        ) : null}
+
         <PrimaryButton label="Sign out" tone="ghost" onPress={onLogout} />
       </View>
     </Screen>
@@ -151,13 +172,37 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
   },
   cardHint: { color: colors.muted, fontFamily: type.body, fontSize: 13 },
-  apiRow: {
-    gap: 4,
+  error: { color: colors.danger, fontFamily: type.body, fontSize: 13 },
+  devToggle: {
+    alignSelf: "center",
+    paddingVertical: 8,
   },
-  apiText: {
+  devToggleText: {
     color: colors.muted,
+    fontFamily: type.medium,
+    fontSize: 12,
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+  },
+  devBox: {
+    borderColor: colors.line,
+    borderWidth: 1,
+    borderRadius: radius.md,
+    padding: space.sm,
+    backgroundColor: colors.bgElevated,
+    gap: 2,
+  },
+  devLabel: {
+    color: colors.muted,
+    fontFamily: type.medium,
+    fontSize: 10,
+    letterSpacing: 1,
+    textTransform: "uppercase",
+    marginTop: 4,
+  },
+  devValue: {
+    color: colors.ink,
     fontFamily: type.body,
     fontSize: 12,
   },
-  error: { color: colors.danger, fontFamily: type.body, fontSize: 13 },
 });

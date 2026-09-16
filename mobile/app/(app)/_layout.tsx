@@ -1,6 +1,7 @@
 import { Redirect, Tabs } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useAuth } from "@/src/auth/AuthContext";
+import { BootScreen } from "@/src/components/BootScreen";
 import { colors, radius, type } from "@/src/theme";
 
 type TabBarProps = {
@@ -75,7 +76,7 @@ function ArenaTabBar({ state, navigation }: TabBarProps) {
 export default function AppLayout() {
   const { user, ready } = useAuth();
 
-  if (!ready) return null;
+  if (!ready) return <BootScreen label="Signing in" />;
   if (!user) return <Redirect href="/(auth)/login" />;
 
   return (

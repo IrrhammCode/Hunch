@@ -13,6 +13,8 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { AuthProvider } from "@/src/auth/AuthContext";
+import { BootScreen } from "@/src/components/BootScreen";
+import { ToastProvider } from "@/src/components/Toast";
 import { WalletProvider } from "@/src/wallet/WalletContext";
 import {
   HAS_PRIVY,
@@ -29,22 +31,24 @@ SplashScreen.preventAutoHideAsync();
 function AppShell() {
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bg }}>
-      <AuthProvider>
-        <WalletProvider>
-          <StatusBar style="light" />
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: colors.bg },
-              animation: "fade",
-            }}
-          >
-            <Stack.Screen name="index" />
-            <Stack.Screen name="(auth)" />
-            <Stack.Screen name="(app)" />
-          </Stack>
-        </WalletProvider>
-      </AuthProvider>
+      <ToastProvider>
+        <AuthProvider>
+          <WalletProvider>
+            <StatusBar style="light" />
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                contentStyle: { backgroundColor: colors.bg },
+                animation: "fade",
+              }}
+            >
+              <Stack.Screen name="index" />
+              <Stack.Screen name="(auth)" />
+              <Stack.Screen name="(app)" />
+            </Stack>
+          </WalletProvider>
+        </AuthProvider>
+      </ToastProvider>
     </GestureHandlerRootView>
   );
 }
@@ -65,10 +69,9 @@ export default function RootLayout() {
     if (loaded) SplashScreen.hideAsync();
   }, [loaded]);
 
-  if (!loaded) return null;
+  if (!loaded) return <BootScreen label="Starting" />;
 
   if (!HAS_PRIVY) {
-    // Demo / local path without Privy credentials
     return <AppShell />;
   }
 

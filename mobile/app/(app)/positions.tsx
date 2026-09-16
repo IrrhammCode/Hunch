@@ -1,12 +1,13 @@
 import { useCallback, useState } from "react";
 import { useFocusEffect } from "expo-router";
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import * as Haptics from "expo-haptics";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { demoRedeem } from "@/src/api/client";
 import { useAuth } from "@/src/auth/AuthContext";
-import { BrandMark } from "@/src/components/BrandMark";
 import { Screen } from "@/src/components/Screen";
-import { EmptyState, PrimaryButton, StatusPill } from "@/src/components/ui";
+import { useToast } from "@/src/components/Toast";
+import { BalanceChip, EmptyState, PrimaryButton, StatusPill } from "@/src/components/ui";
 import { useWallet } from "@/src/wallet/WalletContext";
 import { redeemPrivyPosition } from "@/src/wallet/privyTrade";
 import { colors, radius, space, type } from "@/src/theme";
@@ -15,6 +16,7 @@ export default function PositionsScreen() {
   const insets = useSafeAreaInsets();
   const { me, error, refresh } = useWallet();
   const { user, privyMode, getEthereumProvider } = useAuth();
+  const toast = useToast();
   const [busyId, setBusyId] = useState<string | null>(null);
 
   useFocusEffect(
@@ -34,14 +36,16 @@ export default function PositionsScreen() {
         const provider = await getEthereumProvider();
         const r = await redeemPrivyPosition({ provider, address: user.address, market });
         await refresh();
-        Alert.alert("Claimed", `Payout sent\n${r.tx.slice(0, 12)}…`);
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        toast.success("Claimed", `Payout sent · ${r.tx.slice(0, 10)}…`);
       } else {
         const r = await demoRedeem(roundId);
         await refresh();
-        Alert.alert("Redeemed", `+${r.payout} AUSD · ${r.sideWon} won\n${r.tx.slice(0, 12)}…`);
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        toast.success("Claimed", `+${r.payout} AUSD · ${r.sideWon} won`);
       }
     } catch (e) {
-      Alert.alert("Redeem failed", e instanceof Error ? e.message : String(e));
+      toast.error("Claim failed", e instanceof Error ? e.message : String(e));
     } finally {
       setBusyId(null);
     }
@@ -51,25 +55,17 @@ export default function PositionsScreen() {
     <Screen>
       <View style={[styles.wrap, { paddingTop: insets.top + 18, paddingBottom: insets.bottom + 8 }]}>
         <View style={styles.header}>
-          <View>
+          <View style={styles.headerLeft}>
             <Text style={styles.title}>BOOK</Text>
             <Text style={styles.sub}>
               {openCount} open · {redeemable.length} to claim
             </Text>
           </View>
-          <Pressable onPress={refresh} hitSlop={12}>
-            <Text style={styles.refresh}>Refresh</Text>
-          </Pressable>
-        </View>
-
-        <View style={styles.balRow}>
-          <View style={styles.balCard}>
-            <Text style={styles.balLabel}>AUSD</Text>
-            <Text style={styles.balValue}>{me ? Number(me.ausd).toFixed(2) : "—"}</Text>
-          </View>
-          <View style={styles.balCard}>
-            <Text style={styles.balLabel}>MON</Text>
-            <Text style={styles.balValue}>{me ? Number(me.mon).toFixed(3) : "—"}</Text>
+          <View style={styles.headerRight}>
+            <BalanceChip label={me ? `${Number(me.ausd).toFixed(0)} AUSD` : "…"} />
+            <Pressable onPress={refresh} hitSlop={12}>
+              <Text style={styles.refresh}>Refresh</Text>
+            </Pressable>
           </View>
         </View>
 
@@ -81,8 +77,9 @@ export default function PositionsScreen() {
         >
           {positions.length === 0 ? (
             <EmptyState
+              glyph="↑ UP   ↓ DOWN"
               title="No hunches yet"
-              body="Swipe your first UP or DOWN on the HUNCH tab. Winning shares show up here to claim."
+              body="Swipe your first one on the HUNCH tab. Winning shares show up here to claim."
             />
           ) : (
             positions.map((p) => {
@@ -111,11 +108,7 @@ export default function PositionsScreen() {
               return (
                 <View
                   key={p.roundId}
-                  style={[
-                    styles.row,
-                    youWon && styles.rowWon,
-                    youLost && styles.rowLost,
-                  ]}
+                  style={[styles.row, youWon && styles.rowWon, youLost && styles.rowLost]}
                 >
                   <View style={{ flex: 1, gap: 6 }}>
                     <View style={styles.rowTop}>
@@ -148,7 +141,13 @@ export default function PositionsScreen() {
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, paddingHorizontal: space.lg, gap: 12 },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+  },
+  headerLeft: { flex: 1 },
+  headerRight: { alignItems: "flex-end", gap: 8, marginTop: 10 },
   title: {
     color: colors.ink,
     fontFamily: "BebasNeue_400Regular",
@@ -156,24 +155,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   sub: { color: colors.muted, fontFamily: type.body, fontSize: 14 },
-  refresh: { color: colors.muted, fontFamily: type.medium, fontSize: 13, marginTop: 12 },
-  balRow: { flexDirection: "row", gap: 10 },
-  balCard: {
-    flex: 1,
-    borderColor: colors.line,
-    borderWidth: 1,
-    borderRadius: radius.md,
-    padding: space.md,
-    backgroundColor: colors.bgElevated,
-    gap: 4,
-  },
-  balLabel: {
-    color: colors.muted,
-    fontFamily: type.medium,
-    fontSize: 11,
-    letterSpacing: 1,
-  },
-  balValue: { color: colors.ink, fontFamily: type.bold, fontSize: 20 },
+  refresh: { color: colors.muted, fontFamily: type.medium, fontSize: 13 },
   error: { color: colors.danger, fontFamily: type.body, fontSize: 13 },
   row: {
     flexDirection: "row",
@@ -186,11 +168,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bgElevated,
   },
   rowWon: {
-    borderColor: "rgba(46,229,157,0.35)",
-    backgroundColor: "rgba(46,229,157,0.06)",
+    borderColor: "rgba(46,229,157,0.4)",
+    backgroundColor: "rgba(46,229,157,0.07)",
   },
   rowLost: {
-    borderColor: "rgba(255,77,106,0.28)",
+    borderColor: "rgba(255,77,106,0.32)",
   },
   rowTop: {
     flexDirection: "row",

@@ -1,18 +1,11 @@
 import { Redirect } from "expo-router";
-import { ActivityIndicator, View } from "react-native";
 import { useAuth } from "@/src/auth/AuthContext";
-import { colors } from "@/src/theme";
+import { BootScreen } from "@/src/components/BootScreen";
 
 export default function Index() {
   const { user, ready } = useAuth();
 
-  if (!ready) {
-    return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.bg }}>
-        <ActivityIndicator color={colors.brand} />
-      </View>
-    );
-  }
+  if (!ready) return <BootScreen label="Starting" />;
 
   return <Redirect href={user ? "/(app)" : "/(auth)/login"} />;
 }

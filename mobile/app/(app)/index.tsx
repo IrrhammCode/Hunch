@@ -1,12 +1,6 @@
 import * as Haptics from "expo-haptics";
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  Alert,
-  Dimensions,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Dimensions, StyleSheet, Text, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   FadeIn,
@@ -22,7 +16,6 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
-  API_URL,
   demoTrade,
   fetchCurrentRound,
   fetchQuote,
@@ -32,6 +25,7 @@ import {
 import { useAuth } from "@/src/auth/AuthContext";
 import { BrandMark } from "@/src/components/BrandMark";
 import { Screen } from "@/src/components/Screen";
+import { useToast } from "@/src/components/Toast";
 import { AmountChip, BalanceChip, PrimaryButton } from "@/src/components/ui";
 import { addHunch, listHunches, settleRound } from "@/src/hunchBook";
 import { useWallet } from "@/src/wallet/WalletContext";
@@ -58,6 +52,7 @@ export default function HunchScreen() {
   const insets = useSafeAreaInsets();
   const { me, refresh: refreshWallet } = useWallet();
   const { user, privyMode, getEthereumProvider } = useAuth();
+  const toast = useToast();
   const [data, setData] = useState<CurrentRoundResponse | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [picked, setPicked] = useState<"UP" | "DOWN" | null>(null);
@@ -105,7 +100,8 @@ export default function HunchScreen() {
               setLastResult(line);
               setFlash(won ? "up" : "down");
               setTimeout(() => setFlash(null), 700);
-              Alert.alert(won ? "You won" : "You lost", `${outcome}\n${line}`);
+              if (won) toast.success("You won", `${outcome}\n${line}`);
+              else toast.error("You lost", `${outcome}\n${line}`);
             }
           }
         } catch {
@@ -118,7 +114,7 @@ export default function HunchScreen() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     refresh();
@@ -192,19 +188,19 @@ export default function HunchScreen() {
     async (side: "UP" | "DOWN") => {
       if (busyRef.current) return;
       if (err) {
-        Alert.alert("API offline", "Cannot reach the Hunch API. Check EXPO_PUBLIC_API_URL.");
+        toast.error("API offline", "Cannot reach the Hunch API.");
         return;
       }
       if (!open || !round) {
-        Alert.alert("No live round", "Keeper is opening the next 60s market.");
+        toast.show("No live round", { body: "Keeper is opening the next market." });
         return;
       }
       if (remainingSec < 12) {
-        Alert.alert("Too late", "Under 12s left — wait for next round.");
+        toast.show("Too late", { body: "Under 12s left — wait for next round." });
         return;
       }
       if (privyMode && !user?.address) {
-        Alert.alert("Wallet not ready", "Finish email OTP so your embedded wallet can trade.");
+        toast.error("Wallet not ready", "Finish email OTP so your wallet can trade.");
         return;
       }
 
@@ -252,10 +248,11 @@ export default function HunchScreen() {
           tx: hash,
         });
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        toast.success(`${side} filled`, `${amount} AUSD · round ${roundId}`);
         await Promise.all([refresh(), refreshWallet()]);
       } catch (e) {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        Alert.alert("Trade failed", e instanceof Error ? e.message : String(e));
+        toast.error("Trade failed", e instanceof Error ? e.message : String(e));
       } finally {
         busyRef.current = false;
         setBusy(false);
@@ -275,6 +272,7 @@ export default function HunchScreen() {
       privyMode,
       user?.address,
       getEthereumProvider,
+      toast,
     ],
   );
 

@@ -104,22 +104,36 @@ export function StatusPill({
   tone?: "muted" | "up" | "down" | "brand";
 }) {
   const map = {
-    muted: { bg: "rgba(139,142,151,0.14)", fg: colors.muted },
-    up: { bg: colors.upDim, fg: colors.up },
-    down: { bg: colors.downDim, fg: colors.down },
-    brand: { bg: colors.brandDim, fg: colors.brand },
+    muted: { bg: "rgba(139,142,151,0.18)", fg: colors.muted, border: colors.line },
+    up: { bg: "rgba(46,229,157,0.18)", fg: colors.up, border: "rgba(46,229,157,0.45)" },
+    down: { bg: "rgba(255,77,106,0.18)", fg: colors.down, border: "rgba(255,77,106,0.45)" },
+    brand: { bg: colors.brandDim, fg: colors.brand, border: "rgba(214,255,63,0.4)" },
   }[tone];
 
   return (
-    <View style={[styles.pill, { backgroundColor: map.bg }]}>
+    <View
+      style={[
+        styles.pill,
+        { backgroundColor: map.bg, borderColor: map.border, borderWidth: 1 },
+      ]}
+    >
       <Text style={[styles.pillText, { color: map.fg }]}>{label}</Text>
     </View>
   );
 }
 
-export function EmptyState({ title, body }: { title: string; body: string }) {
+export function EmptyState({
+  title,
+  body,
+  glyph,
+}: {
+  title: string;
+  body: string;
+  glyph?: string;
+}) {
   return (
     <View style={styles.empty}>
+      {glyph ? <Text style={styles.emptyGlyph}>{glyph}</Text> : null}
       <Text style={styles.emptyTitle}>{title}</Text>
       <Text style={styles.emptyBody}>{body}</Text>
     </View>
@@ -220,6 +234,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.line,
     gap: 8,
+  },
+  emptyGlyph: {
+    color: colors.brand,
+    fontFamily: type.bold,
+    fontSize: 14,
+    letterSpacing: 2,
   },
   emptyTitle: {
     color: colors.ink,
