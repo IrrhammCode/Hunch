@@ -1,0 +1,29 @@
+# Envio indexer scaffold for Hunch (Metropolis bounty: Best Use of Envio)
+# https://docs.envio.dev
+#
+# Setup (when ready):
+#   npm i -g envio
+#   cd envio && envio codegen && envio dev
+#
+# This stub documents the events to index; full HyperIndex config can replace
+# the JSON poller in src/indexer once Envio Monad support is wired.
+
+name: hunch
+networks:
+  - id: 10143 # Monad testnet
+    start_block: 62720000
+    contracts:
+      - name: HunchFactory
+        address: "{{FACTORY_ADDRESS}}"
+        handler: ./src/EventHandlers.ts
+        events:
+          - event: RoundCreated(uint256 indexed roundId, address indexed market, bytes32 indexed feedId, uint256 seed)
+      - name: HunchMarket
+        # Markets are created per round — use factory factory pattern / dynamic contracts in Envio
+        handler: ./src/EventHandlers.ts
+        events:
+          - event: IntentCommitted(uint256 indexed intentId, address indexed trader, uint8 side, uint256 collateralIn)
+          - event: IntentExecuted(uint256 indexed intentId, address indexed trader, uint8 side, uint256 sharesOut, uint256 fee)
+          - event: RoundResolved(int64 settlementPrice, bool yesWins)
+          - event: Redeemed(address indexed trader, uint256 shares, uint256 payout)
+          - event: ResidualClaimed(address indexed to, uint256 amount)

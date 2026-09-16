@@ -1,0 +1,22 @@
+{
+  "network": "Monad Testnet",
+  "chainId": 10143,
+  "deployedAt": "2026-09-15T10:38:05.493Z",
+  "deployer": "0xFA9f60689e79030A83817Fd38913667f9d5E21B2",
+  "pyth": "0x2880aB155794e7179c9eE2e38200202908C17B43",
+  "btcUsdFeedId": "0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43",
+  "collateral": {
+    "address": "0xB5C6B27f0128A317171C5658eAfAC901d52f2989",
+    "symbol": "AUSD",
+    "decimals": 6,
+    "note": "MockAUSD testnet stand-in"
+  },
+  "factory": "0x9b708E57B0a51d03207b0c65392D50de40e1B250",
+  "vault": "0xe064D0B2edE1891ebD0F815eDADd45541c62C927",
+  "explorer": {
+    "ausd": "https://testnet.monadvision.com/address/0xB5C6B27f0128A317171C5658eAfAC901d52f2989",
+    "factory": "https://testnet.monadvision.com/address/0x9b708E57B0a51d03207b0c65392D50de40e1B250",
+    "vault": "https://testnet.monadvision.com/address/0xe064D0B2edE1891ebD0F815eDADd45541c62C927",
+    "pyth": "https://testnet.monadvision.com/address/0x2880aB155794e7179c9eE2e38200202908C17B43"
+  }
+}

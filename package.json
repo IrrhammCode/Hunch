@@ -1,0 +1,43 @@
+{
+  "name": "hunch",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Hunch — 60-second binary hunches on Monad",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "test:e2e": "hardhat test test/e2e/Hunch.e2e.ts",
+    "node": "hardhat node",
+    "deploy:local": "hardhat run scripts/deploy.ts",
+    "simulate": "hardhat run scripts/simulateRound.ts",
+    "smoke:monad": "hardhat run scripts/smokeMonad.ts --network monadTestnet",
+    "deploy:monad": "hardhat run scripts/deployMonadTestnet.ts --network monadTestnet",
+    "deploy:vault": "hardhat run scripts/deployVaultTestnet.ts --network monadTestnet",
+    "open:monad": "hardhat run scripts/openRoundTestnet.ts --network monadTestnet",
+    "trade:yes": "hardhat run scripts/tradeYesTestnet.ts --network monadTestnet",
+    "resolve:monad": "hardhat run scripts/resolveRedeemTestnet.ts --network monadTestnet",
+    "keeper": "ts-node src/keeper/index.ts",
+    "indexer": "ts-node src/indexer/index.ts",
+    "api": "ts-node src/api/index.ts",
+    "backend": "ts-node src/keeper/index.ts",
+    "clean": "hardhat clean"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-chai-matchers": "^2.0.8",
+    "@nomicfoundation/hardhat-ethers": "^3.0.8",
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.12",
+    "@types/chai": "^4.3.20",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^22.10.2",
+    "chai": "^4.5.0",
+    "ethers": "^6.13.4",
+    "hardhat": "^2.22.17",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.2"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.19.17",
+    "@openzeppelin/contracts": "^5.1.0",
+    "hono": "^4.13.8"
+  }
+}
