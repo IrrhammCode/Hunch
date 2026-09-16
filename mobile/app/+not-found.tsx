@@ -1,40 +1,42 @@
-import { Link, Stack } from 'expo-router';
-import { StyleSheet } from 'react-native';
-
-import { Text, View } from '@/components/Themed';
+import { Link, Stack } from "expo-router";
+import { StyleSheet, Text, View } from "react-native";
+import { Screen } from "@/src/components/Screen";
+import { colors, type } from "@/src/theme";
 
 export default function NotFoundScreen() {
   return (
-    <>
-      <Stack.Screen options={{ title: 'Oops!' }} />
+    <Screen>
+      <Stack.Screen options={{ title: "Oops!" }} />
       <View style={styles.container}>
-        <Text style={styles.title}>This screen doesn't exist.</Text>
-
+        <Text style={styles.title}>Off the board</Text>
         <Link href="/" style={styles.link}>
-          <Text style={styles.linkText}>Go to home screen!</Text>
+          <Text style={styles.linkText}>Back to HUNCH</Text>
         </Link>
       </View>
-    </>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     padding: 20,
+    gap: 12,
   },
   title: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    color: colors.ink,
+    fontFamily: "BebasNeue_400Regular",
+    fontSize: 40,
+    letterSpacing: 1,
   },
   link: {
-    marginTop: 15,
-    paddingVertical: 15,
+    paddingVertical: 12,
   },
   linkText: {
-    fontSize: 14,
-    color: '#2e78b7',
+    color: colors.brand,
+    fontFamily: type.bold,
+    fontSize: 15,
   },
 });

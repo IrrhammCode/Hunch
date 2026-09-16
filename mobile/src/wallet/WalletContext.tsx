@@ -6,10 +6,11 @@ import React, {
   useMemo,
   useState,
 } from "react";
-import { fetchDemoMe, type DemoMe } from "../api/client";
+import { fetchDemoMe, fetchWallet, type WalletSnapshot } from "../api/client";
+import { useAuth } from "../auth/AuthContext";
 
 type WalletContextValue = {
-  me: DemoMe | null;
+  me: WalletSnapshot | null;
   loading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
@@ -18,27 +19,35 @@ type WalletContextValue = {
 const WalletContext = createContext<WalletContextValue | null>(null);
 
 export function WalletProvider({ children }: { children: React.ReactNode }) {
-  const [me, setMe] = useState<DemoMe | null>(null);
+  const { user, ready, privyMode } = useAuth();
+  const [me, setMe] = useState<WalletSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const address = user?.address ?? null;
 
   const refresh = useCallback(async () => {
     try {
       setError(null);
-      const next = await fetchDemoMe();
-      setMe(next);
+      if (privyMode && address) {
+        setMe(await fetchWallet(address));
+      } else if (!privyMode) {
+        setMe(await fetchDemoMe());
+      } else {
+        setMe(null);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "wallet fetch failed");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [address, privyMode]);
 
   useEffect(() => {
+    if (!ready) return;
     refresh();
     const id = setInterval(refresh, 12000);
     return () => clearInterval(id);
-  }, [refresh]);
+  }, [ready, refresh]);
 
   const value = useMemo(
     () => ({ me, loading, error, refresh }),

@@ -9,7 +9,7 @@ import {
 } from "../shared/chain";
 import { waitForReceipt } from "../shared/pythPull";
 
-export type DemoPosition = {
+export type WalletPosition = {
   roundId: string;
   market: string;
   yes: string;
@@ -20,19 +20,19 @@ export type DemoPosition = {
   estimatedPayout: string;
 };
 
-let meCache: { at: number; body: Awaited<ReturnType<typeof buildSnapshot>> } | null = null;
+let meCache: { key: string; at: number; body: Awaited<ReturnType<typeof buildSnapshot>> } | null =
+  null;
 const ME_CACHE_MS = 4000;
 
-async function buildSnapshot(lookback = 8) {
-  const wallet = getWallet();
+async function buildSnapshot(address: string, lookback = 8) {
   const provider = getProvider();
   const dep = loadDeployment();
   const ausd = ausdContract(provider, dep);
   const factory = factoryContract(provider, dep);
 
   const [ausdBal, monBal, roundCount] = await Promise.all([
-    ausd.balanceOf(wallet.address),
-    provider.getBalance(wallet.address),
+    ausd.balanceOf(address),
+    provider.getBalance(address),
     factory.roundCount(),
   ]);
 
@@ -41,14 +41,14 @@ async function buildSnapshot(lookback = 8) {
   const ids = Array.from({ length: count - start + 1 }, (_, i) => count - i);
 
   const settled = await Promise.all(
-    ids.map(async (id): Promise<DemoPosition | null> => {
+    ids.map(async (id): Promise<WalletPosition | null> => {
       try {
         const market = (await factory.rounds(id)) as string;
         if (!market || market === ethers.ZeroAddress) return null;
         const m = marketContract(market, provider);
         const [yes, no, statusRaw] = await Promise.all([
-          m.yesBalances(wallet.address),
-          m.noBalances(wallet.address),
+          m.yesBalances(address),
+          m.noBalances(address),
           m.status(),
         ]);
         if (yes === 0n && no === 0n) return null;
@@ -77,27 +77,66 @@ async function buildSnapshot(lookback = 8) {
       }
     }),
   );
-  const positions = settled.filter((p): p is DemoPosition => p !== null);
+  const positions = settled.filter((p): p is WalletPosition => p !== null);
 
   return {
-    address: wallet.address,
+    address,
     ausd: ethers.formatUnits(ausdBal, 6),
     mon: ethers.formatEther(monBal),
     roundCount: count,
     positions,
-    explorer: dep.chainId === 10143 ? "https://testnet.monadexplorer.com" : "",
+    explorer: dep.chainId === 10143 ? "https://testnet.monadvision.com" : "",
   };
 }
 
-export async function demoWalletSnapshot(lookback = 8) {
-  if (meCache && Date.now() - meCache.at < ME_CACHE_MS) return meCache.body;
-  const body = await buildSnapshot(lookback);
-  meCache = { at: Date.now(), body };
+export async function walletSnapshot(address: string, lookback = 8) {
+  const key = address.toLowerCase();
+  if (meCache && meCache.key === key && Date.now() - meCache.at < ME_CACHE_MS) return meCache.body;
+  const body = await buildSnapshot(address, lookback);
+  meCache = { key, at: Date.now(), body };
   return body;
+}
+
+/** Legacy alias used by demo hot-wallet path. */
+export async function demoWalletSnapshot(lookback = 8) {
+  return walletSnapshot(getWallet().address, lookback);
 }
 
 export function invalidateDemoWalletCache() {
   meCache = null;
+}
+
+/** Mint MockAUSD + top up MON for a Privy embedded wallet (testnet only). */
+export async function faucetWallet(address: string, amountAUSD = "1000") {
+  if (!ethers.isAddress(address)) throw new Error("bad address");
+  const wallet = getWallet();
+  const provider = getProvider();
+  const dep = loadDeployment();
+  const ausd = ausdContract(wallet, dep);
+
+  const qty = ethers.parseUnits(amountAUSD, 6);
+  const mintTx = await ausd.mint(address, qty);
+  await waitForReceipt(provider, mintTx.hash);
+
+  const MON_TOPUP = ethers.parseEther(process.env.FAUCET_MON || "0.05");
+  const monBal = await provider.getBalance(address);
+  let monTx: string | undefined;
+  if (monBal < MON_TOPUP) {
+    const send = await wallet.sendTransaction({ to: address, value: MON_TOPUP });
+    await waitForReceipt(provider, send.hash);
+    monTx = send.hash;
+  }
+
+  invalidateDemoWalletCache();
+  const snap = await walletSnapshot(address);
+  return {
+    address,
+    ausd: snap.ausd,
+    mon: snap.mon,
+    mintTx: mintTx.hash,
+    monTx,
+    alreadyFunded: false,
+  };
 }
 
 export async function demoRedeem(roundId: number) {
@@ -133,13 +172,5 @@ export async function demoRedeem(roundId: number) {
 }
 
 export async function demoFaucetAUSD(amount = "1000") {
-  const wallet = getWallet();
-  const provider = getProvider();
-  const ausd = ausdContract(wallet);
-  const qty = ethers.parseUnits(amount, 6);
-  const tx = await ausd.mint(wallet.address, qty);
-  await waitForReceipt(provider, tx.hash);
-  const bal = await ausd.balanceOf(wallet.address);
-  invalidateDemoWalletCache();
-  return { tx: tx.hash, ausd: ethers.formatUnits(bal, 6), minted: amount };
+  return faucetWallet(getWallet().address, amount);
 }

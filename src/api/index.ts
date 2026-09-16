@@ -15,7 +15,15 @@ import { currentRound, readStore, syncIndex, type RoundRow } from "../indexer/in
 import { buildCommitCalldata, buildExecuteCalldata, buildRedeemCalldata } from "../userop/encode";
 import { quoteBuy } from "./quote";
 import { demoTrade } from "./demoTrade";
-import { demoFaucetAUSD, demoRedeem, demoWalletSnapshot, invalidateDemoWalletCache } from "./demoWallet";
+import { executeCommittedIntent } from "./relayedTrade";
+import {
+  demoFaucetAUSD,
+  demoRedeem,
+  demoWalletSnapshot,
+  faucetWallet,
+  invalidateDemoWalletCache,
+  walletSnapshot,
+} from "./wallet";
 
 loadEnv();
 
@@ -182,7 +190,56 @@ app.get("/v1/position/:address", async (c) => {
   });
 });
 
-/** Demo: server wallet executes trade until Privy/ZeroDev is wired on iOS */
+/** Any wallet snapshot (Privy embedded address) */
+app.get("/v1/wallet/:address", async (c) => {
+  try {
+    const address = c.req.param("address");
+    if (!ethers.isAddress(address)) return c.json({ error: "bad address" }, 400);
+    return c.json(await walletSnapshot(address));
+  } catch (e: any) {
+    return c.json({ error: e.shortMessage || e.message || String(e) }, 500);
+  }
+});
+
+/** Testnet faucet: mint MockAUSD + top up MON for Privy wallet */
+app.post("/v1/wallet/faucet", async (c) => {
+  try {
+    const body = await c.req.json<{ address?: string; amountAUSD?: string }>();
+    const address = body.address;
+    if (!address || !ethers.isAddress(address)) return c.json({ error: "address required" }, 400);
+    return c.json(await faucetWallet(address, body.amountAUSD || "1000"));
+  } catch (e: any) {
+    return c.json({ error: e.shortMessage || e.message || String(e) }, 500);
+  }
+});
+
+/**
+ * Relay executeBuy for a Privy-committed intent.
+ * Mobile signs approve+commitBuy; hot wallet waits delay-blocks + Pyth then executes.
+ * Shares always credit the original trader.
+ */
+app.post("/v1/trade/execute", async (c) => {
+  if (demoBusy) return c.json({ error: "trade in progress — retry in a few seconds" }, 429);
+  demoBusy = true;
+  try {
+    const body = await c.req.json<{ trader: string; intentId?: string; market?: string }>();
+    if (!body.trader || !ethers.isAddress(body.trader)) {
+      return c.json({ error: "trader address required" }, 400);
+    }
+    const result = await executeCommittedIntent({
+      trader: body.trader,
+      intentId: body.intentId,
+      market: body.market,
+    });
+    invalidateDemoWalletCache();
+    return c.json(result);
+  } catch (e: any) {
+    return c.json({ error: e.shortMessage || e.message || String(e) }, 500);
+  } finally {
+    demoBusy = false;
+  }
+});
+
 /** Demo wallet: AUSD + MON + open/resolved positions (shared hot wallet) */
 app.get("/v1/demo/me", async (c) => {
   try {

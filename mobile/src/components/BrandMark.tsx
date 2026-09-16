@@ -1,29 +1,47 @@
 import { StyleSheet, Text, View } from "react-native";
 import { colors } from "../theme";
 
-export function BrandMark({ size = "lg" }: { size?: "sm" | "lg" }) {
-  const large = size === "lg";
+/** Wordmark. `md` for top bars, `lg` for auth heroes. */
+export function BrandMark({
+  size = "lg",
+  tag,
+}: {
+  size?: "sm" | "md" | "lg";
+  tag?: string;
+}) {
+  const scale =
+    size === "lg"
+      ? { word: 64, line: 64, tag: 13 }
+      : size === "md"
+        ? { word: 34, line: 34, tag: 0 }
+        : { word: 26, line: 26, tag: 0 };
+
   return (
     <View style={styles.wrap}>
-      <Text style={[styles.word, large ? styles.wordLg : styles.wordSm]}>HUNCH</Text>
-      {large ? <Text style={styles.tag}>60s UP / DOWN · BTC</Text> : null}
+      <Text
+        style={[
+          styles.word,
+          { fontSize: scale.word, lineHeight: scale.line, letterSpacing: size === "lg" ? 2.2 : 1.4 },
+        ]}
+      >
+        HUNCH
+      </Text>
+      {tag ? (
+        <Text style={[styles.tag, { fontSize: scale.tag || 12 }]}>{tag}</Text>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: 6 },
+  wrap: { gap: 4 },
   word: {
     color: colors.brand,
     fontFamily: "BebasNeue_400Regular",
-    letterSpacing: 2,
   },
-  wordLg: { fontSize: 72, lineHeight: 72 },
-  wordSm: { fontSize: 28, lineHeight: 28 },
   tag: {
     color: colors.muted,
     fontFamily: "DMSans_400Regular",
-    fontSize: 14,
-    letterSpacing: 0.4,
+    letterSpacing: 0.5,
   },
 });

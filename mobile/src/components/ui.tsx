@@ -1,10 +1,14 @@
-import { Pressable, StyleSheet, Text, TextInput, View, type TextInputProps } from "react-native";
-import { colors, space } from "../theme";
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  type TextInputProps,
+} from "react-native";
+import { colors, radius, space, type } from "../theme";
 
-export function Field({
-  label,
-  ...props
-}: TextInputProps & { label: string }) {
+export function Field({ label, ...props }: TextInputProps & { label: string }) {
   return (
     <View style={styles.field}>
       <Text style={styles.label}>{label}</Text>
@@ -24,11 +28,13 @@ export function PrimaryButton({
   onPress,
   disabled,
   tone = "brand",
+  compact,
 }: {
   label: string;
   onPress: () => void;
   disabled?: boolean;
   tone?: "brand" | "up" | "down" | "ghost";
+  compact?: boolean;
 }) {
   const bg =
     tone === "up"
@@ -38,7 +44,7 @@ export function PrimaryButton({
         : tone === "ghost"
           ? "transparent"
           : colors.brand;
-  const fg = tone === "ghost" ? colors.ink : tone === "brand" ? "#0A0B0D" : "#0A0B0D";
+  const fg = tone === "ghost" ? colors.ink : "#0A0B0D";
 
   return (
     <Pressable
@@ -46,12 +52,77 @@ export function PrimaryButton({
       disabled={disabled}
       style={({ pressed }) => [
         styles.btn,
-        { backgroundColor: bg, opacity: disabled ? 0.4 : pressed ? 0.85 : 1 },
+        compact && styles.btnCompact,
+        {
+          backgroundColor: bg,
+          opacity: disabled ? 0.35 : pressed ? 0.88 : 1,
+        },
         tone === "ghost" && styles.btnGhost,
       ]}
     >
-      <Text style={[styles.btnText, { color: fg }]}>{label}</Text>
+      <Text style={[styles.btnText, compact && styles.btnTextCompact, { color: fg }]}>{label}</Text>
     </Pressable>
+  );
+}
+
+export function AmountChip({
+  value,
+  selected,
+  onPress,
+}: {
+  value: string;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.amountChip,
+        selected && styles.amountChipOn,
+        pressed && { opacity: 0.85 },
+      ]}
+    >
+      <Text style={[styles.amountText, selected && styles.amountTextOn]}>{value}</Text>
+    </Pressable>
+  );
+}
+
+export function BalanceChip({ label }: { label: string }) {
+  return (
+    <View style={styles.balanceChip}>
+      <Text style={styles.balanceText}>{label}</Text>
+    </View>
+  );
+}
+
+export function StatusPill({
+  label,
+  tone = "muted",
+}: {
+  label: string;
+  tone?: "muted" | "up" | "down" | "brand";
+}) {
+  const map = {
+    muted: { bg: "rgba(139,142,151,0.14)", fg: colors.muted },
+    up: { bg: colors.upDim, fg: colors.up },
+    down: { bg: colors.downDim, fg: colors.down },
+    brand: { bg: colors.brandDim, fg: colors.brand },
+  }[tone];
+
+  return (
+    <View style={[styles.pill, { backgroundColor: map.bg }]}>
+      <Text style={[styles.pillText, { color: map.fg }]}>{label}</Text>
+    </View>
+  );
+}
+
+export function EmptyState({ title, body }: { title: string; body: string }) {
+  return (
+    <View style={styles.empty}>
+      <Text style={styles.emptyTitle}>{title}</Text>
+      <Text style={styles.emptyBody}>{body}</Text>
+    </View>
   );
 }
 
@@ -59,34 +130,106 @@ const styles = StyleSheet.create({
   field: { gap: 8 },
   label: {
     color: colors.muted,
-    fontFamily: "DMSans_500Medium",
-    fontSize: 13,
-    letterSpacing: 0.3,
+    fontFamily: type.medium,
+    fontSize: 12,
+    letterSpacing: 0.8,
     textTransform: "uppercase",
   },
   input: {
     backgroundColor: colors.bgElevated,
     borderColor: colors.line,
     borderWidth: 1,
-    borderRadius: 14,
+    borderRadius: radius.md,
     color: colors.ink,
-    fontFamily: "DMSans_400Regular",
+    fontFamily: type.body,
     fontSize: 17,
     paddingHorizontal: space.md,
     paddingVertical: 14,
   },
   btn: {
     alignItems: "center",
-    borderRadius: 16,
+    justifyContent: "center",
+    borderRadius: radius.lg,
     paddingVertical: 16,
+    minHeight: 52,
+  },
+  btnCompact: {
+    paddingVertical: 12,
+    minHeight: 44,
+    borderRadius: radius.md,
   },
   btnGhost: {
     borderColor: colors.line,
     borderWidth: 1,
   },
   btnText: {
-    fontFamily: "DMSans_700Bold",
-    fontSize: 16,
-    letterSpacing: 0.2,
+    fontFamily: type.bold,
+    fontSize: 15,
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+  },
+  btnTextCompact: { fontSize: 13 },
+  amountChip: {
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radius.md,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: colors.bgElevated,
+    minWidth: 56,
+    alignItems: "center",
+  },
+  amountChipOn: {
+    borderColor: colors.brand,
+    backgroundColor: colors.brandDim,
+  },
+  amountText: {
+    color: colors.muted,
+    fontFamily: type.bold,
+    fontSize: 14,
+  },
+  amountTextOn: { color: colors.brand },
+  balanceChip: {
+    backgroundColor: colors.brandSoft,
+    borderRadius: radius.sm,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  balanceText: {
+    color: colors.brand,
+    fontFamily: type.bold,
+    fontSize: 12,
+    letterSpacing: 0.4,
+  },
+  pill: {
+    borderRadius: radius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    alignSelf: "flex-start",
+  },
+  pillText: {
+    fontFamily: type.bold,
+    fontSize: 11,
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
+  },
+  empty: {
+    borderRadius: radius.lg,
+    padding: space.lg,
+    backgroundColor: colors.bgElevated,
+    borderWidth: 1,
+    borderColor: colors.line,
+    gap: 8,
+  },
+  emptyTitle: {
+    color: colors.ink,
+    fontFamily: type.bold,
+    fontSize: 17,
+  },
+  emptyBody: {
+    color: colors.muted,
+    fontFamily: type.body,
+    fontSize: 14,
+    lineHeight: 20,
   },
 });

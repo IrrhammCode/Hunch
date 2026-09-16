@@ -34,6 +34,26 @@ export type CurrentRoundResponse = {
   error?: string;
 };
 
+export type WalletPosition = {
+  roundId: string;
+  market: string;
+  yes: string;
+  no: string;
+  status: "open" | "resolved";
+  yesWins?: boolean;
+  redeemable: boolean;
+  estimatedPayout: string;
+};
+
+export type WalletSnapshot = {
+  address: string;
+  ausd: string;
+  mon: string;
+  roundCount: number;
+  positions: WalletPosition[];
+  explorer: string;
+};
+
 export type DemoTradeResult = {
   mode: string;
   trader: string;
@@ -47,24 +67,38 @@ export type DemoTradeResult = {
   spot: { yes: string; no: string };
 };
 
-export type DemoPosition = {
-  roundId: string;
+export type CommitCalldata = {
+  chainId: number;
   market: string;
-  yes: string;
-  no: string;
-  status: "open" | "resolved";
-  yesWins?: boolean;
-  redeemable: boolean;
-  estimatedPayout: string;
+  collateral: string;
+  approve: { to: string; data: string; value: string };
+  commit: { to: string; data: string; value: string; description: string };
 };
 
-export type DemoMe = {
+export type ExecuteTradeResult = {
+  mode: string;
+  intentId: string;
+  market: string;
+  trader: string;
+  side: string;
+  sideLabel: string;
+  roundId: string;
+  amountAUSD: string;
+  sharesOut: string;
+  yes: string;
+  no: string;
+  executeTx: string;
+  spot: { yes: string; no: string };
+  explorer: string;
+};
+
+export type FaucetResult = {
   address: string;
   ausd: string;
   mon: string;
-  roundCount: number;
-  positions: DemoPosition[];
-  explorer: string;
+  mintTx?: string;
+  monTx?: string;
+  alreadyFunded?: boolean;
 };
 
 export function fetchCurrentRound() {
@@ -85,12 +119,33 @@ export function fetchConfig() {
   return get<{ chainId: number; duration: number; vault: string | null }>("/v1/config");
 }
 
+/** Shared demo hot-wallet snapshot (local testing only). */
 export function fetchDemoMe() {
-  return get<DemoMe>("/v1/demo/me");
+  return get<WalletSnapshot>("/v1/demo/me");
 }
 
-export function demoTrade(side: "UP" | "DOWN", amountAUSD = "10") {
-  return post<DemoTradeResult>("/v1/demo/trade", { side, amountAUSD });
+/** Balances + positions for any wallet (Privy embedded address). */
+export function fetchWallet(address: string) {
+  return get<WalletSnapshot>(`/v1/wallet/${address}`);
+}
+
+export function walletFaucet(address: string, amountAUSD = "1000") {
+  return post<FaucetResult>("/v1/wallet/faucet", { address, amountAUSD });
+}
+
+export function fetchCommitCalldata(side: "UP" | "DOWN" | "YES" | "NO", amountAUSD: string) {
+  const normalized = side === "UP" ? "YES" : side === "DOWN" ? "NO" : side;
+  return post<CommitCalldata>("/v1/tx/commit", { side: normalized, amountAUSD });
+}
+
+export function executeTrade(trader: string, intentId?: string) {
+  return post<ExecuteTradeResult>("/v1/trade/execute", { trader, intentId });
+}
+
+export function fetchRedeemCalldata(market?: string) {
+  return post<{ to: string; data: string; value: string; description: string }>("/v1/tx/redeem", {
+    market,
+  });
 }
 
 export function fetchQuote(side: "YES" | "NO", amountAUSD: string, market?: string) {
@@ -101,6 +156,11 @@ export function fetchQuote(side: "YES" | "NO", amountAUSD: string, market?: stri
     sharesOut: string;
     note?: string;
   }>("/v1/quote", { side, amountAUSD, market });
+}
+
+/** Demo path — server hot wallet executes trade. */
+export function demoTrade(side: "UP" | "DOWN", amountAUSD = "10") {
+  return post<DemoTradeResult>("/v1/demo/trade", { side, amountAUSD });
 }
 
 export function demoRedeem(roundId: string) {

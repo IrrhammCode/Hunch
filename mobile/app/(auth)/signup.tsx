@@ -12,10 +12,11 @@ import { useAuth } from "@/src/auth/AuthContext";
 import { BrandMark } from "@/src/components/BrandMark";
 import { Screen } from "@/src/components/Screen";
 import { Field, PrimaryButton } from "@/src/components/ui";
-import { colors, space } from "@/src/theme";
+import { colors, space, type } from "@/src/theme";
 
+/** Demo-only signup. Privy mode routes through login OTP. */
 export default function SignupScreen() {
-  const { user, signupWithEmail } = useAuth();
+  const { user, privyMode, signupWithEmail } = useAuth();
   const insets = useSafeAreaInsets();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -23,6 +24,7 @@ export default function SignupScreen() {
   const [error, setError] = useState<string | null>(null);
 
   if (user) return <Redirect href="/(app)" />;
+  if (privyMode) return <Redirect href="/(auth)/login" />;
 
   const onSubmit = async () => {
     setBusy(true);
@@ -41,18 +43,24 @@ export default function SignupScreen() {
     <Screen>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={[styles.wrap, { paddingTop: insets.top + 28, paddingBottom: insets.bottom + 20 }]}
+        style={[
+          styles.wrap,
+          { paddingTop: insets.top + 36, paddingBottom: insets.bottom + 24 },
+        ]}
       >
         <View style={styles.hero}>
-          <BrandMark size="sm" />
+          <BrandMark size="lg" tag="60s UP / DOWN · Monad" />
           <Text style={styles.title}>Create your seat</Text>
-          <Text style={styles.line}>
-            Embedded wallet on Monad. Gasless hunches via Privy session keys — Face ID later.
-          </Text>
         </View>
 
         <View style={styles.form}>
-          <Field label="Display name" value={name} onChangeText={setName} placeholder="Alex" autoCapitalize="words" />
+          <Field
+            label="Display name"
+            value={name}
+            onChangeText={setName}
+            placeholder="Alex"
+            autoCapitalize="words"
+          />
           <Field
             label="Email"
             value={email}
@@ -91,19 +99,12 @@ const styles = StyleSheet.create({
     fontFamily: "BebasNeue_400Regular",
     fontSize: 48,
     letterSpacing: 1,
-    marginTop: 8,
-  },
-  line: {
-    color: colors.muted,
-    fontFamily: "DMSans_400Regular",
-    fontSize: 16,
-    lineHeight: 24,
-    maxWidth: 320,
+    marginTop: 4,
   },
   form: { gap: space.md },
   error: {
     color: colors.danger,
-    fontFamily: "DMSans_500Medium",
+    fontFamily: type.medium,
     fontSize: 14,
   },
   footer: {
@@ -114,12 +115,12 @@ const styles = StyleSheet.create({
   },
   footerMuted: {
     color: colors.muted,
-    fontFamily: "DMSans_400Regular",
+    fontFamily: type.body,
     fontSize: 15,
   },
   footerLink: {
     color: colors.brand,
-    fontFamily: "DMSans_700Bold",
+    fontFamily: type.bold,
     fontSize: 15,
   },
 });

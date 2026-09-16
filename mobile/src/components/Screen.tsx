@@ -2,15 +2,17 @@ import { LinearGradient } from "expo-linear-gradient";
 import { StyleSheet, View, type ViewProps } from "react-native";
 import { colors } from "../theme";
 
+/** Soft atmosphere — not flat void, not rainbow. */
 export function Screen({ children, style, ...rest }: ViewProps) {
   return (
     <View style={[styles.root, style]} {...rest}>
       <LinearGradient
-        colors={["#152018", colors.bg, "#0A0B0D"]}
-        locations={[0, 0.35, 1]}
+        colors={["#10160F", colors.bg, "#0A0B0D"]}
+        locations={[0, 0.32, 1]}
         style={StyleSheet.absoluteFill}
       />
       <View style={styles.glow} />
+      <View style={styles.glowLow} />
       {children}
     </View>
   );
@@ -23,11 +25,20 @@ const styles = StyleSheet.create({
   },
   glow: {
     position: "absolute",
-    top: -80,
-    right: -40,
-    width: 260,
-    height: 260,
-    borderRadius: 260,
-    backgroundColor: "rgba(214,255,63,0.08)",
+    top: -100,
+    right: -60,
+    width: 280,
+    height: 280,
+    borderRadius: 280,
+    backgroundColor: "rgba(214,255,63,0.06)",
+  },
+  glowLow: {
+    position: "absolute",
+    bottom: 40,
+    left: -80,
+    width: 220,
+    height: 220,
+    borderRadius: 220,
+    backgroundColor: "rgba(46,229,157,0.04)",
   },
 });
