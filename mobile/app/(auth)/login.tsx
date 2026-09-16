@@ -7,6 +7,7 @@ import {
   Text,
   View,
 } from "react-native";
+import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/src/auth/AuthContext";
 import { BrandMark } from "@/src/components/BrandMark";
@@ -66,20 +67,24 @@ export default function LoginScreen() {
     }
   };
 
+  const showOtp = codeSent && privyMode;
+
   return (
     <Screen>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={[
           styles.wrap,
-          { paddingTop: insets.top + 36, paddingBottom: insets.bottom + 24 },
+          { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 28 },
         ]}
       >
-        <View style={styles.hero}>
-          <BrandMark size="lg" tag="Swipe UP or DOWN. 60s markets." />
-          <Text style={styles.line}>Enter the arena.</Text>
-        </View>
+        {/* Brand */}
+        <Animated.View entering={FadeInUp.duration(320)} style={styles.hero}>
+          <BrandMark size="lg" />
+          <Text style={styles.tagline}>Swipe UP or DOWN. 60s markets on Monad.</Text>
+        </Animated.View>
 
+        {/* Form */}
         <View style={styles.form}>
           {missingPrivyConfig ? (
             <View style={styles.setupBox}>
@@ -98,16 +103,20 @@ export default function LoginScreen() {
             onChangeText={setEmail}
             keyboardType="email-address"
             placeholder="you@email.com"
-            returnKeyType={codeSent ? "next" : "go"}
+            returnKeyType={showOtp ? "next" : "go"}
             onSubmitEditing={() => {
-              if (!codeSent) onSendCode();
+              if (!showOtp) onSendCode();
             }}
           />
 
-          {codeSent && privyMode ? (
-            <>
+          {showOtp ? (
+            <Animated.View
+              key="otp"
+              entering={FadeInDown.duration(240)}
+              style={styles.otpBlock}
+            >
               <Field
-                label="OTP code"
+                label="Code"
                 value={code}
                 onChangeText={setCode}
                 keyboardType="number-pad"
@@ -123,7 +132,7 @@ export default function LoginScreen() {
                 disabled={busy || sending || !code}
               />
               <Text style={styles.hint}>Check your inbox. Code expires shortly.</Text>
-            </>
+            </Animated.View>
           ) : (
             <>
               {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -143,6 +152,7 @@ export default function LoginScreen() {
           )}
         </View>
 
+        {/* Footer */}
         <View style={styles.footer}>
           {!privyMode ? (
             <>
@@ -166,15 +176,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.lg,
     justifyContent: "space-between",
   },
-  hero: { gap: 14, paddingTop: 20 },
-  line: {
-    color: colors.ink,
+  hero: {
+    paddingTop: 28,
+    gap: 14,
+  },
+  tagline: {
+    color: colors.muted,
     fontFamily: type.body,
-    fontSize: 17,
-    lineHeight: 24,
-    maxWidth: 280,
+    fontSize: 16,
+    lineHeight: 22,
+    maxWidth: 260,
   },
   form: { gap: space.md },
+  otpBlock: { gap: space.md },
   setupBox: {
     borderColor: colors.danger,
     borderWidth: 1,
@@ -204,6 +218,7 @@ const styles = StyleSheet.create({
     gap: 8,
     alignItems: "center",
     justifyContent: "center",
+    paddingBottom: 4,
   },
   footerMuted: {
     color: colors.muted,

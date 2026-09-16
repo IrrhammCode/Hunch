@@ -11,7 +11,7 @@ export function BrandMark({
 }) {
   const scale =
     size === "lg"
-      ? { word: 64, line: 64, tag: 13 }
+      ? { word: 72, line: 72, tag: 13 }
       : size === "md"
         ? { word: 34, line: 34, tag: 0 }
         : { word: 26, line: 26, tag: 0 };

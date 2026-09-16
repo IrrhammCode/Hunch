@@ -7,6 +7,7 @@ import {
   Text,
   View,
 } from "react-native";
+import Animated, { FadeInUp } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/src/auth/AuthContext";
 import { BrandMark } from "@/src/components/BrandMark";
@@ -45,13 +46,14 @@ export default function SignupScreen() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={[
           styles.wrap,
-          { paddingTop: insets.top + 36, paddingBottom: insets.bottom + 24 },
+          { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 28 },
         ]}
       >
-        <View style={styles.hero}>
-          <BrandMark size="lg" tag="60s UP / DOWN · Monad" />
+        <Animated.View entering={FadeInUp.duration(320)} style={styles.hero}>
+          <BrandMark size="lg" />
           <Text style={styles.title}>Create your seat</Text>
-        </View>
+          <Text style={styles.tagline}>60s UP / DOWN · Monad testnet.</Text>
+        </Animated.View>
 
         <View style={styles.form}>
           <Field
@@ -93,13 +95,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.lg,
     justifyContent: "space-between",
   },
-  hero: { gap: 12, paddingTop: 12 },
+  hero: {
+    paddingTop: 20,
+    gap: 10,
+  },
   title: {
     color: colors.ink,
     fontFamily: "BebasNeue_400Regular",
-    fontSize: 48,
+    fontSize: 44,
     letterSpacing: 1,
-    marginTop: 4,
+    marginTop: 8,
+  },
+  tagline: {
+    color: colors.muted,
+    fontFamily: type.body,
+    fontSize: 15,
+    lineHeight: 20,
   },
   form: { gap: space.md },
   error: {
@@ -112,6 +123,7 @@ const styles = StyleSheet.create({
     gap: 8,
     alignItems: "center",
     justifyContent: "center",
+    paddingBottom: 4,
   },
   footerMuted: {
     color: colors.muted,
