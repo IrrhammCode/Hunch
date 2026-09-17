@@ -31,16 +31,22 @@ Screenshots (text labels): `[Login methods] → Email → toggle ON → OTP`
 
 This is why YOU tab shows a real `0x…` after OTP instead of a demo fake address.
 
-## 4. Add an iOS app client
+## 4. Add an iOS app client — then copy the **Client ID**
 
-1. Sidebar → **App clients** (or **Clients** / **Applications**).
-2. **New client** / **Add client**.
-3. Platform: **iOS**.
-4. **Bundle ID:** `com.hunch123.app` (must match `mobile/app.json`).
-5. If asked for scheme / redirect: **`hunch`** (matches `mobile/app.json` → `scheme`).
-6. Create → copy the **Client ID** (often starts with `client_`).
+1. Go to **https://dashboard.privy.io/apps** → open app **Hunch**.
+2. **Settings → Clients** (App clients).
+3. **Add app client** / **New client**.
+4. Platform **iOS** / React Native.
+5. **Allowed app identifier:** `com.hunch.app`  
+   (iOS **bundle id** from `mobile/app.json` — this is the allowlist field, **not** the `.env` value)
+6. If asked for URL scheme: `hunch`
+7. Create → find that client in the list.
 
-Optional: add Android package `com.hunch123.app` the same way.
+**Copy the Client ID** shown for the client (often `client_…` or a long opaque token).
+
+**Never** put `com.hunch.app` into `EXPO_PUBLIC_PRIVY_CLIENT_ID` — that is only the allowed identifier.
+
+Optional: add Android package `com.hunch.app` the same way.
 
 ## 5. Fill `mobile/.env` (local only)
 
