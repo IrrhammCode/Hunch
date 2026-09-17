@@ -24,11 +24,21 @@ export const monadTestnet = defineChain({
 export const PRIVY_APP_ID = process.env.EXPO_PUBLIC_PRIVY_APP_ID ?? "";
 export const PRIVY_CLIENT_ID = process.env.EXPO_PUBLIC_PRIVY_CLIENT_ID ?? "";
 
-/** Demo auth only when explicitly enabled OR Privy credentials are missing. */
-export const USE_DEMO_AUTH =
-  process.env.EXPO_PUBLIC_USE_DEMO_AUTH === "1" || !PRIVY_APP_ID;
+/**
+ * Design / mock mode — offline fixtures for UI work (browser or Android).
+ * No API, no Privy, no chain. See mobile/DESIGN.md
+ */
+export const DESIGN_MODE = process.env.EXPO_PUBLIC_DESIGN_MODE === "1";
 
-export const HAS_PRIVY = Boolean(PRIVY_APP_ID && PRIVY_CLIENT_ID);
+/** Demo auth when design mode, explicit flag, or Privy credentials missing. */
+export const USE_DEMO_AUTH =
+  DESIGN_MODE ||
+  process.env.EXPO_PUBLIC_USE_DEMO_AUTH === "1" ||
+  !PRIVY_APP_ID;
+
+/** Real Privy only when configured AND not in design mode. */
+export const HAS_PRIVY =
+  !DESIGN_MODE && Boolean(PRIVY_APP_ID && PRIVY_CLIENT_ID);
 
 export const CHAIN_ID = monadTestnet.id;
 

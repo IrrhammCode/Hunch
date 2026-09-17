@@ -47,6 +47,9 @@
   "scripts": {
     "start": "expo start",
     "start:dev": "expo start --dev-client",
+    "design": "expo start --web",
+    "design:web": "expo start --web",
+    "design:android": "expo start --android",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",

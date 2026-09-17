@@ -4,7 +4,24 @@ Swipe UP or DOWN on 60-second onchain markets on Monad.
 
 **Track 01 · Agora Mobile · Privy · Pyth** · Bundle ID `com.hunch.app`
 
-Privy requires a **custom development client** (or TestFlight/ad-hoc build). **Expo Go will not work.**
+## Design mode (UI only — mock data)
+
+For designers / Android / **browser** without API or Privy:
+
+→ Full guide: **[DESIGN.md](./DESIGN.md)**
+
+```powershell
+cd mobile
+npm install
+copy .env.design .env
+npm run design
+```
+
+Then open the web URL (or press `w`). Auto-login + full mock fixtures.
+
+---
+
+Privy requires a **custom development client** (or TestFlight/ad-hoc build). **Expo Go will not work** for real Privy.
 
 ---
 

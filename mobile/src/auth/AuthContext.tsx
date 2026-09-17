@@ -13,7 +13,14 @@ import React, {
   useMemo,
   useState,
 } from "react";
-import { HAS_PRIVY, PRIVY_APP_ID, PRIVY_CLIENT_ID, USE_DEMO_AUTH } from "../config/chain";
+import {
+  DESIGN_MODE,
+  HAS_PRIVY,
+  PRIVY_APP_ID,
+  PRIVY_CLIENT_ID,
+  USE_DEMO_AUTH,
+} from "../config/chain";
+import { DESIGN_USER } from "../mock/api";
 
 const STORAGE_KEY = "hunch.session.v1";
 
@@ -119,8 +126,12 @@ function addressFromPrivyWallets(wallets: any[]): string | null {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  if (USE_DEMO_AUTH || !HAS_PRIVY) {
-    return <DemoAuthProvider missingConfig={!HAS_PRIVY}>{children}</DemoAuthProvider>;
+  if (DESIGN_MODE || USE_DEMO_AUTH || !HAS_PRIVY) {
+    return (
+      <DemoAuthProvider missingConfig={!DESIGN_MODE && !HAS_PRIVY}>
+        {children}
+      </DemoAuthProvider>
+    );
   }
   return <PrivyAuthProvider>{children}</PrivyAuthProvider>;
 }
@@ -223,9 +234,26 @@ function DemoAuthProvider({
   const [user, setUser] = useState<SessionUser | null>(null);
   const [ready, setReady] = useState(false);
 
+  const persist = useCallback(async (next: SessionUser | null) => {
+    setUser(next);
+    if (next) await storageSet(STORAGE_KEY, JSON.stringify(next));
+    else await storageRemove(STORAGE_KEY);
+  }, []);
+
   useEffect(() => {
     (async () => {
       try {
+        if (DESIGN_MODE) {
+          // Auto-enter as designer — skip login friction for UI work
+          await persist({
+            id: DESIGN_USER.id,
+            email: DESIGN_USER.email,
+            displayName: DESIGN_USER.displayName,
+            address: DESIGN_USER.address,
+            privy: false,
+          });
+          return;
+        }
         const raw = await storageGet(STORAGE_KEY);
         if (raw) setUser(JSON.parse(raw) as SessionUser);
       } catch {
@@ -234,13 +262,7 @@ function DemoAuthProvider({
         setReady(true);
       }
     })();
-  }, []);
-
-  const persist = useCallback(async (next: SessionUser | null) => {
-    setUser(next);
-    if (next) await storageSet(STORAGE_KEY, JSON.stringify(next));
-    else await storageRemove(STORAGE_KEY);
-  }, []);
+  }, [persist]);
 
   const loginWithEmail = useCallback(
     async (email: string) => {
@@ -273,6 +295,17 @@ function DemoAuthProvider({
   );
 
   const logout = useCallback(async () => {
+    if (DESIGN_MODE) {
+      // Stay logged in for design — re-seed designer session
+      await persist({
+        id: DESIGN_USER.id,
+        email: DESIGN_USER.email,
+        displayName: DESIGN_USER.displayName,
+        address: DESIGN_USER.address,
+        privy: false,
+      });
+      return;
+    }
     await persist(null);
   }, [persist]);
 
