@@ -36,11 +36,11 @@ This is why YOU tab shows a real `0x…` after OTP instead of a demo fake addres
 1. Sidebar → **App clients** (or **Clients** / **Applications**).
 2. **New client** / **Add client**.
 3. Platform: **iOS**.
-4. **Bundle ID:** `com.hunch.app` (must match `mobile/app.json`).
+4. **Bundle ID:** `com.hunch123.app` (must match `mobile/app.json`).
 5. If asked for scheme / redirect: **`hunch`** (matches `mobile/app.json` → `scheme`).
 6. Create → copy the **Client ID** (often starts with `client_`).
 
-Optional: add Android package `com.hunch.app` the same way.
+Optional: add Android package `com.hunch123.app` the same way.
 
 ## 5. Fill `mobile/.env` (local only)
 
@@ -99,7 +99,7 @@ If you still see the red setup box: App ID / Client ID empty or Metro not restar
 | OTP email not arriving | Email login off or typo | Dashboard → enable Email OTP; check spam |
 | Login works, no wallet address | Embedded wallets off / create-on-login off | Enable Ethereum + create on login |
 | `eth_sendTransaction` fails | Wrong chain / no MON | Faucet MON; ensure chainId **10143** |
-| Client ID rejected | Bundle ID mismatch | Client must be `com.hunch.app` |
+| Client ID rejected | Bundle ID mismatch | Client must be `com.hunch123.app` |
 | Works on Wi‑Fi only | `API_URL` LAN-only | Use ngrok for off-LAN judges |
 | Still demo login | `EXPO_PUBLIC_USE_DEMO_AUTH=1` | Unset it and restart Metro |
 | Env “not loading” | Edited `.env` without restart | Stop Metro; `npm run start:dev` |

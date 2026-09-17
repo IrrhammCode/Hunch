@@ -142,10 +142,20 @@ function PrivyAuthProvider({ children }: { children: React.ReactNode }) {
   const { sendCode, loginWithCode, state: otpState } = useLoginWithEmail();
   const [user, setUser] = useState<SessionUser | null>(null);
   const [ready, setReady] = useState(false);
+  const [privyStuck, setPrivyStuck] = useState(false);
+
+  // Safety: never leave the user on splash if Privy never reports isReady
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setPrivyStuck(true);
+      setReady(true);
+    }, 12_000);
+    return () => clearTimeout(t);
+  }, []);
 
   useEffect(() => {
     if (!privyReady) {
-      setReady(false);
+      if (privyStuck) setReady(true);
       return;
     }
     if (!privyUser) {
@@ -163,7 +173,7 @@ function PrivyAuthProvider({ children }: { children: React.ReactNode }) {
       privy: true,
     });
     setReady(true);
-  }, [privyReady, privyUser, wallets]);
+  }, [privyReady, privyUser, wallets, privyStuck]);
 
   const sendOtp = useCallback(
     async (email: string) => {

@@ -25,6 +25,17 @@ export const PRIVY_APP_ID = process.env.EXPO_PUBLIC_PRIVY_APP_ID ?? "";
 export const PRIVY_CLIENT_ID = process.env.EXPO_PUBLIC_PRIVY_CLIENT_ID ?? "";
 
 /**
+ * Bundle IDs look like com.hunch.app. Privy Client IDs are app-client tokens
+ * (often client_… / long opaque id) — never reverse-DNS.
+ */
+export function looksLikeBundleId(value: string) {
+  return /^com\.[a-z0-9_.-]+$/i.test(value.trim());
+}
+
+export const PRIVY_CLIENT_ID_OK =
+  Boolean(PRIVY_CLIENT_ID) && !looksLikeBundleId(PRIVY_CLIENT_ID);
+
+/**
  * Design / mock mode — offline fixtures for UI work (browser or Android).
  * No API, no Privy, no chain. See mobile/DESIGN.md
  */
@@ -38,7 +49,7 @@ export const USE_DEMO_AUTH =
 
 /** Real Privy only when configured AND not in design mode. */
 export const HAS_PRIVY =
-  !DESIGN_MODE && Boolean(PRIVY_APP_ID && PRIVY_CLIENT_ID);
+  !DESIGN_MODE && Boolean(PRIVY_APP_ID) && PRIVY_CLIENT_ID_OK;
 
 export const CHAIN_ID = monadTestnet.id;
 
