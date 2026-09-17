@@ -36,9 +36,17 @@ export function loadDeployment(): Deployment {
   return JSON.parse(fs.readFileSync(p, "utf8"));
 }
 
+let cachedProvider: JsonRpcProvider | null = null;
+
 export function getProvider() {
   loadEnv();
-  return new JsonRpcProvider(process.env.MONAD_RPC_URL || MONAD_TESTNET.rpcUrl, MONAD_TESTNET.chainId);
+  if (cachedProvider) return cachedProvider;
+  cachedProvider = new JsonRpcProvider(
+    process.env.MONAD_RPC_URL || MONAD_TESTNET.rpcUrl,
+    MONAD_TESTNET.chainId,
+    { staticNetwork: true },
+  );
+  return cachedProvider;
 }
 
 export function getWallet() {

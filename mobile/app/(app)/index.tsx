@@ -119,7 +119,7 @@ export default function HunchScreen() {
 
   useEffect(() => {
     refresh();
-    const id = setInterval(refresh, 4000);
+    const id = setInterval(refresh, 6000);
     return () => clearInterval(id);
   }, [refresh]);
 

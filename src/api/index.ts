@@ -17,6 +17,7 @@ import { quoteBuy } from "./quote";
 import { demoTrade } from "./demoTrade";
 import { executeCommittedIntent } from "./relayedTrade";
 import { clientIp, pruneRateLimits, rateLimit } from "./rateLimit";
+import { isRateLimitError, withRpcRetry } from "../shared/rpcRetry";
 import {
   demoFaucetAUSD,
   demoRedeem,
@@ -35,9 +36,9 @@ app.use("*", cors());
 /** In-flight guard — one demo trade at a time (shared hot wallet). */
 let demoBusy = false;
 
-/** Short cache so phone poll + keeper don't melt public RPC. */
+/** Cache so phone poll + keeper don't melt public RPC (15 req/s cap). */
 let roundCache: { at: number; body: unknown } | null = null;
-const ROUND_CACHE_MS = 3000;
+const ROUND_CACHE_MS = Number(process.env.ROUND_CACHE_MS || 5000);
 
 app.get("/health", (c) => c.json({ ok: true, service: "hunch-api" }));
 
@@ -62,70 +63,69 @@ app.get("/v1/round/current", async (c) => {
   }
 
   try {
-    const provider = getProvider();
-    const factory = factoryContract(provider);
-    const roundCount = Number(await factory.roundCount());
-    if (roundCount === 0) {
-      const body = { round: null };
-      roundCache = { at: Date.now(), body };
-      return c.json(body);
-    }
+    const body = await withRpcRetry(async () => {
+      const provider = getProvider();
+      const factory = factoryContract(provider);
+      const roundCount = Number(await factory.roundCount());
+      if (roundCount === 0) return { round: null };
 
-    const roundId = String(roundCount);
-    const market = (await factory.rounds(roundCount)) as string;
-    const m = marketContract(market, provider);
+      const roundId = String(roundCount);
+      const market = (await factory.rounds(roundCount)) as string;
+      const m = marketContract(market, provider);
 
-    const [statusRaw, spots, strike, expiry, startTime, feedId, latest] = await Promise.all([
-      m.status(),
-      m.spotPrices(),
-      m.strikePrice(),
-      m.expiry(),
-      m.startTime(),
-      m.priceFeedId(),
-      provider.getBlock("latest"),
-    ]);
+      const [statusRaw, spots, strike, expiry, startTime, feedId, latest] = await Promise.all([
+        m.status(),
+        m.spotPrices(),
+        m.strikePrice(),
+        m.expiry(),
+        m.startTime(),
+        m.priceFeedId(),
+        provider.getBlock("latest"),
+      ]);
 
-    const statusNum = Number(statusRaw);
-    const [yesWad, noWad] = spots as [bigint, bigint];
-    const now = Number(latest!.timestamp);
-    const expiryN = Number(expiry);
+      const statusNum = Number(statusRaw);
+      const [yesWad, noWad] = spots as [bigint, bigint];
+      const now = Number(latest!.timestamp);
+      const expiryN = Number(expiry);
 
-    let yesWins: boolean | undefined;
-    let settlement: string | undefined;
-    if (statusNum === 1) {
-      const [yw, sp] = await Promise.all([m.yesWins(), m.settlementPrice()]);
-      yesWins = Boolean(yw);
-      settlement = sp.toString();
-    }
+      let yesWins: boolean | undefined;
+      let settlement: string | undefined;
+      if (statusNum === 1) {
+        const [yw, sp] = await Promise.all([m.yesWins(), m.settlementPrice()]);
+        yesWins = Boolean(yw);
+        settlement = sp.toString();
+      }
 
-    const body = {
-      round: {
-        roundId,
-        market,
-        feedId: feedId as string,
-        seed: "0",
-        strike: strike.toString(),
-        expo: -8,
-        startTime: Number(startTime),
-        expiry: expiryN,
-        status: statusNum === 0 ? "open" : "resolved",
-        yesWins,
-        settlement,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      },
-      spot: {
-        yes: ethers.formatUnits(yesWad, 18),
-        no: ethers.formatUnits(noWad, 18),
-      },
-      timeRemaining: statusNum === 0 ? Math.max(0, expiryN - now) : 0,
-    };
+      return {
+        round: {
+          roundId,
+          market,
+          feedId: feedId as string,
+          seed: "0",
+          strike: strike.toString(),
+          expo: -8,
+          startTime: Number(startTime),
+          expiry: expiryN,
+          status: statusNum === 0 ? ("open" as const) : ("resolved" as const),
+          yesWins,
+          settlement,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        },
+        spot: {
+          yes: ethers.formatUnits(yesWad, 18),
+          no: ethers.formatUnits(noWad, 18),
+        },
+        timeRemaining: statusNum === 0 ? Math.max(0, expiryN - now) : 0,
+      };
+    }, { label: "round/current" });
+
     roundCache = { at: Date.now(), body };
     return c.json(body);
   } catch (e: any) {
     if (roundCache) return c.json(roundCache.body);
     const msg = e.shortMessage || e.message || String(e);
-    const rateLimited = /rate limit|Too many requests|-32090/i.test(msg);
+    const rateLimited = isRateLimitError(e);
     return c.json(
       { round: null, error: rateLimited ? "RPC rate limited — retry shortly" : msg },
       rateLimited ? 503 : 500,

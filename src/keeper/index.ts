@@ -16,7 +16,7 @@ import { ethers } from "ethers";
 loadEnv();
 
 const SEED = () => ethers.parseUnits(process.env.SEED_AUSD || "1000", 6);
-const POLL_MS = Number(process.env.KEEPER_POLL_MS || 4000);
+const POLL_MS = Number(process.env.KEEPER_POLL_MS || 10000);
 const MIN_MON = ethers.parseEther(process.env.KEEPER_MIN_MON || "1.0");
 
 function formatErr(e: any): string {
