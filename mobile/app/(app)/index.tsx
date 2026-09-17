@@ -1,6 +1,6 @@
 import * as Haptics from "expo-haptics";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Dimensions, StyleSheet, Text, View } from "react-native";
+import { Dimensions, Linking, StyleSheet, Text, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   FadeIn,
@@ -27,6 +27,7 @@ import { BrandMark } from "@/src/components/BrandMark";
 import { Screen } from "@/src/components/Screen";
 import { useToast } from "@/src/components/Toast";
 import { AmountChip, BalanceChip, PrimaryButton } from "@/src/components/ui";
+import { explorerTx } from "@/src/config/chain";
 import { addHunch, listHunches, settleRound } from "@/src/hunchBook";
 import { useWallet } from "@/src/wallet/WalletContext";
 import { placePrivyTrade } from "@/src/wallet/privyTrade";
@@ -248,7 +249,14 @@ export default function HunchScreen() {
           tx: hash,
         });
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        toast.success(`${side} filled`, `${amount} AUSD · round ${roundId}`);
+        toast.show(`${side} filled`, {
+          body: `${amount} AUSD · round ${roundId}`,
+          tone: "success",
+          actionLabel: "View tx",
+          onAction: () => {
+            Linking.openURL(explorerTx(hash)).catch(() => {});
+          },
+        });
         await Promise.all([refresh(), refreshWallet()]);
       } catch (e) {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);

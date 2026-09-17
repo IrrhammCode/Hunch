@@ -4,6 +4,18 @@ Swipe UP or DOWN on 60-second fully onchain markets, built on Monad.
 
 **Metropolis Track 01** · Agora Mobile · Privy · Pyth · Deadline Oct 13, 2026
 
+## Submit
+
+| Doc | Use |
+|---|---|
+| [SUBMIT.md](SUBMIT.md) | Paste-ready judge write-up |
+| [mobile/DEMO.md](mobile/DEMO.md) | 5-minute try path |
+| [OPS.md](OPS.md) | Day-of mentor checklist |
+| [DEMO_VIDEO_SCRIPT.md](DEMO_VIDEO_SCRIPT.md) | ~90s video shot list |
+| [mobile/README.md](mobile/README.md) | Privy + EAS / TestFlight runbook |
+
+> **EAS preview:** replace `EXPO_PUBLIC_API_URL` in `mobile/eas.json` (and `mobile/.env`) with your LAN IP or ngrok host **before** building. Do not ship the placeholder URL.
+
 ---
 
 ## Try in 2 minutes
@@ -212,6 +224,8 @@ Auth lives under `mobile/app/(auth)`.
 See [mobile/DEMO.md](mobile/DEMO.md) — email OTP → fund → swipe → resolve → claim → MonadVision link.
 
 ## Mentor day-of
+
+Full checklist: **[OPS.md](OPS.md)**
 
 1. Fund root `PRIVATE_KEY` with MON on Monad testnet
 2. Vault funded (`npm run deploy:vault` if needed)
