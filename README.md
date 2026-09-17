@@ -155,6 +155,18 @@ Keeper must be running or HUNCH will show no live round.
 | POST | `/v1/demo/trade` | demo hot-wallet trade |
 | GET | `/v1/demo/me` | demo wallet snapshot |
 
+### Demo safety (rate limits)
+
+In-memory limits (reset on API restart) so mid-demo spam cannot drain the hot wallet:
+
+| Endpoint | Policy |
+|---|---|
+| `POST /v1/wallet/faucet` | Cap **1000 AUSD**/req · MON **0.05** only if &lt; **0.02** · 1 / address / 10 min · already funded → 200 `alreadyFunded` |
+| `POST /v1/demo/faucet` | Same mint caps · 4 / IP / 10 min |
+| `POST /v1/trade/execute` | 4 / trader / min · 12 / IP / min · market must be a recent factory round · single in-flight execute |
+
+429 body: `{ "error": "...", "retryAfterSec": N }`.
+
 ---
 
 ## Local contracts
@@ -197,4 +209,13 @@ Auth lives under `mobile/app/(auth)`.
 
 ## Judge try path
 
-See [mobile/DEMO.md](mobile/DEMO.md) — email OTP → fund → swipe → resolve → claim.
+See [mobile/DEMO.md](mobile/DEMO.md) — email OTP → fund → swipe → resolve → claim → MonadVision link.
+
+## Mentor day-of
+
+1. Fund root `PRIVATE_KEY` with MON on Monad testnet
+2. Vault funded (`npm run deploy:vault` if needed)
+3. `npm run api` + `npm run keeper`
+4. Privy App ID + Client ID in `mobile/.env` (rebuild/restart Metro)
+5. Tunnel URL if judges are off-LAN
+6. Smoke: Fund twice → second is no-op/429 · Trade → Claim → explorer opens

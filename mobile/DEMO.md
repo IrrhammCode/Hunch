@@ -15,6 +15,15 @@ Host/mentor should have:
 - [ ] Keeper running (rounds open every ~60s)
 - [ ] Privy email OTP enabled
 
+### Mentor day-of checklist
+
+- [ ] Root `.env` has `PRIVATE_KEY` funded with **MON** (gas for execute + Pyth pull)
+- [ ] Vault has AUSD seed (`npm run deploy:vault` once; vault not underfunded)
+- [ ] `npm run api` + `npm run keeper` running
+- [ ] `mobile/.env` Privy App ID + Client ID set (or demo flag only if Privy broken)
+- [ ] Off-LAN judges: ngrok/tunnel URL in the build (`EXPO_PUBLIC_API_URL`)
+- [ ] Smoke once: Fund → swipe → Claim → MonadVision link opens
+
 Repo: https://github.com/IrrhammCode/Hunch
 
 ---
@@ -26,9 +35,21 @@ Repo: https://github.com/IrrhammCode/Hunch
 3. **YOU tab** — confirm **Privy wallet** + short `0x…` address. Tap **Fund wallet**.
 4. **HUNCH tab** — wait for a live round (large countdown). Swipe **right = UP** or **left = DOWN** (or tap the buttons).
 5. **Wait ~60s** — keeper resolves with Pyth BTC/USD.
-6. **BOOK** — OPEN → WON/LOST → **Claim** when you won.
+6. **BOOK** — OPEN → WON/LOST → **Claim** when you won. Tap **View on MonadVision** (toast or row link) for onchain proof.
 
 You’re done. That’s the full loop: Privy identity → embedded wallet → onchain commit → relayed execute → redeem.
+
+---
+
+## Demo safety (API caps)
+
+| Endpoint | Limit |
+|---|---|
+| `POST /v1/wallet/faucet` | Max **1000** AUSD/request · MON top-up **0.05** only if below **0.02** · **1 / address / 10 min** · already funded → **200 no-op** |
+| `POST /v1/demo/faucet` | Same mint caps · **4 / IP / 10 min** |
+| `POST /v1/trade/execute` | **4 / trader / min** · **12 / IP / min** · market must be a recent factory round · one in-flight execute at a time |
+
+Limits are **in-memory** (reset if API restarts). Errors return `{ error, retryAfterSec? }` with HTTP 429.
 
 ---
 

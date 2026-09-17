@@ -16,6 +16,7 @@ import { buildCommitCalldata, buildExecuteCalldata, buildRedeemCalldata } from "
 import { quoteBuy } from "./quote";
 import { demoTrade } from "./demoTrade";
 import { executeCommittedIntent } from "./relayedTrade";
+import { clientIp, pruneRateLimits, rateLimit } from "./rateLimit";
 import {
   demoFaucetAUSD,
   demoRedeem,
@@ -23,6 +24,7 @@ import {
   faucetWallet,
   invalidateDemoWalletCache,
   walletSnapshot,
+  FAUCET,
 } from "./wallet";
 
 loadEnv();
@@ -201,12 +203,43 @@ app.get("/v1/wallet/:address", async (c) => {
   }
 });
 
-/** Testnet faucet: mint MockAUSD + top up MON for Privy wallet */
+/** Testnet faucet: mint MockAUSD + top up MON for Privy wallet (capped + rate-limited) */
 app.post("/v1/wallet/faucet", async (c) => {
   try {
     const body = await c.req.json<{ address?: string; amountAUSD?: string }>();
     const address = body.address;
     if (!address || !ethers.isAddress(address)) return c.json({ error: "address required" }, 400);
+
+    // Idempotent no-op without burning the cooldown
+    const peek = await walletSnapshot(address);
+    const alreadyAUSD = Number(peek.ausd) >= FAUCET.fundedAUSDThreshold;
+    const alreadyMON = Number(peek.mon) >= Number(FAUCET.monSkipAbove);
+    if (alreadyAUSD && alreadyMON) {
+      return c.json({
+        address,
+        ausd: peek.ausd,
+        mon: peek.mon,
+        alreadyFunded: true,
+        message: "already funded — try again later",
+      });
+    }
+
+    pruneRateLimits(FAUCET.cooldownMs);
+    const addrLimit = rateLimit(`faucet:addr:${address}`, 1, FAUCET.cooldownMs);
+    if (!addrLimit.ok) {
+      return c.json(
+        { error: "faucet cooldown — try again later", retryAfterSec: addrLimit.retryAfterSec },
+        429,
+      );
+    }
+    const ipLimit = rateLimit(`faucet:ip:${clientIp((n) => c.req.header(n))}`, 8, FAUCET.cooldownMs);
+    if (!ipLimit.ok) {
+      return c.json(
+        { error: "faucet cooldown — try again later", retryAfterSec: ipLimit.retryAfterSec },
+        429,
+      );
+    }
+
     return c.json(await faucetWallet(address, body.amountAUSD || "1000"));
   } catch (e: any) {
     return c.json({ error: e.shortMessage || e.message || String(e) }, 500);
@@ -217,15 +250,62 @@ app.post("/v1/wallet/faucet", async (c) => {
  * Relay executeBuy for a Privy-committed intent.
  * Mobile signs approve+commitBuy; hot wallet waits delay-blocks + Pyth then executes.
  * Shares always credit the original trader.
+ * Rate-limited per trader + IP; validates market when supplied.
  */
 app.post("/v1/trade/execute", async (c) => {
   if (demoBusy) return c.json({ error: "trade in progress — retry in a few seconds" }, 429);
-  demoBusy = true;
+  let locked = false;
   try {
     const body = await c.req.json<{ trader: string; intentId?: string; market?: string }>();
     if (!body.trader || !ethers.isAddress(body.trader)) {
       return c.json({ error: "trader address required" }, 400);
     }
+    if (body.intentId !== undefined && body.intentId !== null) {
+      const idNum = Number(body.intentId);
+      if (!Number.isFinite(idNum) || idNum < 1 || idNum > 1e9) {
+        return c.json({ error: "bad intentId" }, 400);
+      }
+    }
+    if (body.market && !ethers.isAddress(body.market)) {
+      return c.json({ error: "bad market address" }, 400);
+    }
+
+    // Validate market is a known factory round when provided
+    if (body.market) {
+      const provider = getProvider();
+      const factory = factoryContract(provider);
+      const count = Number(await factory.roundCount());
+      const known = new Set<string>();
+      for (let i = Math.max(1, count - 12); i <= count; i++) {
+        try {
+          known.add(String(await factory.rounds(i)).toLowerCase());
+        } catch {
+          /* skip */
+        }
+      }
+      if (!known.has(body.market.toLowerCase())) {
+        return c.json({ error: "unknown market — not a recent factory round" }, 400);
+      }
+    }
+
+    pruneRateLimits(60_000);
+    const addrLimit = rateLimit(`exec:addr:${body.trader}`, 4, 60_000);
+    if (!addrLimit.ok) {
+      return c.json(
+        { error: "execute rate limited — retry shortly", retryAfterSec: addrLimit.retryAfterSec },
+        429,
+      );
+    }
+    const ipLimit = rateLimit(`exec:ip:${clientIp((n) => c.req.header(n))}`, 12, 60_000);
+    if (!ipLimit.ok) {
+      return c.json(
+        { error: "execute rate limited — retry shortly", retryAfterSec: ipLimit.retryAfterSec },
+        429,
+      );
+    }
+
+    demoBusy = true;
+    locked = true;
     const result = await executeCommittedIntent({
       trader: body.trader,
       intentId: body.intentId,
@@ -236,7 +316,7 @@ app.post("/v1/trade/execute", async (c) => {
   } catch (e: any) {
     return c.json({ error: e.shortMessage || e.message || String(e) }, 500);
   } finally {
-    demoBusy = false;
+    if (locked) demoBusy = false;
   }
 });
 
@@ -252,6 +332,18 @@ app.get("/v1/demo/me", async (c) => {
 app.post("/v1/demo/faucet", async (c) => {
   try {
     const body = await c.req.json<{ amountAUSD?: string }>().catch(() => ({} as { amountAUSD?: string }));
+    pruneRateLimits(FAUCET.cooldownMs);
+    const ipLimit = rateLimit(
+      `demo-faucet:ip:${clientIp((n) => c.req.header(n))}`,
+      4,
+      FAUCET.cooldownMs,
+    );
+    if (!ipLimit.ok) {
+      return c.json(
+        { error: "faucet cooldown — try again later", retryAfterSec: ipLimit.retryAfterSec },
+        429,
+      );
+    }
     return c.json(await demoFaucetAUSD(body.amountAUSD || "1000"));
   } catch (e: any) {
     return c.json({ error: e.shortMessage || e.message || String(e) }, 500);

@@ -106,7 +106,21 @@ export function invalidateDemoWalletCache() {
   meCache = null;
 }
 
-/** Mint MockAUSD + top up MON for a Privy embedded wallet (testnet only). */
+/** Faucet policy — cap mint + MON so mid-demo spam cannot drain the hot wallet. */
+export const FAUCET = {
+  maxAUSD: Number(process.env.FAUCET_MAX_AUSD || "1000"),
+  /** Skip mint if already at/above this AUSD. */
+  fundedAUSDThreshold: Number(process.env.FAUCET_SKIP_AUSD || "250"),
+  /** Only send MON if balance below this. */
+  monTopup: process.env.FAUCET_MON || "0.05",
+  monSkipAbove: process.env.FAUCET_MON_SKIP_ABOVE || "0.02",
+  cooldownMs: Number(process.env.FAUCET_COOLDOWN_MS || String(10 * 60 * 1000)),
+};
+
+/**
+ * Mint MockAUSD + top up MON for a Privy embedded wallet (testnet only).
+ * Rate limiting is enforced at the HTTP layer; this function enforces caps + idempotency.
+ */
 export async function faucetWallet(address: string, amountAUSD = "1000") {
   if (!ethers.isAddress(address)) throw new Error("bad address");
   const wallet = getWallet();
@@ -114,15 +128,44 @@ export async function faucetWallet(address: string, amountAUSD = "1000") {
   const dep = loadDeployment();
   const ausd = ausdContract(wallet, dep);
 
-  const qty = ethers.parseUnits(amountAUSD, 6);
-  const mintTx = await ausd.mint(address, qty);
-  await waitForReceipt(provider, mintTx.hash);
+  const requested = Number(amountAUSD);
+  if (!Number.isFinite(requested) || requested <= 0) throw new Error("bad amountAUSD");
+  const capped = Math.min(requested, FAUCET.maxAUSD);
 
-  const MON_TOPUP = ethers.parseEther(process.env.FAUCET_MON || "0.05");
-  const monBal = await provider.getBalance(address);
+  const [ausdBal, monBal] = await Promise.all([
+    ausd.balanceOf(address),
+    provider.getBalance(address),
+  ]);
+  const ausdHuman = Number(ethers.formatUnits(ausdBal, 6));
+  const monHuman = Number(ethers.formatEther(monBal));
+
+  const needMint = ausdHuman < FAUCET.fundedAUSDThreshold;
+  const monSkip = ethers.parseEther(FAUCET.monSkipAbove);
+  const needMon = monBal < monSkip;
+
+  if (!needMint && !needMon) {
+    const snap = await walletSnapshot(address);
+    return {
+      address,
+      ausd: snap.ausd,
+      mon: snap.mon,
+      alreadyFunded: true,
+      message: "already funded — try again later",
+    };
+  }
+
+  let mintTx: string | undefined;
+  if (needMint) {
+    const qty = ethers.parseUnits(String(capped), 6);
+    const tx = await ausd.mint(address, qty);
+    await waitForReceipt(provider, tx.hash);
+    mintTx = tx.hash;
+  }
+
   let monTx: string | undefined;
-  if (monBal < MON_TOPUP) {
-    const send = await wallet.sendTransaction({ to: address, value: MON_TOPUP });
+  if (needMon) {
+    const topup = ethers.parseEther(FAUCET.monTopup);
+    const send = await wallet.sendTransaction({ to: address, value: topup });
     await waitForReceipt(provider, send.hash);
     monTx = send.hash;
   }
@@ -133,9 +176,10 @@ export async function faucetWallet(address: string, amountAUSD = "1000") {
     address,
     ausd: snap.ausd,
     mon: snap.mon,
-    mintTx: mintTx.hash,
+    mintTx,
     monTx,
     alreadyFunded: false,
+    mintedAUSD: needMint ? String(capped) : "0",
   };
 }
 

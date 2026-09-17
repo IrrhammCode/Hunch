@@ -1,13 +1,14 @@
 import { useCallback, useState } from "react";
 import { useFocusEffect } from "expo-router";
 import * as Haptics from "expo-haptics";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { demoRedeem } from "@/src/api/client";
 import { useAuth } from "@/src/auth/AuthContext";
 import { Screen } from "@/src/components/Screen";
 import { useToast } from "@/src/components/Toast";
 import { BalanceChip, EmptyState, PrimaryButton, StatusPill } from "@/src/components/ui";
+import { explorerTx } from "@/src/config/chain";
 import { useWallet } from "@/src/wallet/WalletContext";
 import { redeemPrivyPosition } from "@/src/wallet/privyTrade";
 import { colors, radius, space, type } from "@/src/theme";
@@ -18,6 +19,7 @@ export default function PositionsScreen() {
   const { user, privyMode, getEthereumProvider } = useAuth();
   const toast = useToast();
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [lastClaim, setLastClaim] = useState<{ roundId: string; tx: string } | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -32,18 +34,29 @@ export default function PositionsScreen() {
   const onRedeem = async (roundId: string, market: string) => {
     setBusyId(roundId);
     try {
+      let txHash = "";
+      let payoutLine = "";
       if (privyMode && user?.address) {
         const provider = await getEthereumProvider();
         const r = await redeemPrivyPosition({ provider, address: user.address, market });
-        await refresh();
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        toast.success("Claimed", `Payout sent · ${r.tx.slice(0, 10)}…`);
+        txHash = r.tx;
+        payoutLine = "Payout sent";
       } else {
         const r = await demoRedeem(roundId);
-        await refresh();
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        toast.success("Claimed", `+${r.payout} AUSD · ${r.sideWon} won`);
+        txHash = r.tx;
+        payoutLine = `+${r.payout} AUSD · ${r.sideWon} won`;
       }
+      await refresh();
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setLastClaim({ roundId, tx: txHash });
+      toast.show("Claimed", {
+        body: payoutLine,
+        tone: "success",
+        actionLabel: "View tx",
+        onAction: () => {
+          Linking.openURL(explorerTx(txHash)).catch(() => {});
+        },
+      });
     } catch (e) {
       toast.error("Claim failed", e instanceof Error ? e.message : String(e));
     } finally {
@@ -119,6 +132,16 @@ export default function PositionsScreen() {
                     {p.redeemable ? (
                       <Text style={styles.claimHint}>Claim {p.estimatedPayout} AUSD</Text>
                     ) : null}
+                    {lastClaim?.roundId === p.roundId ? (
+                      <Pressable
+                        onPress={() => {
+                          Linking.openURL(explorerTx(lastClaim.tx)).catch(() => {});
+                        }}
+                        hitSlop={8}
+                      >
+                        <Text style={styles.explorerLink}>View on MonadVision →</Text>
+                      </Pressable>
+                    ) : null}
                   </View>
                   {p.redeemable ? (
                     <PrimaryButton
@@ -183,4 +206,10 @@ const styles = StyleSheet.create({
   rowTitle: { color: colors.ink, fontFamily: type.bold, fontSize: 16 },
   rowMeta: { color: colors.muted, fontFamily: type.body, fontSize: 13 },
   claimHint: { color: colors.brand, fontFamily: type.medium, fontSize: 13 },
+  explorerLink: {
+    color: colors.brand,
+    fontFamily: type.bold,
+    fontSize: 13,
+    letterSpacing: 0.2,
+  },
 });
