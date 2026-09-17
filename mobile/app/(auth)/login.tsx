@@ -1,3 +1,4 @@
+import * as AppleAuthentication from "expo-apple-authentication";
 import { Link, Redirect, router } from "expo-router";
 import { useState } from "react";
 import {
@@ -13,6 +14,11 @@ import { useAuth } from "@/src/auth/AuthContext";
 import { BrandMark } from "@/src/components/BrandMark";
 import { Screen } from "@/src/components/Screen";
 import { Field, PrimaryButton } from "@/src/components/ui";
+import {
+  PRIVY_APP_ID,
+  PRIVY_CLIENT_ID,
+  PRIVY_CLIENT_ID_OK,
+} from "@/src/config/chain";
 import { colors, radius, space, type } from "@/src/theme";
 
 export default function LoginScreen() {
@@ -22,6 +28,7 @@ export default function LoginScreen() {
     missingPrivyConfig,
     sendOtp,
     loginWithOtp,
+    loginWithApple,
     loginWithEmail,
     otpStatus,
   } = useAuth();
@@ -34,7 +41,10 @@ export default function LoginScreen() {
 
   if (user) return <Redirect href="/(app)" />;
 
-  const sending = otpStatus === "sending-code" || otpStatus === "submitting-code";
+  const sending =
+    otpStatus === "sending-code" ||
+    otpStatus === "submitting-code" ||
+    otpStatus === "loading";
 
   const onSendCode = async () => {
     setBusy(true);
@@ -67,7 +77,21 @@ export default function LoginScreen() {
     }
   };
 
+  const onApple = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await loginWithApple();
+      router.replace("/(app)");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Apple sign-in failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const showOtp = codeSent && privyMode;
+  const showApple = privyMode && Platform.OS === "ios";
 
   return (
     <Screen>
@@ -78,22 +102,29 @@ export default function LoginScreen() {
           { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 28 },
         ]}
       >
-        {/* Brand */}
         <Animated.View entering={FadeInUp.duration(320)} style={styles.hero}>
           <BrandMark size="lg" />
           <Text style={styles.tagline}>Swipe UP or DOWN. 60s markets on Monad.</Text>
         </Animated.View>
 
-        {/* Form */}
         <View style={styles.form}>
           {missingPrivyConfig ? (
             <View style={styles.setupBox}>
               <Text style={styles.setupTitle}>Privy not configured</Text>
               <Text style={styles.hint}>
-                Copy mobile/.env.example → mobile/.env, then set EXPO_PUBLIC_PRIVY_APP_ID and
-                EXPO_PUBLIC_PRIVY_CLIENT_ID from dashboard.privy.io (Email OTP + embedded wallet +
-                App Client for com.hunch.app). Restart Metro after saving. For local UI only:
-                EXPO_PUBLIC_USE_DEMO_AUTH=1.
+                App needs EXPO_PUBLIC_PRIVY_APP_ID + EXPO_PUBLIC_PRIVY_CLIENT_ID in
+                mobile/.env, then **restart Metro** (env is baked at bundle start).
+              </Text>
+              <Text style={styles.envLine}>
+                App ID: {PRIVY_APP_ID ? `${PRIVY_APP_ID.slice(0, 6)}… set` : "EMPTY"}
+              </Text>
+              <Text style={styles.envLine}>
+                Client ID:{" "}
+                {PRIVY_CLIENT_ID
+                  ? PRIVY_CLIENT_ID_OK
+                    ? `${PRIVY_CLIENT_ID.slice(0, 8)}… set`
+                    : "looks like a bundle id (wrong field)"
+                  : "EMPTY"}
               </Text>
             </View>
           ) : null}
@@ -105,6 +136,7 @@ export default function LoginScreen() {
             keyboardType="email-address"
             placeholder="you@email.com"
             returnKeyType={showOtp ? "next" : "go"}
+            autoCapitalize="none"
             onSubmitEditing={() => {
               if (!showOtp) onSendCode();
             }}
@@ -139,21 +171,44 @@ export default function LoginScreen() {
               {error ? <Text style={styles.error}>{error}</Text> : null}
               <PrimaryButton
                 label={
-                  busy || sending ? "Sending…" : privyMode ? "Send code" : "Continue (demo)"
+                  busy || sending
+                    ? "Sending…"
+                    : privyMode
+                      ? "Send code"
+                      : "Continue (demo)"
                 }
                 onPress={onSendCode}
                 disabled={busy || sending || !email || missingPrivyConfig}
               />
+              {showApple ? (
+                <>
+                  <View style={styles.orRow}>
+                    <View style={styles.orLine} />
+                    <Text style={styles.orText}>or</Text>
+                    <View style={styles.orLine} />
+                  </View>
+                  <AppleAuthentication.AppleAuthenticationButton
+                    buttonType={
+                      AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN
+                    }
+                    buttonStyle={
+                      AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
+                    }
+                    cornerRadius={16}
+                    style={styles.appleBtn}
+                    onPress={onApple}
+                  />
+                </>
+              ) : null}
               <Text style={styles.hint}>
                 {privyMode
-                  ? "Creates your embedded Monad wallet."
+                  ? "Email OTP or Apple · creates your embedded Monad wallet."
                   : "Demo login for local testing only."}
               </Text>
             </>
           )}
         </View>
 
-        {/* Footer */}
         <View style={styles.footer}>
           {!privyMode ? (
             <>
@@ -163,7 +218,7 @@ export default function LoginScreen() {
               </Link>
             </>
           ) : (
-            <Text style={styles.footerMuted}>Same email = same wallet</Text>
+            <Text style={styles.footerMuted}>Same identity = same wallet</Text>
           )}
         </View>
       </KeyboardAvoidingView>
@@ -177,10 +232,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.lg,
     justifyContent: "space-between",
   },
-  hero: {
-    paddingTop: 28,
-    gap: 14,
-  },
+  hero: { paddingTop: 28, gap: 14 },
   tagline: {
     color: colors.muted,
     fontFamily: type.body,
@@ -190,6 +242,20 @@ const styles = StyleSheet.create({
   },
   form: { gap: space.md },
   otpBlock: { gap: space.md },
+  orRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  orLine: { flex: 1, height: 1, backgroundColor: colors.line },
+  orText: {
+    color: colors.muted,
+    fontFamily: type.medium,
+    fontSize: 12,
+    letterSpacing: 1,
+    textTransform: "uppercase",
+  },
+  appleBtn: { height: 52, width: "100%" },
   setupBox: {
     borderColor: colors.danger,
     borderWidth: 1,
@@ -198,16 +264,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.dangerDim,
     gap: 8,
   },
-  setupTitle: {
-    color: colors.danger,
-    fontFamily: type.bold,
-    fontSize: 14,
+  setupTitle: { color: colors.danger, fontFamily: type.bold, fontSize: 14 },
+  envLine: {
+    color: colors.ink,
+    fontFamily: type.body,
+    fontSize: 12,
   },
-  error: {
-    color: colors.danger,
-    fontFamily: type.medium,
-    fontSize: 14,
-  },
+  error: { color: colors.danger, fontFamily: type.medium, fontSize: 14 },
   hint: {
     color: colors.muted,
     fontFamily: type.body,

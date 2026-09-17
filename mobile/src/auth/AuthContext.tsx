@@ -1,6 +1,7 @@
 import {
   useEmbeddedEthereumWallet,
   useLoginWithEmail,
+  useLoginWithOAuth,
   usePrivy,
 } from "@privy-io/expo";
 import * as SecureStore from "expo-secure-store";
@@ -84,6 +85,8 @@ type AuthContextValue = {
   sendOtp: (email: string) => Promise<void>;
   /** Submit email OTP (Privy). */
   loginWithOtp: (code: string, email: string) => Promise<void>;
+  /** Native Sign in with Apple (Privy OAuth). */
+  loginWithApple: () => Promise<void>;
   otpStatus: string;
   /** Demo-only local login (feature flag). */
   loginWithEmail: (email: string) => Promise<void>;
@@ -140,6 +143,7 @@ function PrivyAuthProvider({ children }: { children: React.ReactNode }) {
   const { user: privyUser, isReady: privyReady, logout: privyLogout } = usePrivy();
   const { wallets } = useEmbeddedEthereumWallet();
   const { sendCode, loginWithCode, state: otpState } = useLoginWithEmail();
+  const { login: oauthLogin, state: oauthState } = useLoginWithOAuth();
   const [user, setUser] = useState<SessionUser | null>(null);
   const [ready, setReady] = useState(false);
   const [privyStuck, setPrivyStuck] = useState(false);
@@ -192,6 +196,12 @@ function PrivyAuthProvider({ children }: { children: React.ReactNode }) {
     [loginWithCode],
   );
 
+  const loginWithApple = useCallback(async () => {
+    await oauthLogin({ provider: "apple" });
+  }, [oauthLogin]);
+
+  const appleBusy = oauthState?.status === "loading";
+
   const logout = useCallback(async () => {
     try {
       await privyLogout();
@@ -214,17 +224,33 @@ function PrivyAuthProvider({ children }: { children: React.ReactNode }) {
       missingPrivyConfig: false,
       sendOtp,
       loginWithOtp,
-      otpStatus: otpState?.status ?? "initial",
+      loginWithApple,
+      otpStatus:
+        otpState?.status && otpState.status !== "initial"
+          ? otpState.status
+          : appleBusy
+            ? "loading"
+            : (otpState?.status ?? "initial"),
       loginWithEmail: async () => {
-        throw new Error("Demo auth disabled — use Privy email OTP");
+        throw new Error("Demo auth disabled — use Privy email OTP or Apple");
       },
       signupWithEmail: async () => {
-        throw new Error("Demo auth disabled — use Privy email OTP");
+        throw new Error("Demo auth disabled — use Privy email OTP or Apple");
       },
       logout,
       getEthereumProvider,
     }),
-    [user, ready, sendOtp, loginWithOtp, otpState?.status, logout, getEthereumProvider],
+    [
+      user,
+      ready,
+      sendOtp,
+      loginWithOtp,
+      loginWithApple,
+      otpState?.status,
+      appleBusy,
+      logout,
+      getEthereumProvider,
+    ],
   );
 
   // Silence unused env (used for docs / debugging)
@@ -329,6 +355,9 @@ function DemoAuthProvider({
         throw new Error("Privy not configured");
       },
       loginWithOtp: async () => {
+        throw new Error("Privy not configured");
+      },
+      loginWithApple: async () => {
         throw new Error("Privy not configured");
       },
       otpStatus: "initial",
