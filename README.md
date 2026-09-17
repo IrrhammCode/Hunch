@@ -22,7 +22,7 @@ Swipe UP or DOWN on 60-second fully onchain markets, built on Monad.
 
 **Honest blockers (host must do, not in repo):** Privy App ID + Client ID · EAS/TestFlight install · ngrok/public API URL if off-LAN · record demo video · funded testnet `PRIVATE_KEY`.
 
-**UI design (no backend):** [mobile/DESIGN.md](mobile/DESIGN.md) — mock data + browser (`cd mobile && copy .env.design .env && npm run design`).
+**UI design (no backend):** [mobile/README.DESIGN.md](mobile/README.DESIGN.md) — kirim ke temen · [mobile/DESIGN.md](mobile/DESIGN.md) · `cd mobile && copy .env.design .env && npm run design`.
 
 Preflight + smoke (no trades):
 

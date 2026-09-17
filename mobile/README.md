@@ -8,7 +8,8 @@ Swipe UP or DOWN on 60-second onchain markets on Monad.
 
 For designers / Android / **browser** without API or Privy:
 
-→ Full guide: **[DESIGN.md](./DESIGN.md)**
+→ **Kirim ke temen design:** [README.DESIGN.md](./README.DESIGN.md) (bahasa gampang)  
+→ Detail: [DESIGN.md](./DESIGN.md)
 
 ```powershell
 cd mobile
