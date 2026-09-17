@@ -20,6 +20,7 @@
     "indexer": "ts-node src/indexer/index.ts",
     "api": "ts-node src/api/index.ts",
     "backend": "ts-node src/keeper/index.ts",
+    "smoke:demo": "ts-node scripts/smokeDemo.ts",
     "clean": "hardhat clean"
   },
   "devDependencies": {

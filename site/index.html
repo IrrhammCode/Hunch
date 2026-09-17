@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Hunch — Swipe UP or DOWN. 60s markets on Monad.</title>
+  <meta name="description" content="Hunch: swipe UP or DOWN on 60-second fully onchain markets on Monad. Metropolis Track 01 · Agora · Privy · Pyth." />
+  <link rel="icon" href="../mobile/assets/images/favicon.png" />
+  <style>
+    :root {
+      --bg: #0A0B0D;
+      --bg2: #12141A;
+      --ink: #F2F1EC;
+      --muted: #8B8E97;
+      --line: rgba(242, 241, 236, 0.12);
+      --brand: #D6FF3F;
+      --up: #2EE59D;
+      --down: #FF4D6A;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.55;
+      min-height: 100vh;
+    }
+    a { color: var(--brand); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .wrap {
+      width: min(920px, calc(100% - 40px));
+      margin: 0 auto;
+    }
+
+    /* Hero — one composition, no orbs */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 64px 0 48px;
+      border-bottom: 1px solid var(--line);
+    }
+    .kicker {
+      font-size: 12px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+    .wordmark {
+      font-size: clamp(64px, 14vw, 112px);
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      color: var(--brand);
+      line-height: 0.95;
+      margin-bottom: 20px;
+    }
+    .headline {
+      font-size: clamp(22px, 4vw, 32px);
+      font-weight: 600;
+      max-width: 18em;
+      margin-bottom: 14px;
+    }
+    .lede {
+      color: var(--muted);
+      font-size: 17px;
+      max-width: 36em;
+      margin-bottom: 32px;
+    }
+    .ctas {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      padding: 12px 18px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      border: 1px solid var(--line);
+      color: var(--ink);
+      text-decoration: none;
+    }
+    .btn:hover { text-decoration: none; opacity: 0.9; }
+    .btn-primary {
+      background: var(--brand);
+      color: var(--bg);
+      border-color: var(--brand);
+    }
+    .btn-up { color: var(--up); border-color: rgba(46, 229, 157, 0.35); }
+    .btn-down { color: var(--down); border-color: rgba(255, 77, 106, 0.35); }
+
+    section {
+      padding: 56px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    h2 {
+      font-size: 13px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--brand);
+      margin-bottom: 20px;
+    }
+    .steps {
+      list-style: none;
+      display: grid;
+      gap: 14px;
+      margin-bottom: 28px;
+    }
+    .steps li {
+      display: grid;
+      grid-template-columns: 40px 1fr;
+      gap: 12px;
+      align-items: start;
+    }
+    .n {
+      color: var(--brand);
+      font-weight: 800;
+      font-size: 18px;
+      font-variant-numeric: tabular-nums;
+    }
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .tag {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .tag strong { color: var(--ink); font-weight: 700; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    th, td {
+      text-align: left;
+      padding: 10px 8px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+    }
+    th {
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+    code, .mono {
+      font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+      font-size: 12px;
+      color: var(--ink);
+      word-break: break-all;
+    }
+
+    footer {
+      padding: 36px 0 56px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    footer p + p { margin-top: 8px; }
+
+    @media (max-width: 560px) {
+      .hero { min-height: auto; padding-top: 48px; }
+      .wordmark { font-size: 64px; }
+      table { font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="wrap">
+      <p class="kicker">Metropolis Track 01 · Agora · Privy · Pyth</p>
+      <h1 class="wordmark">HUNCH</h1>
+      <p class="headline">Swipe UP or DOWN. 60-second markets on Monad.</p>
+      <p class="lede">
+        One gesture on iOS. Privy email OTP creates an embedded wallet; that wallet is the onchain
+        trader. Pyth prices every 60s BTC/USD round on Monad testnet.
+      </p>
+      <div class="ctas">
+        <a class="btn btn-primary" href="https://github.com/IrrhammCode/Hunch">GitHub</a>
+        <a class="btn btn-up" href="https://github.com/IrrhammCode/Hunch/blob/master/mobile/DEMO.md">Try path</a>
+        <a class="btn" href="https://github.com/IrrhammCode/Hunch/blob/master/SUBMIT.md">Submit write-up</a>
+        <a class="btn btn-down" href="https://github.com/IrrhammCode/Hunch/blob/master/DEMO_VIDEO_SCRIPT.md">Video script</a>
+      </div>
+    </div>
+  </header>
+
+  <section>
+    <div class="wrap">
+      <h2>How it works</h2>
+      <ol class="steps">
+        <li><span class="n">01</span><span>Email OTP via <strong>Privy</strong> — embedded Ethereum wallet on Monad.</span></li>
+        <li><span class="n">02</span><span>Fund testnet <strong>AUSD</strong> + <strong>MON</strong> (capped faucet).</span></li>
+        <li><span class="n">03</span><span>Swipe <strong style="color:var(--up)">UP</strong> or <strong style="color:var(--down)">DOWN</strong> on the live 60s round. Wallet signs <code>commitBuy</code>.</span></li>
+        <li><span class="n">04</span><span>API relays <code>executeBuy</code> after delay-blocks with a fresh <strong>Pyth</strong> price.</span></li>
+        <li><span class="n">05</span><span>Keeper resolves → claim in BOOK → open the tx on MonadVision.</span></li>
+      </ol>
+      <div class="tags">
+        <span class="tag"><strong>Track 01</strong> · Onchain Finance</span>
+        <span class="tag"><strong>Agora</strong> · AUSD shape</span>
+        <span class="tag"><strong>Privy</strong> · OTP + wallet</span>
+        <span class="tag"><strong>Pyth</strong> · BTC/USD</span>
+        <span class="tag"><strong>Monad</strong> · chainId 10143</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <h2>Contracts · Monad testnet</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Contract</th>
+            <th>Address</th>
+            <th>Explorer</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Factory</td>
+            <td class="mono">0x9b708E57B0a51d03207b0c65392D50de40e1B250</td>
+            <td><a href="https://testnet.monadvision.com/address/0x9b708E57B0a51d03207b0c65392D50de40e1B250" rel="noopener">MonadVision</a></td>
+          </tr>
+          <tr>
+            <td>Vault</td>
+            <td class="mono">0xe064D0B2edE1891ebD0F815eDADd45541c62C927</td>
+            <td><a href="https://testnet.monadvision.com/address/0xe064D0B2edE1891ebD0F815eDADd45541c62C927" rel="noopener">MonadVision</a></td>
+          </tr>
+          <tr>
+            <td>MockAUSD</td>
+            <td class="mono">0xB5C6B27f0128A317171C5658eAfAC901d52f2989</td>
+            <td><a href="https://testnet.monadvision.com/address/0xB5C6B27f0128A317171C5658eAfAC901d52f2989" rel="noopener">MonadVision</a></td>
+          </tr>
+          <tr>
+            <td>Pyth</td>
+            <td class="mono">0x2880aB155794e7179c9eE2e38200202908C17B43</td>
+            <td><a href="https://testnet.monadvision.com/address/0x2880aB155794e7179c9eE2e38200202908C17B43" rel="noopener">MonadVision</a></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap">
+      <p>
+        Source: <a href="https://github.com/IrrhammCode/Hunch">github.com/IrrhammCode/Hunch</a>
+        · Ops: <a href="https://github.com/IrrhammCode/Hunch/blob/master/OPS.md">OPS.md</a>
+      </p>
+      <p>Open locally: open this file in a browser · GitHub Pages: Settings → Pages → deploy from <code>/site</code>.</p>
+    </div>
+  </footer>
+</body>
+</html>

@@ -16,6 +16,7 @@ Judge path: [mobile/DEMO.md](mobile/DEMO.md)
 - [ ] `npm run api` listening on **:8787**
 - [ ] `npm run keeper` opening + resolving rounds
 - [ ] Smoke: `curl -s localhost:8787/health` → `{"ok":true}`
+- [ ] Full smoke: `npm run smoke:demo` → all **PASS** (health, config vs deployments, current round)
 
 ### Mobile
 

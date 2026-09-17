@@ -4,17 +4,44 @@ Swipe UP or DOWN on 60-second fully onchain markets, built on Monad.
 
 **Metropolis Track 01** · Agora Mobile · Privy · Pyth · Deadline Oct 13, 2026
 
+## For judges
+
+**One-liner:** Swipe UP or DOWN. 60-second markets on Monad.
+
+| | Link |
+|---|---|
+| Judge try path | [mobile/DEMO.md](mobile/DEMO.md) |
+| Full write-up | [SUBMIT.md](SUBMIT.md) |
+| Form fields | [SUBMISSION_FORM.md](SUBMISSION_FORM.md) |
+| Day-of ops | [OPS.md](OPS.md) |
+| Landing page | [site/index.html](site/index.html) (GitHub Pages: Settings → Pages → `/site`) |
+| Video outline | [DEMO_VIDEO_SCRIPT.md](DEMO_VIDEO_SCRIPT.md) |
+| Mobile / EAS | [mobile/README.md](mobile/README.md) |
+
+**Honest blockers (host must do, not in repo):** Privy App ID + Client ID · EAS/TestFlight install · ngrok/public API URL if off-LAN · record demo video · funded testnet `PRIVATE_KEY`.
+
+Smoke a running API (no trades):
+
+```bash
+npm run api          # terminal 1
+npm run keeper       # terminal 2
+npm run smoke:demo   # terminal 3 — PASS/FAIL health + config + current round
+```
+
 ## Submit
 
 | Doc | Use |
 |---|---|
 | [SUBMIT.md](SUBMIT.md) | Paste-ready judge write-up |
+| [SUBMISSION_FORM.md](SUBMISSION_FORM.md) | Platform form answers + TODOs |
 | [mobile/DEMO.md](mobile/DEMO.md) | 5-minute try path |
 | [OPS.md](OPS.md) | Day-of mentor checklist |
 | [DEMO_VIDEO_SCRIPT.md](DEMO_VIDEO_SCRIPT.md) | ~90s video shot list |
 | [mobile/README.md](mobile/README.md) | Privy + EAS / TestFlight runbook |
 
 > **EAS preview:** replace `EXPO_PUBLIC_API_URL` in `mobile/eas.json` (and `mobile/.env`) with your LAN IP or ngrok host **before** building. Do not ship the placeholder URL.
+
+> **Landing page:** open `site/index.html` in a browser. To publish: GitHub repo → **Settings → Pages → Deploy from branch → `master` / `/site`**.
 
 ---
 
