@@ -66,8 +66,8 @@ eas build:configure
 
 Confirm `app.json` still has:
 
-- `ios.bundleIdentifier`: `com.hunch.app`
-- `android.package`: `com.hunch.app`
+- `ios.bundleIdentifier`: `com.hunch123.app`
+- `android.package`: `com.hunch123.app`
 - `scheme`: `hunch`
 
 ---
@@ -134,13 +134,42 @@ Full path: [mobile/DEMO.md](./mobile/DEMO.md) · Day-of: [OPS.md](./OPS.md)
 
 ---
 
+## Windows: junk `System32\npm` (Open with dialog)
+
+If typing `npm` opens **“How do you want to open this file?”**, Windows is hitting a **0-byte** file at `C:\Windows\System32\npm` (it wins PATH over `C:\Program Files\nodejs\npm.cmd`).
+
+**Do not** pick Word/Paint. Press **Esc** / close the dialog.
+
+**Fix once (Admin PowerShell):**
+
+```powershell
+Remove-Item "C:\Windows\System32\npm" -Force
+```
+
+**Until you delete it**, use the repo helper (calls real npm):
+
+```bat
+scripts\win-npm.cmd run api
+scripts\win-npm.cmd run keeper
+scripts\win-npm.cmd run doctor
+scripts\win-npm.cmd run smoke:demo
+```
+
+Or full path:
+
+```powershell
+& "C:\Program Files\nodejs\npm.cmd" run api
+```
+
+---
+
 ## Troubleshooting
 
 | Problem | Fix |
 |---|---|
 | **Expo Go** + Privy crash / missing module | Install EAS **development client** |
 | `eas login` fails | `eas whoami`; re-login; check network |
-| Bundle ID mismatch | Privy client + `app.json` + Apple app ID all `com.hunch.app` |
+| Bundle ID mismatch | Privy client + `app.json` + Apple app ID all `com.hunch123.app` |
 | Build succeeds, API offline | `EXPO_PUBLIC_API_URL` wrong IP; phone not on same LAN; Windows firewall TCP **8787** |
 | Cleartext HTTP blocked | LAN `http://` needs ATS local networking (already in `app.json`); prefer ngrok **https** for judges |
 | Metro “No apps connected” | Dev client open? Same Wi‑Fi? Try `npx expo start --dev-client --lan` |
