@@ -21,6 +21,7 @@
     "api": "ts-node src/api/index.ts",
     "backend": "ts-node src/keeper/index.ts",
     "smoke:demo": "ts-node scripts/smokeDemo.ts",
+    "doctor": "ts-node scripts/doctor.ts",
     "clean": "hardhat clean"
   },
   "devDependencies": {

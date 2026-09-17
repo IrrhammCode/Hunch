@@ -3,7 +3,19 @@
 Short runbook so the demo does not brick mid-pitch.
 
 Repo: https://github.com/IrrhammCode/Hunch  
-Judge path: [mobile/DEMO.md](mobile/DEMO.md)
+Judge path: [mobile/DEMO.md](mobile/DEMO.md)  
+Setup: [PRIVY_SETUP.md](./PRIVY_SETUP.md) · [EAS_SETUP.md](./EAS_SETUP.md)
+
+---
+
+## Setup order (do once, then daily)
+
+1. **Privy** — [PRIVY_SETUP.md](./PRIVY_SETUP.md) → paste App ID + Client ID into `mobile/.env`
+2. **EAS / device** — [EAS_SETUP.md](./EAS_SETUP.md) → install dev client on iPhone
+3. **Backend** — root `.env` · `npm run api` + `npm run keeper`
+4. **Preflight** — `npm run doctor` (must not fail on Privy / PRIVATE_KEY)
+5. **Smoke** — `npm run smoke:demo`
+6. **Judge path** — [mobile/DEMO.md](./mobile/DEMO.md)
 
 ---
 
@@ -15,6 +27,7 @@ Judge path: [mobile/DEMO.md](mobile/DEMO.md)
 - [ ] Vault funded (AUSD seed) — `npm run deploy:vault` if this is a fresh machine
 - [ ] `npm run api` listening on **:8787**
 - [ ] `npm run keeper` opening + resolving rounds
+- [ ] `npm run doctor` — no ❌ on PRIVATE_KEY / Privy IDs
 - [ ] Smoke: `curl -s localhost:8787/health` → `{"ok":true}`
 - [ ] Full smoke: `npm run smoke:demo` → all **PASS** (health, config vs deployments, current round)
 

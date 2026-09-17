@@ -14,15 +14,18 @@ Swipe UP or DOWN on 60-second fully onchain markets, built on Monad.
 | Full write-up | [SUBMIT.md](SUBMIT.md) |
 | Form fields | [SUBMISSION_FORM.md](SUBMISSION_FORM.md) |
 | Day-of ops | [OPS.md](OPS.md) |
+| **Privy setup** | [PRIVY_SETUP.md](PRIVY_SETUP.md) |
+| **EAS / device** | [EAS_SETUP.md](EAS_SETUP.md) |
 | Landing page | [site/index.html](site/index.html) (GitHub Pages: Settings → Pages → `/site`) |
 | Video outline | [DEMO_VIDEO_SCRIPT.md](DEMO_VIDEO_SCRIPT.md) |
 | Mobile / EAS | [mobile/README.md](mobile/README.md) |
 
 **Honest blockers (host must do, not in repo):** Privy App ID + Client ID · EAS/TestFlight install · ngrok/public API URL if off-LAN · record demo video · funded testnet `PRIVATE_KEY`.
 
-Smoke a running API (no trades):
+Preflight + smoke (no trades):
 
 ```bash
+npm run doctor       # env + repo readiness (secrets never printed)
 npm run api          # terminal 1
 npm run keeper       # terminal 2
 npm run smoke:demo   # terminal 3 — PASS/FAIL health + config + current round
@@ -34,6 +37,8 @@ npm run smoke:demo   # terminal 3 — PASS/FAIL health + config + current round
 |---|---|
 | [SUBMIT.md](SUBMIT.md) | Paste-ready judge write-up |
 | [SUBMISSION_FORM.md](SUBMISSION_FORM.md) | Platform form answers + TODOs |
+| [PRIVY_SETUP.md](PRIVY_SETUP.md) | Dashboard click-path for OTP + wallet |
+| [EAS_SETUP.md](EAS_SETUP.md) | Dev client / TestFlight runbook |
 | [mobile/DEMO.md](mobile/DEMO.md) | 5-minute try path |
 | [OPS.md](OPS.md) | Day-of mentor checklist |
 | [DEMO_VIDEO_SCRIPT.md](DEMO_VIDEO_SCRIPT.md) | ~90s video shot list |

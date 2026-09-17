@@ -2,6 +2,8 @@
 
 Fill TODOs before submitting on Metropolis / Rise In.
 
+> **Before you submit:** run `npm run doctor` at the repo root. It must not fail on Privy IDs or `PRIVATE_KEY`. Setup: [PRIVY_SETUP.md](./PRIVY_SETUP.md) · [EAS_SETUP.md](./EAS_SETUP.md).
+
 ---
 
 ## Project name
