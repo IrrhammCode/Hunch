@@ -8,6 +8,7 @@ import {
   marketContract,
   pythContract,
 } from "../shared/chain";
+import { feedIdFor } from "../shared/markets";
 import { pullPythOnchain, waitForReceipt } from "../shared/pythPull";
 
 async function sleep(ms: number) {
@@ -15,18 +16,32 @@ async function sleep(ms: number) {
 }
 
 /**
- * Hackathon demo path: server wallet commits + executes until Privy UserOps ship.
- * YES = UP, NO = DOWN.
+ * Demo path: server wallet commits + executes. YES = UP, NO = DOWN.
+ * `symbol` selects BTC/ETH/SOL market via factory.latestRoundByFeed.
  */
-export async function demoTrade(side: "YES" | "NO", amountAUSD: string) {
+export async function demoTrade(side: "YES" | "NO", amountAUSD: string, symbol?: string) {
   const wallet = getWallet();
   const provider = getProvider();
   const dep = loadDeployment();
   const factory = factoryContract(wallet, dep);
-  const roundCount = Number(await factory.roundCount());
-  if (roundCount === 0) throw new Error("no rounds yet");
+  const feedId = feedIdFor(symbol);
+  const roundIdBn = (await factory.latestRoundByFeed(feedId)) as bigint;
+  if (!roundIdBn || roundIdBn === 0n) {
+    // fallback: last global round
+    const count = Number(await factory.roundCount());
+    if (count === 0) throw new Error("no rounds yet");
+    const marketAddr = (await factory.rounds(count)) as string;
+    return demoTradeOnMarket(side, amountAUSD, marketAddr);
+  }
+  const marketAddr = (await factory.rounds(roundIdBn)) as string;
+  return demoTradeOnMarket(side, amountAUSD, marketAddr);
+}
 
-  const marketAddr = (await factory.rounds(roundCount)) as string;
+async function demoTradeOnMarket(side: "YES" | "NO", amountAUSD: string, marketAddr: string) {
+  const wallet = getWallet();
+  const provider = getProvider();
+  const dep = loadDeployment();
+  const factory = factoryContract(wallet, dep);
   const market = marketContract(marketAddr, wallet);
   const status = Number(await market.status());
   if (status !== 0) throw new Error("round not open");
@@ -58,7 +73,12 @@ export async function demoTrade(side: "YES" | "NO", amountAUSD: string) {
   }
 
   const pyth = pythContract(wallet, dep);
-  await pullPythOnchain(pyth, dep.btcUsdFeedId, wallet);
+  const feedId = (await market.priceFeedId()) as string;
+  try {
+    await pullPythOnchain(pyth, feedId, wallet);
+  } catch {
+    await pullPythOnchain(pyth, dep.btcUsdFeedId, wallet);
+  }
 
   let execHash: string;
   try {
@@ -75,11 +95,12 @@ export async function demoTrade(side: "YES" | "NO", amountAUSD: string) {
   const yes = await market.yesBalances(wallet.address);
   const no = await market.noBalances(wallet.address);
   const [yesWad, noWad] = await market.spotPrices();
+  void factory;
 
   return {
     mode: "demo-relayer",
     trader: wallet.address,
-    roundId: String(roundCount),
+    roundId: intentId.toString(),
     market: marketAddr,
     side,
     amountAUSD,
@@ -92,6 +113,6 @@ export async function demoTrade(side: "YES" | "NO", amountAUSD: string) {
       yes: ethers.formatUnits(yesWad, 18),
       no: ethers.formatUnits(noWad, 18),
     },
-    explorer: `${dep.chainId === 10143 ? "https://testnet.monadexplorer.com" : ""}/tx/${execHash}`,
+    explorer: `https://testnet.monadvision.com/tx/${execHash}`,
   };
 }

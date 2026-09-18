@@ -20,7 +20,7 @@ import {
   HAS_PRIVY,
   PRIVY_APP_ID,
   PRIVY_CLIENT_ID,
-  monadTestnet,
+  SUPPORTED_CHAINS,
 } from "@/src/config/chain";
 import { colors } from "@/src/theme";
 
@@ -79,7 +79,7 @@ export default function RootLayout() {
     <PrivyProvider
       appId={PRIVY_APP_ID}
       clientId={PRIVY_CLIENT_ID}
-      supportedChains={[monadTestnet]}
+      supportedChains={SUPPORTED_CHAINS as any}
       config={{
         embedded: {
           ethereum: {

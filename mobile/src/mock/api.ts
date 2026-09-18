@@ -258,7 +258,7 @@ export const mockApi = {
     };
   },
 
-  async demoTrade(side: "UP" | "DOWN", amountAUSD = "10"): Promise<DemoTradeResult> {
+  async demoTrade(side: "UP" | "DOWN", amountAUSD = "10", _symbol?: string): Promise<DemoTradeResult> {
     await delay(450);
     ensureLiveRound();
     const amt = Number(amountAUSD) || 10;
@@ -308,6 +308,73 @@ export const mockApi = {
 
   async demoFaucet(amountAUSD = "1000") {
     return mockApi.walletFaucet(DESIGN_ADDRESS, amountAUSD);
+  },
+
+  async fetchMarketBoard(_chain?: string) {
+    await delay(100);
+    const remaining = timeRemainingSec();
+    const mk = (symbol: string, chain: string, chainId: number, hub: boolean) => ({
+      symbol,
+      pair: `${symbol}-USD`,
+      label: `${symbol} / USD`,
+      chain,
+      chainId,
+      settlementHub: hub,
+      status: "open" as const,
+      roundId: String(store.roundId),
+      market: MARKET,
+      timeRemaining: remaining,
+      strike: strikeNow(),
+      spot: { yes: "0.52", no: "0.48" },
+    });
+    return {
+      product: "Hunch — mobile multichain trading",
+      feature: "short-horizon UP/DOWN markets",
+      settlement: "multichain · Privy wallet",
+      chains: [
+        { key: "monad", name: "Monad Testnet", chainId: 10143, settlementHub: true, deployed: true },
+        { key: "base", name: "Base Sepolia", chainId: 84532, settlementHub: false, deployed: false },
+      ],
+      markets: [
+        mk("BTC", "monad", 10143, true),
+        mk("ETH", "monad", 10143, true),
+        mk("SOL", "monad", 10143, true),
+        { ...mk("BTC", "base", 84532, false), status: "unavailable" as const, roundId: null, market: null, reason: "deploy pending" },
+      ],
+    };
+  },
+
+  async fetchCrossChainBook(_address: string) {
+    const snap = snapshot();
+    return {
+      address: DESIGN_ADDRESS,
+      model: "same-wallet multichain (mock)",
+      chains: [
+        {
+          chain: "monad",
+          chainName: "Monad Testnet",
+          chainId: 10143,
+          settlementHub: true,
+          available: true,
+          address: snap.address,
+          ausd: snap.ausd,
+          mon: snap.mon,
+          positions: snap.positions,
+          explorer: snap.explorer,
+        },
+        {
+          chain: "base",
+          chainName: "Base Sepolia",
+          chainId: 84532,
+          available: true,
+          address: DESIGN_ADDRESS,
+          ausd: "0",
+          mon: "0",
+          positions: [],
+          note: "Base settlement pending deploy",
+        },
+      ],
+    };
   },
 };
 

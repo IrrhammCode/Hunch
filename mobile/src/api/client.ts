@@ -104,9 +104,10 @@ export type FaucetResult = {
   alreadyFunded?: boolean;
 };
 
-export function fetchCurrentRound() {
+export function fetchCurrentRound(symbol?: string) {
   if (DESIGN_MODE) return mockApi.fetchCurrentRound();
-  return get<CurrentRoundResponse>("/v1/round/current");
+  const q = symbol ? `?symbol=${encodeURIComponent(symbol)}` : "";
+  return get<CurrentRoundResponse>(`/v1/round/current${q}`);
 }
 
 export function fetchRound(id: string) {
@@ -122,7 +123,75 @@ export function fetchRound(id: string) {
 
 export function fetchConfig() {
   if (DESIGN_MODE) return mockApi.fetchConfig();
-  return get<{ chainId: number; duration: number; vault: string | null }>("/v1/config");
+  return get<{
+    chainId: number;
+    duration: number;
+    vault: string | null;
+    markets?: { symbol: string; pair: string }[];
+    chains?: { key: string; name: string; chainId: number; settlementHub?: boolean }[];
+  }>("/v1/config");
+}
+
+export type MarketBoardRow = {
+  symbol: string;
+  pair: string;
+  label?: string;
+  chain: string;
+  chainId: number;
+  settlementHub?: boolean;
+  status: "open" | "resolved" | "waiting" | "unavailable";
+  roundId: string | null;
+  market: string | null;
+  timeRemaining?: number;
+  strike?: string;
+  spot?: { yes: string; no: string };
+  reason?: string;
+  explorer?: string;
+};
+
+export type MarketBoard = {
+  product: string;
+  feature: string;
+  settlement: string;
+  chains: {
+    key: string;
+    name: string;
+    chainId: number;
+    settlementHub?: boolean;
+    deployed?: boolean;
+    explorer?: string;
+  }[];
+  markets: MarketBoardRow[];
+};
+
+export function fetchMarketBoard(chain?: string) {
+  if (DESIGN_MODE) return mockApi.fetchMarketBoard(chain);
+  const q = chain ? `?chain=${encodeURIComponent(chain)}` : "";
+  return get<MarketBoard>(`/v1/markets${q}`);
+}
+
+export type CrossChainBook = {
+  address: string;
+  model: string;
+  chains: {
+    chain: string;
+    chainName?: string;
+    chainId: number;
+    available?: boolean;
+    settlementHub?: boolean;
+    address?: string;
+    ausd?: string;
+    mon?: string;
+    positions?: WalletPosition[];
+    explorer?: string;
+    error?: string;
+    note?: string;
+  }[];
+};
+
+export function fetchCrossChainBook(address: string) {
+  if (DESIGN_MODE) return mockApi.fetchCrossChainBook(address);
+  return get<CrossChainBook>(`/v1/book/${address}`);
 }
 
 /** Shared demo hot-wallet snapshot (local testing only). */
@@ -142,15 +211,19 @@ export function walletFaucet(address: string, amountAUSD = "1000") {
   return post<FaucetResult>("/v1/wallet/faucet", { address, amountAUSD });
 }
 
-export function fetchCommitCalldata(side: "UP" | "DOWN" | "YES" | "NO", amountAUSD: string) {
+export function fetchCommitCalldata(
+  side: "UP" | "DOWN" | "YES" | "NO",
+  amountAUSD: string,
+  symbol?: string,
+) {
   const normalized = side === "UP" ? "YES" : side === "DOWN" ? "NO" : side;
   if (DESIGN_MODE) return mockApi.fetchCommitCalldata(normalized, amountAUSD);
-  return post<CommitCalldata>("/v1/tx/commit", { side: normalized, amountAUSD });
+  return post<CommitCalldata>("/v1/tx/commit", { side: normalized, amountAUSD, symbol });
 }
 
-export function executeTrade(trader: string, intentId?: string) {
+export function executeTrade(trader: string, intentId?: string, market?: string) {
   if (DESIGN_MODE) return mockApi.executeTrade(trader);
-  return post<ExecuteTradeResult>("/v1/trade/execute", { trader, intentId });
+  return post<ExecuteTradeResult>("/v1/trade/execute", { trader, intentId, market });
 }
 
 export function fetchRedeemCalldata(market?: string) {
@@ -172,9 +245,9 @@ export function fetchQuote(side: "YES" | "NO", amountAUSD: string, market?: stri
 }
 
 /** Demo path — server hot wallet executes trade. */
-export function demoTrade(side: "UP" | "DOWN", amountAUSD = "10") {
+export function demoTrade(side: "UP" | "DOWN", amountAUSD = "10", symbol?: string) {
   if (DESIGN_MODE) return mockApi.demoTrade(side, amountAUSD);
-  return post<DemoTradeResult>("/v1/demo/trade", { side, amountAUSD });
+  return post<DemoTradeResult>("/v1/demo/trade", { side, amountAUSD, symbol });
 }
 
 export function demoRedeem(roundId: string) {

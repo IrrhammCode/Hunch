@@ -1,6 +1,6 @@
 import { defineChain } from "viem";
 
-/** Monad testnet — not always in viem/chains; define explicitly for Privy. */
+/** Monad testnet — settlement hub for Hunch markets. */
 export const monadTestnet = defineChain({
   id: 10143,
   name: "Monad Testnet",
@@ -21,13 +21,32 @@ export const monadTestnet = defineChain({
   },
 });
 
+/** Base Sepolia — second settlement chain (Option P multichain surface). */
+export const baseSepolia = defineChain({
+  id: 84532,
+  name: "Base Sepolia",
+  network: "base-sepolia",
+  nativeCurrency: { decimals: 18, name: "ETH", symbol: "ETH" },
+  rpcUrls: {
+    default: {
+      http: [
+        process.env.EXPO_PUBLIC_BASE_RPC_URL || "https://sepolia.base.org",
+      ],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "Basescan",
+      url: "https://sepolia.basescan.org",
+    },
+  },
+});
+
+export const SUPPORTED_CHAINS = [monadTestnet, baseSepolia];
+
 export const PRIVY_APP_ID = process.env.EXPO_PUBLIC_PRIVY_APP_ID ?? "";
 export const PRIVY_CLIENT_ID = process.env.EXPO_PUBLIC_PRIVY_CLIENT_ID ?? "";
 
-/**
- * Bundle IDs look like com.hunch.app. Privy Client IDs are app-client tokens
- * (often client_… / long opaque id) — never reverse-DNS.
- */
 export function looksLikeBundleId(value: string) {
   return /^com\.[a-z0-9_.-]+$/i.test(value.trim());
 }
@@ -35,28 +54,24 @@ export function looksLikeBundleId(value: string) {
 export const PRIVY_CLIENT_ID_OK =
   Boolean(PRIVY_CLIENT_ID) && !looksLikeBundleId(PRIVY_CLIENT_ID);
 
-/**
- * Design / mock mode — offline fixtures for UI work (browser or Android).
- * No API, no Privy, no chain. See mobile/DESIGN.md
- */
 export const DESIGN_MODE = process.env.EXPO_PUBLIC_DESIGN_MODE === "1";
 
-/** Demo auth when design mode, explicit flag, or Privy credentials missing. */
 export const USE_DEMO_AUTH =
   DESIGN_MODE ||
   process.env.EXPO_PUBLIC_USE_DEMO_AUTH === "1" ||
   !PRIVY_APP_ID;
 
-/** Real Privy only when configured AND not in design mode. */
 export const HAS_PRIVY =
   !DESIGN_MODE && Boolean(PRIVY_APP_ID) && PRIVY_CLIENT_ID_OK;
 
 export const CHAIN_ID = monadTestnet.id;
 
-export function explorerTx(hash: string) {
+export function explorerTx(hash: string, chainKey = "monad") {
+  if (chainKey === "base") return `https://sepolia.basescan.org/tx/${hash}`;
   return `https://testnet.monadvision.com/tx/${hash}`;
 }
 
-export function explorerAddress(addr: string) {
+export function explorerAddress(addr: string, chainKey = "monad") {
+  if (chainKey === "base") return `https://sepolia.basescan.org/address/${addr}`;
   return `https://testnet.monadvision.com/address/${addr}`;
 }

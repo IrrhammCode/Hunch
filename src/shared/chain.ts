@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { Contract, JsonRpcProvider, Wallet, ethers } from "ethers";
 import { MONAD_TESTNET } from "../../config/addresses";
+import { enabledMarkets, type MarketMeta } from "./markets";
 
 export type Deployment = {
   network: string;
@@ -9,6 +10,7 @@ export type Deployment = {
   factory: string;
   pyth: string;
   btcUsdFeedId: string;
+  markets?: { symbol: string; pair: string; feedId: string }[];
   collateral: { address: string; decimals: number; symbol: string };
   vault?: string;
 };
@@ -34,6 +36,12 @@ export function loadDeployment(): Deployment {
   const p = path.join(__dirname, "..", "..", "deployments", "monad-testnet.json");
   if (!fs.existsSync(p)) throw new Error(`Missing ${p}`);
   return JSON.parse(fs.readFileSync(p, "utf8"));
+}
+
+/** Active multi-asset market list (env/catalog). */
+export function activeMarkets(dep?: Deployment): MarketMeta[] {
+  loadEnv();
+  return enabledMarkets();
 }
 
 let cachedProvider: JsonRpcProvider | null = null;
@@ -88,7 +96,7 @@ export function ausdContract(signerOrProvider: ethers.Signer | ethers.Provider, 
       "function decimals() view returns (uint8)",
       "function transfer(address,uint256) returns (bool)",
     ],
-    signerOrProvider
+    signerOrProvider,
   );
 }
 
@@ -101,7 +109,7 @@ export function pythContract(signerOrProvider: ethers.Signer | ethers.Provider, 
       "function getPriceNoOlderThan(bytes32 id, uint256 age) view returns (int64 price, uint64 conf, int32 expo, uint publishTime)",
       "function getPriceUnsafe(bytes32 id) view returns (int64 price, uint64 conf, int32 expo, uint publishTime)",
     ],
-    signerOrProvider
+    signerOrProvider,
   );
 }
 

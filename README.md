@@ -1,8 +1,11 @@
 # Hunch
 
-Swipe UP or DOWN on 60-second fully onchain markets, built on Monad.
+Swipe UP or DOWN on short-horizon onchain markets — a **mobile multichain trading app** on Monad.
 
 **Metropolis Track 01** · Agora Mobile · Privy · Pyth · Deadline Oct 13, 2026
+
+**Product:** Markets board (BTC / ETH / SOL UP-DOWN) · Trade (swipe) · Portfolio (cross-chain BOOK) · You  
+**Settlement:** Monad hub + Base Sepolia surface (same Privy wallet) · CPMM event markets, not TradFi options
 
 ## For judges
 
@@ -143,7 +146,7 @@ Full mobile runbook (Privy verify, EAS, TestFlight): **[mobile/README.md](mobile
 | `EXPO_PUBLIC_PRIVY_CLIENT_ID` | Privy Dashboard → mobile App Client ID |
 | `EXPO_PUBLIC_USE_DEMO_AUTH` | `1` = local demo login without Privy |
 
-**Privy Dashboard setup:** enable **Email OTP** + **Embedded wallets (Ethereum → create on login)** + add an App Client for iOS bundle `com.hunch.app`.
+**Privy Dashboard setup:** enable **Email OTP** + **Embedded wallets (Ethereum → create on login)** + add an App Client for iOS bundle `com.hunch123.app`.
 
 ### 2b. EAS / TestFlight
 

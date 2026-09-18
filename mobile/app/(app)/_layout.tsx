@@ -17,7 +17,7 @@ type TabBarProps = {
 };
 
 function TabIcon({ label, focused }: { label: string; focused: boolean }) {
-  const primary = label === "HUNCH";
+  const primary = label === "TRADE" || label === "MARKETS";
   return (
     <View style={styles.iconWrap}>
       <Text
@@ -44,7 +44,13 @@ function ArenaTabBar({ state, navigation }: TabBarProps) {
       {state.routes.map((route, index) => {
         const focused = state.index === index;
         const label =
-          route.name === "index" ? "HUNCH" : route.name === "positions" ? "BOOK" : "YOU";
+          route.name === "index"
+            ? "TRADE"
+            : route.name === "markets"
+              ? "MARKETS"
+              : route.name === "positions"
+                ? "PORTFOLIO"
+                : "YOU";
 
         const onPress = () => {
           const event = navigation.emit({
@@ -84,8 +90,9 @@ export default function AppLayout() {
       tabBar={(props) => <ArenaTabBar {...(props as unknown as TabBarProps)} />}
       screenOptions={{ headerShown: false }}
     >
-      <Tabs.Screen name="index" options={{ title: "Hunch" }} />
-      <Tabs.Screen name="positions" options={{ title: "Positions" }} />
+      <Tabs.Screen name="markets" options={{ title: "Markets" }} />
+      <Tabs.Screen name="index" options={{ title: "Trade" }} />
+      <Tabs.Screen name="positions" options={{ title: "Portfolio" }} />
       <Tabs.Screen name="profile" options={{ title: "You" }} />
     </Tabs>
   );

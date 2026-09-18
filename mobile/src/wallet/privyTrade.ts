@@ -109,8 +109,10 @@ export async function placePrivyTrade(params: {
   address: string;
   side: "UP" | "DOWN";
   amountAUSD: string;
+  symbol?: string;
+  market?: string;
 }): Promise<PrivyTradeResult> {
-  const { provider, address, side, amountAUSD } = params;
+  const { provider, address, side, amountAUSD, symbol, market } = params;
   await ensureChain(provider);
 
   let funded = false;
@@ -131,7 +133,7 @@ export async function placePrivyTrade(params: {
     }
   }
 
-  const calldata = await fetchCommitCalldata(side, amountAUSD);
+  const calldata = await fetchCommitCalldata(side, amountAUSD, symbol);
   await ensureChain(provider);
 
   await sendTx(provider, address, calldata.approve);
@@ -142,9 +144,9 @@ export async function placePrivyTrade(params: {
 
   let result: ExecuteTradeResult;
   try {
-    result = await executeTrade(address, intentId);
+    result = await executeTrade(address, intentId, calldata.market || market);
   } catch {
-    result = await executeTrade(address);
+    result = await executeTrade(address, undefined, calldata.market || market);
   }
 
   return {

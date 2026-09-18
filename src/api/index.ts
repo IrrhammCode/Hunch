@@ -18,6 +18,9 @@ import { demoTrade } from "./demoTrade";
 import { executeCommittedIntent } from "./relayedTrade";
 import { clientIp, pruneRateLimits, rateLimit } from "./rateLimit";
 import { isRateLimitError, withRpcRetry } from "../shared/rpcRetry";
+import { listMarketsBoard, crossChainPortfolio } from "./markets";
+import { enabledMarkets } from "../shared/markets";
+import { CHAINS } from "../shared/multichain";
 import {
   demoFaucetAUSD,
   demoRedeem,
@@ -37,7 +40,7 @@ app.use("*", cors());
 let demoBusy = false;
 
 /** Cache so phone poll + keeper don't melt public RPC (15 req/s cap). */
-let roundCache: { at: number; body: unknown } | null = null;
+let roundCache: { key: string; at: number; body: unknown } | null = null;
 const ROUND_CACHE_MS = Number(process.env.ROUND_CACHE_MS || 5000);
 
 app.get("/health", (c) => c.json({ ok: true, service: "hunch-api" }));
@@ -50,6 +53,13 @@ app.get("/v1/config", (c) => {
     collateral: dep.collateral,
     pyth: dep.pyth,
     btcUsdFeedId: dep.btcUsdFeedId,
+    markets: enabledMarkets(),
+    chains: CHAINS.map((ch) => ({
+      key: ch.key,
+      name: ch.name,
+      chainId: ch.chainId,
+      settlementHub: Boolean(ch.settlementHub),
+    })),
     vault: dep.vault ?? null,
     explorer: MONAD_TESTNET.explorer,
     delayBlocks: 2,
@@ -57,8 +67,59 @@ app.get("/v1/config", (c) => {
   });
 });
 
+/** Multichain market board — UP/DOWN short-horizon markets per settlement chain */
+app.get("/v1/markets", async (c) => {
+  try {
+    const chain = c.req.query("chain") || undefined;
+    return c.json(await listMarketsBoard(chain));
+  } catch (e: any) {
+    return c.json({ error: e.shortMessage || e.message || String(e) }, 500);
+  }
+});
+
+/** Cross-chain BOOK — same Privy wallet across settlement chains */
+app.get("/v1/book/:address", async (c) => {
+  try {
+    const address = c.req.param("address");
+    if (!ethers.isAddress(address)) return c.json({ error: "bad address" }, 400);
+    return c.json(await crossChainPortfolio(address));
+  } catch (e: any) {
+    return c.json({ error: e.shortMessage || e.message || String(e) }, 500);
+  }
+});
+
+/** Round current for a market symbol (BTC/ETH/SOL) — defaults BTC/latest factory round */
+app.get("/v1/markets/:symbol/current", async (c) => {
+  try {
+    const symbol = c.req.param("symbol").toUpperCase();
+    const board = (await listMarketsBoard()) as { markets: any[] };
+    const hit = board.markets.find((m) => m.symbol === symbol && m.chain === "monad");
+    if (!hit) return c.json({ round: null, error: "unknown market" }, 404);
+    return c.json({
+      round: hit.roundId
+        ? {
+            roundId: hit.roundId,
+            market: hit.market,
+            status: hit.status,
+            strike: hit.strike,
+            expo: hit.expo,
+            expiry: hit.expiry,
+            feedId: hit.feedId,
+          }
+        : null,
+      spot: hit.spot,
+      timeRemaining: hit.timeRemaining,
+      market: hit,
+    });
+  } catch (e: any) {
+    return c.json({ error: e.shortMessage || e.message || String(e) }, 500);
+  }
+});
+
 app.get("/v1/round/current", async (c) => {
-  if (roundCache && Date.now() - roundCache.at < ROUND_CACHE_MS) {
+  const symbol = c.req.query("symbol")?.toUpperCase();
+  const cacheKey = symbol || "latest";
+  if (roundCache && roundCache.key === cacheKey && Date.now() - roundCache.at < ROUND_CACHE_MS) {
     return c.json(roundCache.body);
   }
 
@@ -66,12 +127,27 @@ app.get("/v1/round/current", async (c) => {
     const body = await withRpcRetry(async () => {
       const provider = getProvider();
       const factory = factoryContract(provider);
-      const roundCount = Number(await factory.roundCount());
-      if (roundCount === 0) return { round: null };
+      let marketAddr: string | null = null;
+      let roundId = "";
 
-      const roundId = String(roundCount);
-      const market = (await factory.rounds(roundCount)) as string;
-      const m = marketContract(market, provider);
+      if (symbol) {
+        const { feedIdFor } = await import("../shared/markets");
+        const feedId = feedIdFor(symbol);
+        const idBn = (await factory.latestRoundByFeed(feedId)) as bigint;
+        if (idBn && idBn > 0n) {
+          roundId = idBn.toString();
+          marketAddr = (await factory.rounds(idBn)) as string;
+        }
+      } else {
+        const roundCount = Number(await factory.roundCount());
+        if (roundCount > 0) {
+          roundId = String(roundCount);
+          marketAddr = (await factory.rounds(roundCount)) as string;
+        }
+      }
+      if (!marketAddr) return { round: null };
+
+      const m = marketContract(marketAddr, provider);
 
       const [statusRaw, spots, strike, expiry, startTime, feedId, latest] = await Promise.all([
         m.status(),
@@ -99,8 +175,9 @@ app.get("/v1/round/current", async (c) => {
       return {
         round: {
           roundId,
-          market,
+          market: marketAddr,
           feedId: feedId as string,
+          symbol,
           seed: "0",
           strike: strike.toString(),
           expo: -8,
@@ -118,9 +195,9 @@ app.get("/v1/round/current", async (c) => {
         },
         timeRemaining: statusNum === 0 ? Math.max(0, expiryN - now) : 0,
       };
-    }, { label: "round/current" });
+    }, { label: `round/current:${cacheKey}` });
 
-    roundCache = { at: Date.now(), body };
+    roundCache = { key: cacheKey, at: Date.now(), body };
     return c.json(body);
   } catch (e: any) {
     if (roundCache) return c.json(roundCache.body);
@@ -362,7 +439,7 @@ app.post("/v1/demo/redeem", async (c) => {
 });
 
 app.post("/v1/demo/trade", async (c) => {
-  const body = await c.req.json<{ side: "UP" | "DOWN" | "YES" | "NO"; amountAUSD?: string }>();
+  const body = await c.req.json<{ side: "UP" | "DOWN" | "YES" | "NO"; amountAUSD?: string; symbol?: string }>();
   const sideRaw = (body.side || "").toUpperCase();
   const side: "YES" | "NO" =
     sideRaw === "UP" || sideRaw === "YES" ? "YES" : sideRaw === "DOWN" || sideRaw === "NO" ? "NO" : null!;
@@ -370,7 +447,7 @@ app.post("/v1/demo/trade", async (c) => {
   if (demoBusy) return c.json({ error: "trade in progress — retry in a few seconds" }, 429);
   demoBusy = true;
   try {
-    const result = await demoTrade(side, body.amountAUSD || "10");
+    const result = await demoTrade(side, body.amountAUSD || "10", body.symbol);
     invalidateDemoWalletCache();
     return c.json(result);
   } catch (e: any) {
@@ -399,23 +476,47 @@ app.post("/v1/quote", async (c) => {
 
 /** Calldata for Privy/ZeroDev UserOps — gasless path on iOS */
 app.post("/v1/tx/commit", async (c) => {
-  const body = await c.req.json<{ side: "YES" | "NO"; amountAUSD: string; minShares?: string }>();
-  await syncIndex();
-  const row = currentRound(readStore()) as RoundRow | null;
-  if (!row || row.status !== "open") return c.json({ error: "no open round" }, 400);
+  const body = await c.req.json<{
+    side: "YES" | "NO";
+    amountAUSD: string;
+    minShares?: string;
+    symbol?: string;
+    market?: string;
+  }>();
   const amount = ethers.parseUnits(body.amountAUSD, 6);
   const minShares = ethers.parseUnits(body.minShares || "0", 6);
   const dep = loadDeployment();
+
+  let marketAddr = body.market;
+  if (!marketAddr) {
+    const { feedIdFor } = await import("../shared/markets");
+    const feedId = feedIdFor(body.symbol);
+    const factory = factoryContract(getProvider(), dep);
+    const idBn = (await factory.latestRoundByFeed(feedId)) as bigint;
+    if (idBn && idBn > 0n) marketAddr = (await factory.rounds(idBn)) as string;
+  }
+  if (!marketAddr) {
+    await syncIndex();
+    const row = currentRound(readStore()) as RoundRow | null;
+    if (!row || row.status !== "open") return c.json({ error: "no open round" }, 400);
+    marketAddr = row.market;
+  }
+
+  const m = marketContract(marketAddr, getProvider());
+  const status = Number(await m.status());
+  if (status !== 0) return c.json({ error: "round not open" }, 400);
+
   return c.json({
     chainId: dep.chainId,
-    market: row.market,
+    market: marketAddr,
+    symbol: body.symbol || "BTC",
     collateral: dep.collateral.address,
     approve: {
       to: dep.collateral.address,
-      data: ausdContract(getProvider()).interface.encodeFunctionData("approve", [row.market, amount]),
+      data: ausdContract(getProvider()).interface.encodeFunctionData("approve", [marketAddr, amount]),
       value: "0",
     },
-    commit: buildCommitCalldata(row.market, body.side, amount, minShares),
+    commit: buildCommitCalldata(marketAddr, body.side, amount, minShares),
   });
 });
 

@@ -64,6 +64,11 @@ const config: HardhatUserConfig = {
       chainId: 143,
       accounts: privateKey ? [privateKey] : [],
     },
+    baseSepolia: {
+      url: process.env.BASE_RPC_URL || process.env.BASE_SEPOLIA_RPC_URL || "https://sepolia.base.org",
+      chainId: 84532,
+      accounts: privateKey ? [privateKey] : [],
+    },
   },
   mocha: {
     timeout: 120_000,

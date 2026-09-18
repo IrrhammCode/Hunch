@@ -3,7 +3,7 @@ import { useFocusEffect } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { demoRedeem } from "@/src/api/client";
+import { demoRedeem, fetchCrossChainBook } from "@/src/api/client";
 import { useAuth } from "@/src/auth/AuthContext";
 import { Screen } from "@/src/components/Screen";
 import { useToast } from "@/src/components/Toast";
@@ -20,11 +20,25 @@ export default function PositionsScreen() {
   const toast = useToast();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [lastClaim, setLastClaim] = useState<{ roundId: string; tx: string } | null>(null);
+  const [bookNote, setBookNote] = useState<string | null>(null);
 
   useFocusEffect(
     useCallback(() => {
       refresh();
-    }, [refresh]),
+      (async () => {
+        if (privyMode && user?.address) {
+          try {
+            const book = await fetchCrossChainBook(user.address);
+            const lines = book.chains
+              .map((c) => `${c.chain.toUpperCase()} ${c.available === false ? "off" : `AUSD ${c.ausd ?? "—"}`}`)
+              .join(" · ");
+            setBookNote(lines || null);
+          } catch {
+            setBookNote(null);
+          }
+        }
+      })();
+    }, [refresh, privyMode, user?.address]),
   );
 
   const positions = me?.positions ?? [];
@@ -69,10 +83,11 @@ export default function PositionsScreen() {
       <View style={[styles.wrap, { paddingTop: insets.top + 18, paddingBottom: insets.bottom + 8 }]}>
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Text style={styles.title}>BOOK</Text>
+            <Text style={styles.title}>PORTFOLIO</Text>
             <Text style={styles.sub}>
               {openCount} open · {redeemable.length} to claim
             </Text>
+            {bookNote ? <Text style={styles.bookNote}>{bookNote}</Text> : null}
           </View>
           <View style={styles.headerRight}>
             <BalanceChip label={me ? `${Number(me.ausd).toFixed(0)} AUSD` : "…"} />
@@ -178,6 +193,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   sub: { color: colors.muted, fontFamily: type.body, fontSize: 14 },
+  bookNote: { color: colors.brand, fontFamily: type.medium, fontSize: 12, marginTop: 4 },
   refresh: { color: colors.muted, fontFamily: type.medium, fontSize: 13 },
   error: { color: colors.danger, fontFamily: type.body, fontSize: 13 },
   row: {

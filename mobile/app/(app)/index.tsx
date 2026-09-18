@@ -28,6 +28,7 @@ import { Screen } from "@/src/components/Screen";
 import { useToast } from "@/src/components/Toast";
 import { AmountChip, BalanceChip, PrimaryButton } from "@/src/components/ui";
 import { explorerTx } from "@/src/config/chain";
+import { getSelectedMarket } from "@/src/market/selection";
 import { addHunch, listHunches, settleRound } from "@/src/hunchBook";
 import { useWallet } from "@/src/wallet/WalletContext";
 import { placePrivyTrade } from "@/src/wallet/privyTrade";
@@ -72,7 +73,8 @@ export default function HunchScreen() {
 
   const refresh = useCallback(async () => {
     try {
-      const next = await fetchCurrentRound();
+      const sel = getSelectedMarket();
+      const next = await fetchCurrentRound(sel.symbol);
       setData(next);
       setErr(null);
 
@@ -223,21 +225,23 @@ export default function HunchScreen() {
             address: user.address,
             side,
             amountAUSD: amount,
+            symbol: getSelectedMarket().symbol,
+            market: getSelectedMarket().market || undefined,
           });
           roundId = result.roundId;
           yes = result.yes;
           no = result.no;
           hash = result.executeTx;
           setLastResult(
-            `${side} filled · R${roundId}${result.funded ? " · funded" : ""}`,
+            `${getSelectedMarket().symbol} ${side} · R${roundId}${result.funded ? " · funded" : ""}`,
           );
         } else {
-          const result = await demoTrade(side, amount);
+          const result = await demoTrade(side, amount, getSelectedMarket().symbol);
           roundId = result.roundId;
           yes = result.yes;
           no = result.no;
           hash = result.executeTx;
-          setLastResult(`${side} open · R${roundId}`);
+          setLastResult(`${getSelectedMarket().symbol} ${side} · R${roundId}`);
         }
 
         await addHunch({
@@ -398,7 +402,11 @@ export default function HunchScreen() {
             </View>
 
             <Text style={styles.asset}>
-              {open ? "BTC / USD" : data?.error ? "OFFLINE" : "NEXT ROUND"}
+              {open
+                ? `${getSelectedMarket().label} · ${getSelectedMarket().chain.toUpperCase()}`
+                : data?.error
+                  ? "OFFLINE"
+                  : "NEXT ROUND"}
             </Text>
             <Text style={styles.roundId}>{open ? `ROUND ${round?.roundId}` : "KEEPER LOADING"}</Text>
 

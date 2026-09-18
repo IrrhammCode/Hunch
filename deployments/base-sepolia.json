@@ -1,0 +1,43 @@
+{
+  "network": "Base Sepolia",
+  "chainId": 84532,
+  "status": "template — run deploy on Base after Monad hub is green",
+  "deployedAt": null,
+  "deployer": null,
+  "pyth": "0x5955c1478f0dAD11bE355b853d1E49d43c81e9d1",
+  "btcUsdFeedId": "0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43",
+  "markets": [
+    {
+      "symbol": "BTC",
+      "pair": "BTC-USD",
+      "feedId": "0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43"
+    },
+    {
+      "symbol": "ETH",
+      "pair": "ETH-USD",
+      "feedId": "0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace"
+    },
+    {
+      "symbol": "SOL",
+      "pair": "SOL-USD",
+      "feedId": "0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d"
+    }
+  ],
+  "collateral": {
+    "address": "0x0000000000000000000000000000000000000000",
+    "symbol": "MockAUSD",
+    "decimals": 6,
+    "note": "Deploy MockAUSD + Factory + Vault on Base Sepolia, then fill addresses"
+  },
+  "factory": null,
+  "vault": null,
+  "explorer": {
+    "factory": null,
+    "vault": null
+  },
+  "notes": [
+    "Same-wallet multichain: Privy EOA trades on Monad and Base independently",
+    "Cross-chain BOOK aggregates API snapshots per chain — not a token bridge",
+    "Testnet AUSD is minted per-chain via faucet (no bridge for MockAUSD)"
+  ]
+}

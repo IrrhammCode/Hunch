@@ -2,7 +2,7 @@
 
 Swipe UP or DOWN on 60-second onchain markets on Monad.
 
-**Track 01 · Agora Mobile · Privy · Pyth** · Bundle ID `com.hunch.app`
+**Track 01 · Agora Mobile · Privy · Pyth** · Bundle ID `com.hunch123.app`
 
 ## Design mode (UI only — mock data)
 
@@ -31,8 +31,8 @@ Privy requires a **custom development client** (or TestFlight/ad-hoc build). **E
 1. Open [https://dashboard.privy.io](https://dashboard.privy.io) → create an app named **Hunch**.
 2. **Login methods** → enable **Email** (OTP).
 3. **Embedded wallets** → enable **Ethereum** → *create on login*.
-4. **App Clients** → **New client** → iOS → bundle ID `com.hunch.app` → copy **Client ID**.
-5. (Optional) Android client with package `com.hunch.app`.
+4. **App Clients** → **New client** → iOS → bundle ID `com.hunch123.app` → copy **Client ID**.
+5. (Optional) Android client with package `com.hunch123.app`.
 
 You need:
 - **App ID** (dashboard home)

@@ -9,18 +9,19 @@
     "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.hunch.app",
+      "bundleIdentifier": "com.hunch123.app",
       "infoPlist": {
         "NSFaceIDUsageDescription": "Unlock Hunch and confirm hunches with Face ID.",
         "NSLocalNetworkUsageDescription": "Hunch talks to your local API on the same Wi‑Fi.",
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": true,
           "NSAllowsLocalNetworking": true
-        }
+        },
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
-      "package": "com.hunch.app",
+      "package": "com.hunch123.app",
       "usesCleartextTraffic": true,
       "adaptiveIcon": {
         "backgroundColor": "#0A0B0D",
@@ -49,6 +50,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "8d33d3ed-4d5f-481f-8335-702e0c333dcb"
+      }
     }
   }
 }

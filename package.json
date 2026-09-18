@@ -13,6 +13,7 @@
     "smoke:monad": "hardhat run scripts/smokeMonad.ts --network monadTestnet",
     "deploy:monad": "hardhat run scripts/deployMonadTestnet.ts --network monadTestnet",
     "deploy:vault": "hardhat run scripts/deployVaultTestnet.ts --network monadTestnet",
+    "deploy:base": "hardhat run scripts/deployBaseSepolia.ts --network baseSepolia",
     "open:monad": "hardhat run scripts/openRoundTestnet.ts --network monadTestnet",
     "trade:yes": "hardhat run scripts/tradeYesTestnet.ts --network monadTestnet",
     "resolve:monad": "hardhat run scripts/resolveRedeemTestnet.ts --network monadTestnet",
