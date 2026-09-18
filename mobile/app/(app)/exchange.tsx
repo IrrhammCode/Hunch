@@ -258,7 +258,13 @@ export default function OptionsExchangeScreen() {
         {/* Listed series blotter */}
         <Text style={styles.listHead}>LISTED SERIES</Text>
         <ScrollView
-          contentContainerStyle={{ gap: 10, paddingBottom: 40 }}
+          style={{ flex: 1, width: "100%", alignSelf: "stretch" }}
+          contentContainerStyle={{
+            width: "100%",
+            alignItems: "stretch",
+            gap: 10,
+            paddingBottom: 40,
+          }}
           showsVerticalScrollIndicator={false}
         >
           {rows.map((r) => (
@@ -291,7 +297,7 @@ function LinkingOpen(hash: string) {
 }
 
 const styles = StyleSheet.create({
-  wrap: { flex: 1, paddingHorizontal: space.lg, gap: 10, paddingBottom: 0 },
+  wrap: { flex: 1, width: "100%", alignSelf: "stretch", paddingHorizontal: 14, gap: 10, paddingBottom: 0 },
   header: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
   title: {
     color: colors.ink,

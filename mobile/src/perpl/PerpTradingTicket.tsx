@@ -107,7 +107,7 @@ export function PerpTradingTicket() {
 
   return (
     <ScrollView
-      style={{ flex: 1 }}
+      style={{ flex: 1, width: "100%", alignSelf: "stretch" }}
       contentContainerStyle={styles.container}
       showsVerticalScrollIndicator={false}
     >
@@ -316,9 +316,12 @@ export function PerpTradingTicket() {
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 16,
+    width: "100%",
+    alignSelf: "stretch",
+    alignItems: "stretch",
+    paddingHorizontal: 14,
     paddingTop: 10,
-    paddingBottom: 32,
+    paddingBottom: 36,
     gap: 12,
   },
   tickerStrip: {
@@ -365,6 +368,8 @@ const styles = StyleSheet.create({
     color: colors.down,
   },
   heroMarketCard: {
+    width: "100%",
+    alignSelf: "stretch",
     backgroundColor: "#12141A",
     borderRadius: radius.lg,
     padding: 16,

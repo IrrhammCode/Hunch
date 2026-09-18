@@ -25,6 +25,8 @@ export function Screen({ children, style, ...rest }: ViewProps) {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
+    width: "100%",
+    alignSelf: "stretch",
     backgroundColor: colors.bg,
   },
   designBadge: {

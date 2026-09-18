@@ -30,7 +30,7 @@ SplashScreen.preventAutoHideAsync();
 
 function AppShell() {
   return (
-    <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bg }}>
+    <GestureHandlerRootView style={{ flex: 1, width: "100%", backgroundColor: colors.bg }}>
       <ToastProvider>
         <AuthProvider>
           <WalletProvider>

@@ -102,8 +102,13 @@ export default function ProfileScreen() {
         </View>
 
         <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={{ gap: 12, paddingBottom: 36 }}
+          style={{ flex: 1, width: "100%", alignSelf: "stretch" }}
+          contentContainerStyle={{
+            width: "100%",
+            alignItems: "stretch",
+            gap: 12,
+            paddingBottom: 36,
+          }}
           showsVerticalScrollIndicator={false}
         >
           {/* USER IDENTITY CARD */}
@@ -272,7 +277,9 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   wrap: {
     flex: 1,
-    paddingHorizontal: 16,
+    width: "100%",
+    alignSelf: "stretch",
+    paddingHorizontal: 14,
     backgroundColor: "#0A0B0D",
     paddingBottom: 0,
   },

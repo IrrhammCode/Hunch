@@ -106,8 +106,7 @@ export default function AppLayout() {
       tabBar={(props) => <ArenaTabBar {...(props as unknown as TabBarProps)} />}
       screenOptions={{
         headerShown: false,
-        // Keep pages filling space above the bar — no bottom flicker
-        sceneStyle: { backgroundColor: colors.bg },
+        sceneStyle: { backgroundColor: colors.bg, width: "100%" },
         animation: "fade",
       }}
     >

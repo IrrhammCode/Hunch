@@ -191,8 +191,13 @@ export default function MarketsScreen() {
         </View>
 
         <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={{ gap: 12, paddingBottom: 36 }}
+          style={{ flex: 1, width: "100%", alignSelf: "stretch" }}
+          contentContainerStyle={{
+            width: "100%",
+            alignItems: "stretch",
+            gap: 12,
+            paddingBottom: 36,
+          }}
           showsVerticalScrollIndicator={false}
         >
           {/* HOT ON MONAD FEATURED BANNER */}
@@ -342,7 +347,9 @@ export default function MarketsScreen() {
 const styles = StyleSheet.create({
   wrap: {
     flex: 1,
-    paddingHorizontal: 18,
+    width: "100%",
+    alignSelf: "stretch",
+    paddingHorizontal: 14,
     paddingBottom: 0,
     backgroundColor: "#0A0B0D",
   },

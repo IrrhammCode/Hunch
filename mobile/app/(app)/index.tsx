@@ -378,7 +378,7 @@ export default function HunchScreen() {
           <View style={styles.topBalancePill}>
             <Text style={styles.ausdBadge}>A</Text>
             <Text style={styles.balanceNum}>
-              ${me ? Number(me.ausd).toFixed(2) : "1,250.00"}
+              {me?.ausd != null ? Number(me.ausd).toFixed(2) : "—"}
             </Text>
             <Text style={styles.balanceUnit}>AUSD</Text>
             <Text style={styles.plusIcon}>+</Text>
@@ -422,18 +422,22 @@ export default function HunchScreen() {
         </View>
 
         {tradeMode === "perps" ? (
-          <Animated.View entering={FadeIn.duration(200)} style={{ flex: 1, marginTop: 4, paddingBottom: 8 }}>
+          <Animated.View
+            entering={FadeIn.duration(200)}
+            style={{ flex: 1, width: "100%", alignSelf: "stretch", marginTop: 4, paddingBottom: 8 }}
+          >
             <PerpTradingTicket />
           </Animated.View>
         ) : (
           <ScrollView
-            style={{ flex: 1 }}
+            style={{ flex: 1, width: "100%", alignSelf: "stretch" }}
             contentContainerStyle={{
+              width: "100%",
+              alignItems: "stretch",
               paddingTop: 8,
               paddingBottom: 32,
               gap: 14,
               flexGrow: 1,
-              justifyContent: "flex-start",
             }}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
@@ -599,7 +603,9 @@ export default function HunchScreen() {
 const styles = StyleSheet.create({
   wrap: {
     flex: 1,
-    paddingHorizontal: 16,
+    width: "100%",
+    alignSelf: "stretch",
+    paddingHorizontal: 14,
     backgroundColor: "#0A0B0D",
     paddingBottom: 0,
   },
