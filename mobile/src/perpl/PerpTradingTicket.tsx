@@ -47,11 +47,11 @@ export function PerpTradingTicket() {
 
   const marginNum = parseFloat(marginAUSD) || 0;
   const positionSizeAUSD = marginNum * leverage;
-  const currentPrice = activeMarket ? activeMarket.markPrice : 78240;
+  const currentPrice = activeMarket ? activeMarket.markPrice : 0;
 
   // Est Liquidation price
   const estLiqPrice = useMemo(() => {
-    if (!currentPrice || leverage <= 0) return 70416;
+    if (!currentPrice || leverage <= 0) return 0;
     const dropFraction = 1 / leverage - 0.05;
     return side === "LONG"
       ? Math.max(0, currentPrice * (1 - dropFraction))
@@ -94,13 +94,7 @@ export function PerpTradingTicket() {
     }
   };
 
-  const displayMarkets: PerplMarket[] = markets.length
-    ? markets
-    : [
-        { id: 16, perpetualId: 16, symbol: "BTC", name: "BTC-PERP", sizeUnits: "BTC", markPrice: 78240.0, lastPrice: 78240, bidPrice: 78235, askPrice: 78245, change24hPct: 2.45, volume24hAUSD: 3980000, openInterest: 17.75, fundingRateBps: 4, maxLeverage: 10, priceDecimals: 2, sizeDecimals: 4 },
-        { id: 32, perpetualId: 32, symbol: "ETH", name: "ETH-PERP", sizeUnits: "ETH", markPrice: 2513.5, lastPrice: 2513, bidPrice: 2512, askPrice: 2514, change24hPct: 3.2, volume24hAUSD: 1840000, openInterest: 210, fundingRateBps: 3, maxLeverage: 20, priceDecimals: 2, sizeDecimals: 3 },
-        { id: 48, perpetualId: 48, symbol: "SOL", name: "SOL-PERP", sizeUnits: "SOL", markPrice: 182.4, lastPrice: 182, bidPrice: 182, askPrice: 183, change24hPct: 5.9, volume24hAUSD: 890000, openInterest: 1200, fundingRateBps: 5, maxLeverage: 20, priceDecimals: 2, sizeDecimals: 2 },
-      ];
+  const displayMarkets: PerplMarket[] = markets;
 
   const currentMark = activeMarket || displayMarkets[0];
   const availBalance = me?.ausd != null ? Number(me.ausd).toFixed(2) : "—";
@@ -111,6 +105,17 @@ export function PerpTradingTicket() {
       contentContainerStyle={styles.container}
       showsVerticalScrollIndicator={false}
     >
+      {!currentMark ? (
+        <View style={styles.emptyBox}>
+          <Text style={styles.emptyTitle}>{marketsLoading ? "Loading Perpl markets…" : "No Perpl markets"}</Text>
+          <Text style={styles.emptyBody}>
+            {marketsLoading
+              ? "Fetching live testnet markets from the API."
+              : "Start the API (npm run api) or check Perpl testnet connectivity."}
+          </Text>
+        </View>
+      ) : (
+        <>
       {/* Top Ticker Selector Strip */}
       <View style={styles.tickerStrip}>
         {displayMarkets.map((m) => {
@@ -310,11 +315,33 @@ export function PerpTradingTicket() {
           </>
         )}
       </Pressable>
+        </>
+      )}
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
+  emptyBox: {
+    width: "100%",
+    padding: 24,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.bgElevated,
+    gap: 8,
+  },
+  emptyTitle: {
+    color: colors.ink,
+    fontFamily: type.bold,
+    fontSize: 16,
+  },
+  emptyBody: {
+    color: colors.muted,
+    fontFamily: type.body,
+    fontSize: 13,
+    lineHeight: 18,
+  },
   container: {
     width: "100%",
     alignSelf: "stretch",

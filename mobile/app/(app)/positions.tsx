@@ -97,28 +97,8 @@ export default function PositionsScreen() {
   const unrealizedPnL = perplAccount?.unrealizedPnLAUSD != null ? perplAccount.unrealizedPnLAUSD.toFixed(2) : "0.00";
   const totalEquity = totalCollateral === "—" ? "—" : (Number(totalCollateral.replace(",", "")) + Number(marginInUse.replace(",", ""))).toFixed(2);
 
-  // Fallback demo positions matching Stitch if empty
-  const displayPerps: PerplPosition[] = perpPositions.length
-    ? perpPositions
-    : [
-        {
-          id: "pos-1",
-          trader: userAddress || "0x8f2a4e9a",
-          symbol: "BTC",
-          side: "LONG",
-          leverage: 10,
-          entryPrice: 76800,
-          markPrice: 78240,
-          liquidationPrice: 70416,
-          size: 0.0064,
-          sizeAUSD: 500,
-          marginAUSD: 50,
-          unrealizedPnLAUSD: 85.5,
-          unrealizedPnLPct: 171.0,
-          openedAt: Date.now() - 3600000,
-          status: "OPEN",
-        },
-      ];
+  // Real Perpl account positions only
+  const displayPerps: PerplPosition[] = perpPositions;
 
   return (
     <Screen>

@@ -97,15 +97,8 @@ export default function MarketsScreen() {
     router.push("/(app)");
   };
 
-  // Mock list fallbacks if API is warming up to match the Stitch design seamlessly
-  const displayPerps: PerplMarket[] = perplMarkets.length
-    ? perplMarkets
-    : [
-        { id: 64, perpetualId: 64, symbol: "MON", name: "MON / AUSD", sizeUnits: "MON", markPrice: 3.852, lastPrice: 3.85, bidPrice: 3.85, askPrice: 3.854, change24hPct: 14.25, volume24hAUSD: 1200000, openInterest: 45000, fundingRateBps: 10, maxLeverage: 20, priceDecimals: 3, sizeDecimals: 2 },
-        { id: 16, perpetualId: 16, symbol: "BTC", name: "BTC / AUSD", sizeUnits: "BTC", markPrice: 94210.5, lastPrice: 94200, bidPrice: 94205, askPrice: 94215, change24hPct: 3.18, volume24hAUSD: 4800000, openInterest: 18.2, fundingRateBps: 40, maxLeverage: 20, priceDecimals: 1, sizeDecimals: 4 },
-        { id: 48, perpetualId: 48, symbol: "SOL", name: "SOL / AUSD", sizeUnits: "SOL", markPrice: 182.4, lastPrice: 182.35, bidPrice: 182.38, askPrice: 182.42, change24hPct: 5.9, volume24hAUSD: 890000, openInterest: 1240, fundingRateBps: 25, maxLeverage: 20, priceDecimals: 2, sizeDecimals: 2 },
-        { id: 320, perpetualId: 320, symbol: "PUMP", name: "PUMP / AUSD", sizeUnits: "PUMP", markPrice: 0.00421, lastPrice: 0.0042, bidPrice: 0.0042, askPrice: 0.00422, change24hPct: 42.8, volume24hAUSD: 340000, openInterest: 8900000, fundingRateBps: 50, maxLeverage: 10, priceDecimals: 5, sizeDecimals: 0 },
-      ];
+  // Real Perpl / API markets only — empty until backend responds
+  const displayPerps: PerplMarket[] = perplMarkets;
 
   const filteredPerps = displayPerps.filter((m) => {
     if (filter === "blitz") return false;
@@ -201,13 +194,13 @@ export default function MarketsScreen() {
           showsVerticalScrollIndicator={false}
         >
           {/* HOT ON MONAD FEATURED BANNER */}
-          {filter !== "blitz" && (
+          {filter !== "blitz" && displayPerps.length > 0 && (
             <View style={styles.heroCard}>
               <View style={styles.heroTop}>
                 <View style={styles.heroTagWrap}>
                   <Icon name="flame" size={14} color={colors.down} />
                   <Text style={styles.heroTag}>HOT ON MONAD</Text>
-                  <Text style={styles.heroPair}>MON / AUSD</Text>
+                  <Text style={styles.heroPair}>{displayPerps[0].symbol} / AUSD</Text>
                 </View>
                 <View style={styles.heroPerpBadge}>
                   <Text style={styles.heroPerpText}>PERP 20X</Text>
@@ -223,7 +216,9 @@ export default function MarketsScreen() {
                   <MiniSparkline positive={true} />
                 </View>
                 <Pressable
-                  onPress={() => openPerpTrade(displayPerps[0])}
+                  onPress={() => {
+                    if (displayPerps[0]) openPerpTrade(displayPerps[0]);
+                  }}
                   style={styles.heroTradeBtn}
                 >
                   <Text style={styles.heroTradeText}>TRADE →</Text>
@@ -241,6 +236,14 @@ export default function MarketsScreen() {
 
           {/* MARKET ROWS */}
           <View style={styles.marketList}>
+            {filteredPerps.length === 0 && hunchMarkets.length === 0 && !loading ? (
+              <View style={styles.emptyBox}>
+                <Text style={styles.emptyTitle}>No live markets</Text>
+                <Text style={styles.emptyBody}>
+                  {err || "Start API + keeper, or Perpl testnet is unreachable."}
+                </Text>
+              </View>
+            ) : null}
             {filteredPerps.map((m) => {
               const isMon = m.symbol === "MON";
               const isBtc = m.symbol === "BTC";

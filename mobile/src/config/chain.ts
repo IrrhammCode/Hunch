@@ -21,7 +21,7 @@ export const monadTestnet = defineChain({
   },
 });
 
-/** Base Sepolia — second settlement chain (Option P multichain surface). */
+/** Base Sepolia — second settlement chain. */
 export const baseSepolia = defineChain({
   id: 84532,
   name: "Base Sepolia",
@@ -54,15 +54,11 @@ export function looksLikeBundleId(value: string) {
 export const PRIVY_CLIENT_ID_OK =
   Boolean(PRIVY_CLIENT_ID) && !looksLikeBundleId(PRIVY_CLIENT_ID);
 
-export const DESIGN_MODE = process.env.EXPO_PUBLIC_DESIGN_MODE === "1";
-
+/** Real Privy only — no mock/design mode in production paths. */
 export const USE_DEMO_AUTH =
-  DESIGN_MODE ||
-  process.env.EXPO_PUBLIC_USE_DEMO_AUTH === "1" ||
-  !PRIVY_APP_ID;
+  process.env.EXPO_PUBLIC_USE_DEMO_AUTH === "1" || !PRIVY_APP_ID;
 
-export const HAS_PRIVY =
-  !DESIGN_MODE && Boolean(PRIVY_APP_ID) && PRIVY_CLIENT_ID_OK;
+export const HAS_PRIVY = Boolean(PRIVY_APP_ID) && PRIVY_CLIENT_ID_OK;
 
 export const CHAIN_ID = monadTestnet.id;
 
