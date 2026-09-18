@@ -380,6 +380,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 16,
     backgroundColor: "#0A0B0D",
+    paddingBottom: 0,
   },
   topBar: {
     flexDirection: "row",
