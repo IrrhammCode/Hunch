@@ -140,7 +140,7 @@ export default function OptionsExchangeScreen() {
 
   return (
     <Screen>
-      <View style={[styles.wrap, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 8 }]}>
+      <View style={[styles.wrap, { paddingTop: insets.top + 16 }]}>
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
             <Text style={styles.title}>EXCHANGE</Text>
@@ -257,7 +257,10 @@ export default function OptionsExchangeScreen() {
 
         {/* Listed series blotter */}
         <Text style={styles.listHead}>LISTED SERIES</Text>
-        <ScrollView contentContainerStyle={{ gap: 8, paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={{ gap: 10, paddingBottom: 40 }}
+          showsVerticalScrollIndicator={false}
+        >
           {rows.map((r) => (
             <Pressable
               key={`list-${r.symbol}`}
@@ -288,7 +291,7 @@ function LinkingOpen(hash: string) {
 }
 
 const styles = StyleSheet.create({
-  wrap: { flex: 1, paddingHorizontal: space.lg, gap: 10 },
+  wrap: { flex: 1, paddingHorizontal: space.lg, gap: 10, paddingBottom: 0 },
   header: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
   title: {
     color: colors.ink,

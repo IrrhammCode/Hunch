@@ -106,7 +106,11 @@ export function PerpTradingTicket() {
   const availBalance = me?.ausd != null ? Number(me.ausd).toFixed(2) : "—";
 
   return (
-    <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      style={{ flex: 1 }}
+      contentContainerStyle={styles.container}
+      showsVerticalScrollIndicator={false}
+    >
       {/* Top Ticker Selector Strip */}
       <View style={styles.tickerStrip}>
         {displayMarkets.map((m) => {

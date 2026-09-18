@@ -121,7 +121,12 @@ export default function MarketsScreen() {
 
   return (
     <Screen>
-      <View style={[styles.wrap, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 8 }]}>
+      <View
+        style={[
+          styles.wrap,
+          { paddingTop: insets.top + 8 },
+        ]}
+      >
         {/* Top network status */}
         <View style={styles.topStatus}>
           <View style={styles.statusLeft}>
@@ -185,7 +190,11 @@ export default function MarketsScreen() {
           </Pressable>
         </View>
 
-        <ScrollView contentContainerStyle={{ gap: 14, paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ gap: 12, paddingBottom: 36 }}
+          showsVerticalScrollIndicator={false}
+        >
           {/* HOT ON MONAD FEATURED BANNER */}
           {filter !== "blitz" && (
             <View style={styles.heroCard}>
@@ -334,6 +343,7 @@ const styles = StyleSheet.create({
   wrap: {
     flex: 1,
     paddingHorizontal: 18,
+    paddingBottom: 0,
     backgroundColor: "#0A0B0D",
   },
   topStatus: {

@@ -363,7 +363,7 @@ export default function HunchScreen() {
       <View
         style={[
           styles.wrap,
-          { paddingTop: insets.top + 14, paddingBottom: insets.bottom + 10 },
+          { paddingTop: insets.top + 10, paddingBottom: 0 },
         ]}
       >
         {/* Top bar matching Stitch */}
@@ -422,13 +422,19 @@ export default function HunchScreen() {
         </View>
 
         {tradeMode === "perps" ? (
-          <View style={{ flex: 1, marginTop: 4 }}>
+          <Animated.View entering={FadeIn.duration(200)} style={{ flex: 1, marginTop: 4, paddingBottom: 8 }}>
             <PerpTradingTicket />
-          </View>
+          </Animated.View>
         ) : (
           <ScrollView
             style={{ flex: 1 }}
-            contentContainerStyle={{ paddingTop: 4, paddingBottom: 24, gap: 14, flexGrow: 1, justifyContent: "space-between" }}
+            contentContainerStyle={{
+              paddingTop: 8,
+              paddingBottom: 32,
+              gap: 14,
+              flexGrow: 1,
+              justifyContent: "flex-start",
+            }}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
@@ -595,6 +601,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 16,
     backgroundColor: "#0A0B0D",
+    paddingBottom: 0,
   },
   top: {
     flexDirection: "row",

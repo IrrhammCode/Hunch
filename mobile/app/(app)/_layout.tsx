@@ -1,5 +1,6 @@
 import { Redirect, Tabs } from "expo-router";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/src/auth/AuthContext";
 import { BootScreen } from "@/src/components/BootScreen";
 import { Icon, type IconName } from "@/src/components/Icon";
@@ -29,17 +30,29 @@ function TabIcon({ label, focused }: { label: string; focused: boolean }) {
   const color = focused ? colors.brand : colors.muted;
 
   return (
-    <View style={styles.iconWrap}>
+    <View style={[styles.iconWrap, { opacity: focused ? 1 : 0.72 }]}>
       <Icon name={name} size={22} color={color} />
-      <Text style={[styles.iconLabel, { color }]}>{label}</Text>
+      <Text style={[styles.iconLabel, { color }]} numberOfLines={1}>
+        {label}
+      </Text>
       {focused ? <View style={styles.activeDot} /> : <View style={styles.dotPlaceholder} />}
     </View>
   );
 }
 
 function ArenaTabBar({ state, navigation }: TabBarProps) {
+  const insets = useSafeAreaInsets();
+
   return (
-    <View style={styles.bar}>
+    <View
+      style={[
+        styles.bar,
+        {
+          // Home indicator / gesture bar: content flows above this chrome
+          paddingBottom: Math.max(insets.bottom, Platform.OS === "ios" ? 8 : 12) + 10,
+        },
+      ]}
+    >
       {state.routes.map((route, index) => {
         if (route.name === "exchange") return null;
         const focused = state.index === index;
@@ -69,7 +82,10 @@ function ArenaTabBar({ state, navigation }: TabBarProps) {
             accessibilityRole="button"
             accessibilityState={focused ? { selected: true } : {}}
             onPress={onPress}
-            style={({ pressed }) => [styles.tab, pressed && { opacity: 0.75 }]}
+            style={({ pressed }) => [
+              styles.tab,
+              pressed && styles.tabPressed,
+            ]}
           >
             <TabIcon label={label} focused={focused} />
           </Pressable>
@@ -88,7 +104,12 @@ export default function AppLayout() {
   return (
     <Tabs
       tabBar={(props) => <ArenaTabBar {...(props as unknown as TabBarProps)} />}
-      screenOptions={{ headerShown: false }}
+      screenOptions={{
+        headerShown: false,
+        // Keep pages filling space above the bar — no bottom flicker
+        sceneStyle: { backgroundColor: colors.bg },
+        animation: "fade",
+      }}
     >
       <Tabs.Screen name="markets" options={{ title: "Markets" }} />
       <Tabs.Screen name="index" options={{ title: "Trade" }} />
@@ -103,26 +124,34 @@ const styles = StyleSheet.create({
   bar: {
     flexDirection: "row",
     backgroundColor: colors.bg,
-    borderTopWidth: 1,
+    borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.line,
-    paddingTop: 10,
-    paddingBottom: 18,
-    paddingHorizontal: 8,
+    paddingTop: 8,
+    paddingHorizontal: 6,
+    // Opaque chrome so scrolling content never paints under the bar
+    elevation: 8,
+    zIndex: 20,
   },
   tab: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 52,
+    minHeight: 48,
+  },
+  tabPressed: {
+    opacity: 0.7,
   },
   iconWrap: {
     alignItems: "center",
-    gap: 4,
+    gap: 3,
+    width: "100%",
   },
   iconLabel: {
     fontFamily: type.bold,
     fontSize: 10,
-    letterSpacing: 0.8,
+    letterSpacing: 0.7,
+    textAlign: "center",
+    maxWidth: "100%",
   },
   activeDot: {
     width: 4,

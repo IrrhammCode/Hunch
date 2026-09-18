@@ -81,7 +81,7 @@ export default function ProfileScreen() {
 
   return (
     <Screen>
-      <View style={[styles.wrap, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 8 }]}>
+      <View style={[styles.wrap, { paddingTop: insets.top + 8 }]}>
         {/* Top Network Bar */}
         <View style={styles.topStatus}>
           <View style={styles.statusLeft}>
@@ -101,7 +101,11 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        <ScrollView contentContainerStyle={{ gap: 14, paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ gap: 12, paddingBottom: 36 }}
+          showsVerticalScrollIndicator={false}
+        >
           {/* USER IDENTITY CARD */}
           <View style={styles.userCard}>
             <View style={styles.avatarWrap}>

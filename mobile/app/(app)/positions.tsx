@@ -122,7 +122,7 @@ export default function PositionsScreen() {
 
   return (
     <Screen>
-      <View style={[styles.wrap, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 8 }]}>
+      <View style={[styles.wrap, { paddingTop: insets.top + 8 }]}>
         {/* Top Header */}
         <View style={styles.topBar}>
           <View style={styles.logoRow}>
@@ -141,7 +141,11 @@ export default function PositionsScreen() {
           </View>
         </View>
 
-        <ScrollView contentContainerStyle={{ gap: 14, paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ gap: 12, paddingBottom: 36 }}
+          showsVerticalScrollIndicator={false}
+        >
           {/* PORTFOLIO OVERVIEW HERO CARD */}
           <View style={styles.overviewCard}>
             <View style={styles.overviewTop}>
