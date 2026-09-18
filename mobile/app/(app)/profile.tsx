@@ -201,7 +201,7 @@ export default function ProfileScreen() {
                   <View style={[styles.assetIcon, { backgroundColor: "#0E2B1F" }]}>
                     <Text style={[styles.assetGlyph, { color: colors.up }]}>A</Text>
                   </View>
-                  <Text style={styles.assetName}>AGORA USD</Text>
+                  <Text style={styles.assetName}>AUSD (TESTNET)</Text>
                 </View>
                 <Text style={styles.assetAmount}>{ausdBalance}</Text>
                 <Text style={styles.assetFiat}>${ausdBalance}</Text>

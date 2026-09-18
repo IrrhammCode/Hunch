@@ -116,7 +116,7 @@ export default function PositionsScreen() {
           </View>
           <View style={styles.topRightPill}>
             <View style={styles.greenPulse} />
-            <Text style={styles.pillLabel}>AGORA AUSD</Text>
+            <Text style={styles.pillLabel}>AUSD TESTNET</Text>
             <Text style={styles.pillVal}>${totalCollateral}</Text>
           </View>
         </View>

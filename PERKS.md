@@ -70,6 +70,27 @@ Mobile wallet RPC (optional): `mobile/.env` → `EXPO_PUBLIC_MONAD_RPC_URL` same
 
 Note: Zerion indexes **production EVM chains** (Ethereum, Base, …). Monad testnet balances stay in Hunch `/v1/wallet` — Zerion supplements the **multichain** story when Base is deployed.
 
+## 4) Perpl trading keys (Agora — real orders)
+
+1. Open https://testnet.perpl.xyz/apikeys → connect wallet → create **trade** key
+2. Save **X-API-Key** + **Ed25519 private key** (not recoverable)
+3. Root `.env`:
+   ```env
+   PERPL_API_KEY=...
+   PERPL_API_KEY_SECRET=...
+   PERPL_API_URL=https://testnet.perpl.xyz/api
+   PERPL_WS_URL=wss://testnet.perpl.xyz
+   PERPL_CHAIN_ID=10143
+   ```
+4. On-chain account: send `createAccount` on Exchange `0x1964…80cc` with AUSD testnet
+   (min ~100 AUSD) then:
+   ```bash
+   curl -X POST localhost:8787/v1/perpl/account-link \
+     -H 'Content-Type: application/json' \
+     -d '{"address":"0xYourPrivyWallet","accountId":<id from tx/account>}'
+   ```
+5. Orders then go over Perpl trading WS (`execution: perpl-ws`). Without keys, `/v1/perpl/order` **errors** — it will not fake fills.
+
 ---
 
 ## Verify

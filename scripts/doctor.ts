@@ -126,6 +126,11 @@ async function main() {
   }
   if (present(rootEnv.ZERION_API_KEY)) ok(`ZERION_API_KEY ${maskHint(rootEnv.ZERION_API_KEY)}`);
   else warn("ZERION_API_KEY empty — /v1/zerion/* returns not-configured");
+  if (present(rootEnv.PERPL_API_KEY) && present(rootEnv.PERPL_API_KEY_SECRET)) {
+    ok(`Perpl trade keys ${maskHint(rootEnv.PERPL_API_KEY)}`);
+  } else {
+    warn("Perpl trade keys missing — real perps orders will fail until enrolled");
+  }
 
   // --- mobile/.env ---
   const mobileEnvPath = path.join(root, "mobile", ".env");

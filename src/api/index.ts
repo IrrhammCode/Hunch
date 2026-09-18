@@ -39,6 +39,7 @@ import {
   buildPerplDepositCalldata,
   placePerplOrder,
   closePerplPosition,
+  linkPerplAccount,
 } from "./perpl";
 import { PERPL_TESTNET } from "../shared/perpl";
 
@@ -140,6 +141,22 @@ app.post("/v1/perpl/order/close", async (c) => {
     const { positionId, trader } = body;
     const result = await closePerplPosition(positionId, trader);
     return c.json(result);
+  } catch (e: any) {
+    return c.json({ error: e.message || String(e) }, 400);
+  }
+});
+
+/** Link on-chain Perpl accountId after createAccount tx */
+app.post("/v1/perpl/account-link", async (c) => {
+  try {
+    const body = await c.req.json<{ address?: string; accountId?: number | string }>();
+    const address = body.address;
+    const accountId = Number(body.accountId);
+    if (!address || !ethers.isAddress(address)) return c.json({ error: "address required" }, 400);
+    if (!Number.isFinite(accountId) || accountId < 0) {
+      return c.json({ error: "accountId required" }, 400);
+    }
+    return c.json(linkPerplAccount(address, accountId));
   } catch (e: any) {
     return c.json({ error: e.message || String(e) }, 400);
   }

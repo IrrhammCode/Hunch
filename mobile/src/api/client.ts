@@ -405,19 +405,7 @@ export async function fetchPerplMarkets(): Promise<{ markets: PerplMarket[]; con
 }
 
 export async function fetchPerplAccount(address: string): Promise<PerplAccount> {
-  try {
-    return await get<PerplAccount>(`/v1/perpl/account/${address}`);
-  } catch {
-    return {
-      address,
-      exchange: "0x1964c32f0be608e7d29302aff5e61268e72080cc",
-      collateralToken: "0xa9012a055bd4e0edff8ce09f960291c09d5322dc",
-      marginUsedAUSD: 0,
-      unrealizedPnLAUSD: 0,
-      openPositionsCount: 0,
-      positions: [],
-    };
-  }
+  return get<PerplAccount>(`/v1/perpl/account/${address}`);
 }
 
 export function placePerplOrder(params: {
@@ -426,8 +414,21 @@ export function placePerplOrder(params: {
   side: "LONG" | "SHORT";
   marginAUSD: number;
   leverage: number;
+  accountId?: number;
 }) {
-  return post<{ success: boolean; position: PerplPosition; market: PerplMarket }>("/v1/perpl/order", params);
+  return post<{
+    success: boolean;
+    execution?: string;
+    position: PerplPosition;
+    market: PerplMarket;
+  }>("/v1/perpl/order", params);
+}
+
+export function linkPerplAccount(address: string, accountId: number) {
+  return post<{ address: string; accountId: number }>("/v1/perpl/account-link", {
+    address,
+    accountId,
+  });
 }
 
 export function closePerplPosition(positionId: string, trader: string) {
