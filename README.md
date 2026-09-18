@@ -18,6 +18,7 @@ Swipe UP or DOWN on short-horizon onchain markets — a **mobile multichain trad
 | Form fields | [SUBMISSION_FORM.md](SUBMISSION_FORM.md) |
 | Day-of ops | [OPS.md](OPS.md) |
 | **Privy setup** | [PRIVY_SETUP.md](PRIVY_SETUP.md) |
+| **Agora bounty (Mera+AUSD+Perpl)** | [AGORA_BOUNTY.md](AGORA_BOUNTY.md) — testnet stack + eligibility gap |
 | **EAS / device** | [EAS_SETUP.md](EAS_SETUP.md) |
 | Landing page | [site/index.html](site/index.html) (GitHub Pages: Settings → Pages → `/site`) |
 | Video outline | [DEMO_VIDEO_SCRIPT.md](DEMO_VIDEO_SCRIPT.md) |

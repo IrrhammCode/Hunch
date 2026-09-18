@@ -1,0 +1,113 @@
+# Agora Onchain Trading Bounty — testnet is OK
+
+**Bounty:** Best Mobile Trading App on Monad (Agora) — $10,000  
+**Eligibility (verbatim gist):** Mobile app that authenticates via **Mera** (passkey), holds/displays **AUSD** balance, and executes trades through **Perpl**.  
+**Demo bar:** Login via passkey → fund/view AUSD → **at least one trade on Perpl**.  
+**Deadline note:** Platform listed Oct 14, 2026 10:59 GMT+7 — confirm on hackathon.monad.xyz when submitting.
+
+Source: bounty copy provided by team (Metropolis platform) + official docs below (accessed 2026-09-18).
+
+---
+
+## Testnet vs mainnet
+
+| | |
+|---|---|
+| Bounty text | **No “mainnet only”** requirement |
+| Verdict | **Testnet is acceptable** for a working onchain demo |
+| Risk | Mainnet may impress more; not required for eligibility |
+| What fails eligibility | **Missing Mera / AUSD / Perpl** — not testnet itself |
+
+---
+
+## Official testnet stack (use this in the demo)
+
+### Perpl — Monad Testnet
+
+| Field | Value |
+|---|---|
+| Chain ID | **10143** |
+| REST API | `https://testnet.perpl.xyz/api` |
+| WebSocket | `wss://testnet.perpl.xyz` |
+| RPC | `https://testnet-rpc.monad.xyz` |
+| Exchange | `0x1964C32f0bE608E7D29302AFF5E61268E72080cc` |
+| Collateral (aUSD) | `0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC` |
+| Decimals | 6 |
+| Min account open (testnet) | **~100 AUSD** (read live from `GET /api/v1/pub/context`) |
+| Markets (testnet market_id) | BTC **16** · ETH **32** · SOL **48** · MON **64** · ZEC **256** |
+
+Docs: https://docs.perpl.xyz/resources/for-developers/networks-and-configuration.md  
+Public context: `GET https://testnet.perpl.xyz/api/v1/pub/context`
+
+Perpl testnet `.env`:
+
+```bash
+PERPL_API_URL=https://testnet.perpl.xyz/api
+PERPL_WS_URL=wss://testnet.perpl.xyz
+PERPL_CHAIN_ID=10143
+PERPL_RPC_URL=https://testnet-rpc.monad.xyz
+PERPL_EXCHANGE_ADDRESS=0x1964C32f0bE608E7D29302AFF5E61268E72080cc
+PERPL_COLLATERAL_TOKEN=0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC
+```
+
+### Agora AUSD — Monad Testnet
+
+| Field | Value |
+|---|---|
+| AUSD | `0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC` |
+| Faucet | `0xd236c18D274E54FAccC3dd9DDA4b27965a73ee6C` |
+| Faucet call | `requestFunds(address)` (via wallet/tx) |
+
+Docs: https://docs.agora.finance/developer/contract-deployments.md  
+Guide: https://docs.agora.finance/instant-settlement/guides/getting-testnet-tokens.md
+
+Mainnet AUSD (not required for demo): `0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a`
+
+### Mera — Monad passkey auth
+
+- Official guide uses **`monadTestnet` (10143)** in viem examples
+- React Native: https://docs.monad.xyz/guides/mera/react-native.md
+- Web: https://docs.monad.xyz/guides/mera.md
+- Package: `@category-labs/mera` + viem + bip32/bip39
+- Needs HTTPS/localhost + WebAuthn PRF (iCloud Keychain etc.)
+- Accounts are **EOAs** — gas = MON on Monad testnet
+
+---
+
+## Eligibility gap vs Hunch today
+
+| Requirement | Hunch current | Needed for Agora bounty |
+|---|---|---|
+| Auth | Privy OTP / Apple | **Mera passkey** |
+| Balance | MockAUSD (mintable) | **Agora AUSD** testnet `0xa901…22dC` |
+| Trade | HunchMarket CPMM UP/DOWN | **Perpl** exchange account + ≥1 order |
+
+**Note:** Hunch UP/DOWN / Options Exchange can remain as extra product surface. **Agora $10k** requires the **Mera + AUSD + Perpl** path in the **same mobile demo**.
+
+---
+
+## Demo script for judges (Agora path)
+
+1. Open mobile app (dev client)  
+2. **Mera** passkey login (Face ID) → show `0x…` address  
+3. Faucet **MON** (gas) + **AUSD** (`0xd236…e6C` / `requestFunds`) — enough for **≥100 AUSD** to open Perpl account  
+4. Show **AUSD balance** on-chain (Agora testnet token)  
+5. **Perpl testnet** — createAccount / deposit collateral → place **one trade** (e.g. BTC market_id 16)  
+6. Optional: show Hunch Markets / Exchange as additional UX  
+
+---
+
+## Honest copy for submission
+
+> Demo runs on **Monad testnet (10143)**. Collateral is **Agora AUSD testnet** `0xa901…22dC`. Auth is **Mera** passkey. Trades execute on **Perpl testnet** Exchange `0x1964…80cc`. Production path = Monad mainnet + mainnet AUSD + Perpl mainnet.
+
+Do **not** claim mainnet production if the demo is testnet.
+
+---
+
+## MetaMask / wallet quick add (Monad testnet)
+
+- Network: Monad Testnet  
+- Chain ID: 10143  
+- RPC: `https://testnet-rpc.monad.xyz`  
+- Explorer: `https://testnet.monadvision.com` (or explorer listed in Monad docs)  
