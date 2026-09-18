@@ -1,6 +1,5 @@
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
-import * as Clipboard from "expo-clipboard";
 import * as Haptics from "expo-haptics";
 import { Pressable, ScrollView, StyleSheet, Text, View, ActivityIndicator } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -8,6 +7,7 @@ import { demoFaucet } from "@/src/api/client";
 import { useAuth } from "@/src/auth/AuthContext";
 import { Screen } from "@/src/components/Screen";
 import { useToast } from "@/src/components/Toast";
+import { copyToClipboard } from "@/src/utils/clipboard";
 import { fundPrivyWallet } from "@/src/wallet/privyTrade";
 import { useWallet } from "@/src/wallet/WalletContext";
 import { colors, radius, space, type, monoStyle } from "@/src/theme";
@@ -38,12 +38,15 @@ export default function ProfileScreen() {
   const totalVal = (Number(ausdBalance.replace(",", "")) + Number(monBalance) * 3.5).toFixed(2);
 
   const onCopy = async () => {
-    if (address) {
-      await Clipboard.setStringAsync(address);
+    if (!address) return;
+    const ok = await copyToClipboard(address);
+    if (ok) {
       setCopied(true);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       toast.show("Copied", { body: "Address copied to clipboard", tone: "success" });
       setTimeout(() => setCopied(false), 2000);
+    } else {
+      toast.show("Address", { body: address, tone: "neutral" });
     }
   };
 
