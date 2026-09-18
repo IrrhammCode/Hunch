@@ -42,17 +42,16 @@ function ArenaTabBar({ state, navigation }: TabBarProps) {
   return (
     <View style={styles.bar}>
       {state.routes.map((route, index) => {
+        if (route.name === "exchange") return null;
         const focused = state.index === index;
         const label =
           route.name === "index"
             ? "TRADE"
             : route.name === "markets"
               ? "MARKETS"
-              : route.name === "exchange"
-                ? "EXCHANGE"
-                : route.name === "positions"
-                  ? "PORTFOLIO"
-                  : "YOU";
+              : route.name === "positions"
+                ? "PORTFOLIO"
+                : "YOU";
 
         const onPress = () => {
           const event = navigation.emit({
@@ -93,10 +92,10 @@ export default function AppLayout() {
       screenOptions={{ headerShown: false }}
     >
       <Tabs.Screen name="markets" options={{ title: "Markets" }} />
-      <Tabs.Screen name="exchange" options={{ title: "Exchange" }} />
       <Tabs.Screen name="index" options={{ title: "Trade" }} />
       <Tabs.Screen name="positions" options={{ title: "Portfolio" }} />
       <Tabs.Screen name="profile" options={{ title: "You" }} />
+      <Tabs.Screen name="exchange" options={{ href: null, title: "Exchange" }} />
     </Tabs>
   );
 }

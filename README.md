@@ -14,6 +14,16 @@ Perpetual Futures (via **Perpl DEX**) + 60-Second Instant Hunches with **Agora A
 3. **Unified Portfolio**: Real-time margin tracking, unrealized PnL, and 1-tap claim for winning hunch payouts.
 4. **Non-Custodial Mobile Auth**: Privy email OTP with embedded EOA created on Monad Testnet.
 
+## App Preview & Interface
+
+| 📈 Perpetuals Hub | ⚡ 60s Swipe Hunch | 📊 Markets Explorer |
+|:---:|:---:|:---:|
+| <img src="docs/assets/screen_trade_perps.png" width="240" /> | <img src="docs/assets/screen_trade_hunch60s.png" width="240" /> | <img src="docs/assets/screen_markets.png" width="240" /> |
+
+| 💼 Portfolio & 1-Tap Claim | 👤 Privy Wallet & Faucet |
+|:---:|:---:|
+| <img src="docs/assets/screen_portfolio.png" width="240" /> | <img src="docs/assets/screen_wallet_profile.png" width="240" /> |
+
 ## For judges
 
 **One-liner:** All-in-one mobile trading app on Monad: Perps via Perpl + 60s swipe hunches with Agora AUSD.
