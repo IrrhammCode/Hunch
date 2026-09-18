@@ -36,22 +36,17 @@ Product UI designer — 90% of time on **Markets list / live ticket**, not marke
 | Body | `DMSans_400/500/700` | Copy, buttons, UI |
 | **Data** | `Menlo` / `Consolas` / `monospace` | Odds ¢, AUSD balances, addresses, countdowns in lists |
 
-**Layout concept:** trading terminal on a phone — **blotter + ticket**, not a dashboard of equal cards.
+**Layout concept:** trading terminal on a phone — **blotter + exchange + swipe ticket**.
 
 ```
-┌─────────────────────────┐
-│ MARKETS  filter ALL|…   │  ← instrument strip
-│ BTC  monad★  42s  54¢   │  ← blotter row
-│ ETH  monad★  31s  48¢   │
-│ SOL  base    OPEN  —    │
-└─────────────────────────┘
-        ↓ tap
-┌─────────────────────────┐
-│ ETH/USD · MONAD  [ bal ]│
-│      31.4               │  ← ticket (swipe)
-│   ↑ UP          DOWN ↓  │
-└─────────────────────────┘
+MARKETS     EXCHANGE      TRADE
+blotter  →  buy UP/DOWN → swipe card
+   ↑_______________ portfolio / claim
 ```
+
+**Options exchange** is a **UI surface** on the same CPMM event markets:
+instrument strip · UP/DOWN quote boxes · size · Buy · listed series.
+Copy: *event markets · not vanilla call/put*.
 
 **Signature:** the **swipe ticket** (countdown + odds + UP/DOWN) — one memorable control, everything else quiet blotter.
 
@@ -73,6 +68,7 @@ Product UI designer — 90% of time on **Markets list / live ticket**, not marke
 | Screen | Role | Must feel |
 |---|---|---|
 | **Markets** | Board of live tickets | Blotter · chain filter · ★ hub |
+| **Exchange** | Options exchange UI | Bid/ask UP/DOWN · Buy · listed series |
 | **Trade** | Selected market swipe | Instrument · urgent countdown |
 | **Portfolio** | Cross-chain positions + claim | Accounting, not second wallet |
 | **You** | Identity + faucet + sign out | Sparse |

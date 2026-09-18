@@ -17,7 +17,7 @@ type TabBarProps = {
 };
 
 function TabIcon({ label, focused }: { label: string; focused: boolean }) {
-  const primary = label === "TRADE" || label === "MARKETS";
+  const primary = label === "TRADE" || label === "MARKETS" || label === "EXCHANGE";
   return (
     <View style={styles.iconWrap}>
       <Text
@@ -48,9 +48,11 @@ function ArenaTabBar({ state, navigation }: TabBarProps) {
             ? "TRADE"
             : route.name === "markets"
               ? "MARKETS"
-              : route.name === "positions"
-                ? "PORTFOLIO"
-                : "YOU";
+              : route.name === "exchange"
+                ? "EXCHANGE"
+                : route.name === "positions"
+                  ? "PORTFOLIO"
+                  : "YOU";
 
         const onPress = () => {
           const event = navigation.emit({
@@ -91,6 +93,7 @@ export default function AppLayout() {
       screenOptions={{ headerShown: false }}
     >
       <Tabs.Screen name="markets" options={{ title: "Markets" }} />
+      <Tabs.Screen name="exchange" options={{ title: "Exchange" }} />
       <Tabs.Screen name="index" options={{ title: "Trade" }} />
       <Tabs.Screen name="positions" options={{ title: "Portfolio" }} />
       <Tabs.Screen name="profile" options={{ title: "You" }} />
@@ -120,12 +123,12 @@ const styles = StyleSheet.create({
   },
   iconLabel: {
     fontFamily: type.bold,
-    fontSize: 12,
-    letterSpacing: 1.4,
+    fontSize: 10,
+    letterSpacing: 0.8,
   },
   iconLabelPrimary: {
-    fontSize: 13,
-    letterSpacing: 1.8,
+    fontSize: 11,
+    letterSpacing: 1,
   },
   focusedBrand: { color: colors.brand },
   focusedInk: { color: colors.ink },

@@ -4,7 +4,7 @@ Swipe UP or DOWN on short-horizon onchain markets — a **mobile multichain trad
 
 **Metropolis Track 01** · Agora Mobile · Privy · Pyth · Deadline Oct 13, 2026
 
-**Product:** Markets board (BTC / ETH / SOL UP-DOWN) · Trade (swipe) · Portfolio (cross-chain BOOK) · You  
+**Product:** Markets board (BTC / ETH / SOL) · **Options Exchange** (buy UP/DOWN at CPMM prices) · Trade (swipe) · Portfolio (cross-chain BOOK) · You  
 **Settlement:** Monad hub + Base Sepolia surface (same Privy wallet) · CPMM event markets, not TradFi options
 
 ## For judges
