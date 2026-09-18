@@ -4,6 +4,7 @@ import * as Haptics from "expo-haptics";
 import { Pressable, ScrollView, StyleSheet, Text, View, ActivityIndicator } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { demoFaucet } from "@/src/api/client";
+import { fetchZerionPortfolio } from "@/src/api/client";
 import { useAuth } from "@/src/auth/AuthContext";
 import { Screen } from "@/src/components/Screen"
 import { Icon } from "@/src/components/Icon";
@@ -25,11 +26,29 @@ export default function ProfileScreen() {
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [zerionNote, setZerionNote] = useState<string | null>(null);
 
   useFocusEffect(
     useCallback(() => {
       refresh();
-    }, [refresh]),
+      (async () => {
+        const addr = user?.address || me?.address;
+        if (!addr) return;
+        try {
+          const z = await fetchZerionPortfolio(addr);
+          if (z.configured && z.totalUSD != null) {
+            const chg = z.change1dPct != null ? ` · 24h ${z.change1dPct.toFixed(2)}%` : "";
+            setZerionNote(`Zerion portfolio $${z.totalUSD.toFixed(2)}${chg}`);
+          } else if (z.configured && z.error) {
+            setZerionNote(null);
+          } else {
+            setZerionNote(null);
+          }
+        } catch {
+          setZerionNote(null);
+        }
+      })();
+    }, [refresh, user?.address, me?.address]),
   );
 
   const address = user?.address || me?.address || "";
@@ -165,9 +184,14 @@ export default function ProfileScreen() {
             <View style={styles.totalWrap}>
               <Text style={styles.totalLabel}>PORTFOLIO</Text>
               <View style={styles.totalRow}>
-                <Text style={styles.totalVal}>${totalVal}</Text>
+                <Text style={styles.totalVal}>{me ? Number(me.ausd).toFixed(2) : "—"}</Text>
                 <Text style={styles.totalUnit}>AUSD</Text>
               </View>
+              {zerionNote ? (
+                <Text style={styles.zerionLine} numberOfLines={2}>
+                  {zerionNote}
+                </Text>
+              ) : null}
             </View>
 
             {/* 2-Column Asset Breakdown */}
@@ -548,6 +572,12 @@ const styles = StyleSheet.create({
   },
   totalWrap: {
     marginBottom: 12,
+  },
+  zerionLine: {
+    color: colors.brand,
+    fontFamily: type.medium,
+    fontSize: 12,
+    marginTop: 6,
   },
   totalLabel: {
     color: colors.muted,

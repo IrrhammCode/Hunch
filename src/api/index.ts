@@ -21,6 +21,8 @@ import { isRateLimitError, withRpcRetry } from "../shared/rpcRetry";
 import { listMarketsBoard, crossChainPortfolio } from "./markets";
 import { enabledMarkets } from "../shared/markets";
 import { CHAINS } from "../shared/multichain";
+import { sponsorsApp } from "./sponsors";
+import { perkStatus } from "../shared/sponsors";
 import {
   demoFaucetAUSD,
   demoRedeem,
@@ -625,7 +627,11 @@ app.get("/v1/factory", async (c) => {
   });
 });
 
+// Metropolis perks: Quicknode / Tenderly / Zerion
+app.route("/", sponsorsApp);
+
 const port = Number(process.env.API_PORT || 8787);
 const hostname = process.env.API_HOST || "0.0.0.0";
 console.log(`[api] http://localhost:${port} (bound ${hostname})`);
+console.log("[api] perks", perkStatus());
 serve({ fetch: app.fetch, port, hostname });

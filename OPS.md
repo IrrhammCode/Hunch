@@ -4,18 +4,19 @@ Short runbook so the demo does not brick mid-pitch.
 
 Repo: https://github.com/IrrhammCode/Hunch  
 Judge path: [mobile/DEMO.md](mobile/DEMO.md)  
-Setup: [PRIVY_SETUP.md](./PRIVY_SETUP.md) · [EAS_SETUP.md](./EAS_SETUP.md)
+Setup: [PRIVY_SETUP.md](./PRIVY_SETUP.md) · [EAS_SETUP.md](./EAS_SETUP.md) · **[PERKS.md](./PERKS.md)** (Quicknode / Tenderly / Zerion)
 
 ---
 
 ## Setup order (do once, then daily)
 
-1. **Privy** — [PRIVY_SETUP.md](./PRIVY_SETUP.md) → paste App ID + Client ID into `mobile/.env`
-2. **EAS / device** — [EAS_SETUP.md](./EAS_SETUP.md) → install dev client on iPhone
-3. **Backend** — root `.env` · `npm run api` + `npm run keeper`
-4. **Preflight** — `npm run doctor` (must not fail on Privy / PRIVATE_KEY)
-5. **Smoke** — `npm run smoke:demo`
-6. **Judge path** — [mobile/DEMO.md](./mobile/DEMO.md)
+1. **Perks** — [PERKS.md](./PERKS.md) → Quicknode RPC + Tenderly + Zerion keys in root `.env`
+2. **Privy** — [PRIVY_SETUP.md](./PRIVY_SETUP.md) → App ID + Client ID in `mobile/.env`
+3. **EAS / device** — [EAS_SETUP.md](./EAS_SETUP.md) → install dev client on iPhone
+4. **Backend** — root `.env` · `npm run api` + `npm run keeper`
+5. **Preflight** — `npm run doctor` (must not fail on Privy / PRIVATE_KEY)
+6. **Smoke** — `npm run smoke:demo`
+7. **Judge path** — [mobile/DEMO.md](./mobile/DEMO.md)
 
 ---
 

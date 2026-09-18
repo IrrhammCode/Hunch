@@ -194,6 +194,30 @@ export function fetchCrossChainBook(address: string) {
   return get<CrossChainBook>(`/v1/book/${address}`);
 }
 
+export type ZerionPortfolio = {
+  address: string;
+  configured: boolean;
+  totalUSD: number | null;
+  change1dUSD: number | null;
+  change1dPct: number | null;
+  byChain: Record<string, number>;
+  byType: Record<string, number>;
+  error?: string;
+};
+
+export function fetchZerionPortfolio(address: string) {
+  return get<ZerionPortfolio>(`/v1/zerion/portfolio/${address}`);
+}
+
+export function fetchSponsorPerks() {
+  return get<{
+    quicknode: string;
+    monadRpcHint: string;
+    tenderly: string;
+    zerion: string;
+  }>("/v1/sponsors/status");
+}
+
 /** Shared demo hot-wallet snapshot (local testing only). */
 export function fetchDemoMe() {
   if (DESIGN_MODE) return mockApi.fetchDemoMe();

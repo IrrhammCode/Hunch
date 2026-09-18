@@ -23,6 +23,7 @@
     "backend": "ts-node src/keeper/index.ts",
     "smoke:demo": "ts-node scripts/smokeDemo.ts",
     "doctor": "ts-node scripts/doctor.ts",
+    "sim:tx": "ts-node scripts/tenderlySimulate.ts",
     "clean": "hardhat clean"
   },
   "devDependencies": {
