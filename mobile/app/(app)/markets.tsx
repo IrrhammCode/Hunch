@@ -644,6 +644,16 @@ const styles = StyleSheet.create({
     borderColor: colors.cardBorder,
     overflow: "hidden",
   },
+  emptyBox: {
+    padding: 20,
+    backgroundColor: "#12141A",
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    gap: 6,
+  },
+  emptyTitle: { color: colors.ink, fontFamily: type.bold, fontSize: 16 },
+  emptyBody: { color: colors.muted, fontFamily: type.body, fontSize: 13, lineHeight: 18 },
   marketRow: {
     flexDirection: "row",
     alignItems: "center",
