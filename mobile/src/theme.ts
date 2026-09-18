@@ -1,5 +1,6 @@
 /**
- * Hunch design tokens — dark arena, acid lime brand, UP/DOWN signals.
+ * Hunch design tokens — dark arena, acid lime, UP/DOWN.
+ * Product: mobile multichain trading · short-horizon markets on Monad hub.
  * Linear/Ramp register: dense, tactile, no casino chrome.
  */
 export const colors = {
@@ -19,6 +20,10 @@ export const colors = {
   downDim: "rgba(255,77,106,0.14)",
   danger: "#FF6B4A",
   dangerDim: "rgba(255,107,74,0.12)",
+  /** Settlement hub badge (Monad) */
+  hub: "#D6FF3F",
+  /** Chain not deployed / pending */
+  pending: "#8B8E97",
 } as const;
 
 export const space = {
@@ -39,12 +44,10 @@ export const radius = {
 } as const;
 
 export const type = {
-  /** Giant countdown / brand display */
   display: {
     fontFamily: "BebasNeue_400Regular",
     letterSpacing: 1.5,
   },
-  /** Screen titles YOU / BOOK */
   title: {
     fontFamily: "BebasNeue_400Regular",
     letterSpacing: 1,
@@ -52,4 +55,19 @@ export const type = {
   body: "DMSans_400Regular",
   medium: "DMSans_500Medium",
   bold: "DMSans_700Bold",
+  /**
+   * Instrument data — odds, balances, addresses, list countdowns.
+   * RN default mono is fine on iOS/Android; explicit stack for web.
+   */
+  data: "Menlo" as const,
+  dataWeb: "Menlo, Consolas, monospace" as const,
 } as const;
+
+export function monoStyle(size = 14, color?: string) {
+  return {
+    fontFamily: type.data,
+    fontSize: size,
+    color: color ?? colors.ink,
+    fontVariant: ["tabular-nums"] as ["tabular-nums"],
+  };
+}

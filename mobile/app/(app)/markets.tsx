@@ -6,7 +6,7 @@ import { fetchMarketBoard, type MarketBoard, type MarketBoardRow } from "@/src/a
 import { Screen } from "@/src/components/Screen";
 import { EmptyState } from "@/src/components/ui";
 import { getSelectedMarket, setSelectedMarket } from "@/src/market/selection";
-import { colors, radius, space, type } from "@/src/theme";
+import { colors, monoStyle, radius, space, type } from "@/src/theme";
 
 function statusTone(status: MarketBoardRow["status"]) {
   if (status === "open") return colors.brand;
@@ -116,24 +116,26 @@ export default function MarketsScreen() {
                 >
                   <View style={styles.rowLeft}>
                     <Text style={styles.symbol}>{row.symbol}</Text>
-                    <Text style={styles.pair}>
-                      {row.pair} · {row.chain}
-                      {row.settlementHub ? " ★" : ""}
+                    <Text style={[styles.pair, monoStyle(11, colors.muted)]}>
+                      {row.chain.toUpperCase()}
+                      {row.settlementHub ? " ★" : row.chain === "base" ? "" : ""}
                     </Text>
                   </View>
                   <View style={styles.rowMid}>
-                    <Text style={styles.count}>
+                    <Text style={[styles.count, monoStyle(14, row.status === "open" ? colors.brand : colors.muted)]}>
                       {row.status === "open" && row.timeRemaining != null
                         ? `${Math.ceil(row.timeRemaining)}s`
-                        : row.status.toUpperCase()}
+                        : row.status === "unavailable"
+                          ? "PENDING"
+                          : row.status.toUpperCase()}
                     </Text>
                     {row.spot ? (
-                      <Text style={styles.odds}>
+                      <Text style={monoStyle(12, colors.muted)}>
                         UP {(Number(row.spot.yes) * 100).toFixed(0)}¢ · DOWN{" "}
                         {(Number(row.spot.no) * 100).toFixed(0)}¢
                       </Text>
                     ) : (
-                      <Text style={styles.odds}>{row.reason || "—"}</Text>
+                      <Text style={monoStyle(12, colors.muted)}>{row.reason || "—"}</Text>
                     )}
                   </View>
                   <Text style={[styles.go, { color: statusTone(row.status) }]}>
@@ -171,7 +173,7 @@ const styles = StyleSheet.create({
   chipOn: { backgroundColor: colors.brandDim, borderColor: colors.brand },
   chipText: { color: colors.muted, fontFamily: type.bold, fontSize: 11, letterSpacing: 0.8 },
   chipTextOn: { color: colors.brand },
-  settle: { color: colors.muted, fontFamily: type.body, fontSize: 12 },
+  settle: { color: colors.muted, fontFamily: type.data, fontSize: 11 },
   error: { color: colors.danger, fontFamily: type.body, fontSize: 13 },
   row: {
     flexDirection: "row",
