@@ -1,6 +1,6 @@
 import * as Haptics from "expo-haptics";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Dimensions, Linking, StyleSheet, Text, View } from "react-native";
+import { Dimensions, Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   FadeIn,
@@ -32,6 +32,7 @@ import { getSelectedMarket } from "@/src/market/selection";
 import { addHunch, listHunches, settleRound } from "@/src/hunchBook";
 import { useWallet } from "@/src/wallet/WalletContext";
 import { placePrivyTrade } from "@/src/wallet/privyTrade";
+import { PerpTradingTicket } from "@/src/perpl/PerpTradingTicket";
 import { colors, radius, space, type } from "@/src/theme";
 
 const AMOUNTS = ["5", "10", "25"] as const;
@@ -55,6 +56,7 @@ export default function HunchScreen() {
   const { me, refresh: refreshWallet } = useWallet();
   const { user, privyMode, getEthereumProvider } = useAuth();
   const toast = useToast();
+  const [tradeMode, setTradeMode] = useState<"perps" | "hunch">("perps");
   const [data, setData] = useState<CurrentRoundResponse | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [picked, setPicked] = useState<"UP" | "DOWN" | null>(null);
@@ -369,117 +371,138 @@ export default function HunchScreen() {
           <BalanceChip label={me ? `${Number(me.ausd).toFixed(0)} AUSD` : "… AUSD"} />
         </View>
 
-        {/* One-liner */}
-        <Text style={styles.oneLiner}>Swipe UP or DOWN. 60-second markets on Monad.</Text>
-
-        {/* Amount chips */}
-        <View style={styles.amountRow}>
-          {AMOUNTS.map((a) => (
-            <AmountChip
-              key={a}
-              value={a}
-              selected={amount === a}
-              onPress={() => {
-                setAmount(a);
-                Haptics.selectionAsync();
-              }}
-            />
-          ))}
-          <Text style={styles.amountLabel}>AUSD</Text>
+        {/* Trade Mode Segmenter (Perps vs 60s Hunch) */}
+        <View style={styles.modeSegment}>
+          <Pressable
+            onPress={() => {
+              setTradeMode("perps");
+              Haptics.selectionAsync();
+            }}
+            style={[styles.modeTab, tradeMode === "perps" && styles.modeTabActive]}
+          >
+            <Text style={[styles.modeTabText, tradeMode === "perps" && styles.modeTabTextActive]}>
+              📈 PERPETUALS (PERPL)
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => {
+              setTradeMode("hunch");
+              Haptics.selectionAsync();
+            }}
+            style={[styles.modeTab, tradeMode === "hunch" && styles.modeTabActive]}
+          >
+            <Text style={[styles.modeTabText, tradeMode === "hunch" && styles.modeTabTextActive]}>
+              ⚡ 60s UP/DOWN
+            </Text>
+          </Pressable>
         </View>
 
-        {/* Hero swipe card — the composition */}
-        <GestureDetector gesture={pan}>
-          <Animated.View style={[styles.card, cardStyle]}>
-            <Animated.View
-              pointerEvents="none"
-              style={[styles.flash, flashStyle]}
-            />
-
-            <View style={styles.hintRow}>
-              <Animated.Text style={[styles.hintDown, downHint]}>← DOWN</Animated.Text>
-              <Animated.Text style={[styles.hintUp, upHint]}>UP →</Animated.Text>
-            </View>
-
-            <Text style={styles.asset}>
-              {open
-                ? `${getSelectedMarket().label} · ${getSelectedMarket().chain.toUpperCase()}`
-                : data?.error
-                  ? "OFFLINE"
-                  : "NEXT ROUND"}
-            </Text>
-            <Text style={styles.roundId}>{open ? `ROUND ${round?.roundId}` : "KEEPER LOADING"}</Text>
-
-            <Animated.Text style={[styles.countdown, countdownStyle]}>
-              {loading && !round ? "··" : remainingDisplay}
-            </Animated.Text>
-            <Text style={styles.secLabel}>{open ? "SECONDS LEFT" : ""}</Text>
-
-            <View style={styles.metaRow}>
-              <View style={styles.metaCol}>
-                <Text style={styles.metaLabel}>STRIKE</Text>
-                <Text style={styles.metaValue}>${strikeLabel}</Text>
-              </View>
-              <View style={styles.metaDivider} />
-              <View style={styles.metaCol}>
-                <Text style={styles.metaLabel}>UP</Text>
-                <Text style={[styles.metaValue, { color: colors.up }]}>
-                  {data?.spot ? `${(Number(data.spot.yes) * 100).toFixed(0)}¢` : "—"}
-                </Text>
-              </View>
-              <View style={styles.metaDivider} />
-              <View style={styles.metaCol}>
-                <Text style={styles.metaLabel}>DOWN</Text>
-                <Text style={[styles.metaValue, { color: colors.down }]}>
-                  {data?.spot ? `${(Number(data.spot.no) * 100).toFixed(0)}¢` : "—"}
-                </Text>
-              </View>
-            </View>
-
-            {quoteLine ? (
-              <Animated.Text entering={FadeIn} style={styles.quote}>
-                {quoteLine}
-              </Animated.Text>
-            ) : null}
-
-            {lastResult ? (
-              <Animated.Text entering={FadeIn} exiting={FadeOut} style={styles.result}>
-                {lastResult}
-              </Animated.Text>
-            ) : null}
-
-            {err ? <Text style={styles.error}>{err}</Text> : null}
-
-            <Text style={styles.swipeCue}>
-              {canTrade ? "Swipe the card" : remainingSec > 0 && remainingSec < 12 ? "Too late this round" : "Hold for live market"}
-            </Text>
-          </Animated.View>
-        </GestureDetector>
-
-        {/* Soft fallback buttons */}
-        <View style={styles.actions}>
-          <View style={styles.row}>
-            <View style={styles.half}>
-              <PrimaryButton
-                label={busy && picked === "DOWN" ? "…" : "DOWN"}
-                tone="down"
-                compact
-                disabled={!canTrade && !(busy && picked === "DOWN")}
-                onPress={() => onPick("DOWN")}
-              />
-            </View>
-            <View style={styles.half}>
-              <PrimaryButton
-                label={busy && picked === "UP" ? "…" : "UP"}
-                tone="up"
-                compact
-                disabled={!canTrade && !(busy && picked === "UP")}
-                onPress={() => onPick("UP")}
-              />
-            </View>
+        {tradeMode === "perps" ? (
+          <View style={{ flex: 1, marginTop: 10 }}>
+            <PerpTradingTicket />
           </View>
-          <Text style={styles.note}>{note}</Text>
-        </View>
+        ) : (
+          <>
+            {/* One-liner */}
+            <Text style={styles.oneLiner}>Swipe UP or DOWN. 60-second markets on Monad.</Text>
+
+            {/* Amount chips */}
+            <View style={styles.amountRow}>
+              {AMOUNTS.map((a) => (
+                <AmountChip
+                  key={a}
+                  value={a}
+                  selected={amount === a}
+                  onPress={() => {
+                    setAmount(a);
+                    Haptics.selectionAsync();
+                  }}
+                />
+              ))}
+              <Text style={styles.amountLabel}>AUSD</Text>
+            </View>
+
+            {/* Hero swipe card — the composition */}
+            <GestureDetector gesture={pan}>
+              <Animated.View style={[styles.card, cardStyle]}>
+                <Animated.View
+                  pointerEvents="none"
+                  style={[styles.flash, flashStyle]}
+                />
+
+                <View style={styles.hintRow}>
+                  <Animated.Text style={[styles.hintDown, downHint]}>← DOWN</Animated.Text>
+                  <Animated.Text style={[styles.hintUp, upHint]}>UP →</Animated.Text>
+                </View>
+
+                <Text style={styles.asset}>
+                  {open
+                    ? `${getSelectedMarket().label} · ${getSelectedMarket().chain.toUpperCase()}`
+                    : data?.error
+                      ? "OFFLINE"
+                      : "NEXT ROUND"}
+                </Text>
+                <Text style={styles.roundId}>{open ? `ROUND ${round?.roundId}` : "KEEPER LOADING"}</Text>
+
+                <Animated.Text style={[styles.countdown, countdownStyle]}>
+                  {loading && !round ? "··" : remainingDisplay}
+                </Animated.Text>
+                <Text style={styles.secLabel}>{open ? "SECONDS LEFT" : ""}</Text>
+
+                <View style={styles.metaRow}>
+                  <View style={styles.metaCol}>
+                    <Text style={styles.metaLabel}>STRIKE</Text>
+                    <Text style={styles.metaValue}>${strikeLabel}</Text>
+                  </View>
+                  <View style={styles.metaDivider} />
+                  <View style={styles.metaCol}>
+                    <Text style={styles.metaLabel}>UP</Text>
+                    <Text style={[styles.metaValue, { color: colors.up }]}>
+                      {data?.spot ? `${(Number(data.spot.yes) * 100).toFixed(0)}¢` : "—"}
+                    </Text>
+                  </View>
+                  <View style={styles.metaDivider} />
+                  <View style={styles.metaCol}>
+                    <Text style={styles.metaLabel}>DOWN</Text>
+                    <Text style={[styles.metaValue, { color: colors.down }]}>
+                      {data?.spot ? `${(Number(data.spot.no) * 100).toFixed(0)}¢` : "—"}
+                    </Text>
+                  </View>
+                </View>
+
+                {quoteLine ? <Text style={styles.quote}>{quoteLine}</Text> : null}
+                {lastResult ? (
+                  <Text style={[styles.quote, { color: colors.brand }]}>{lastResult}</Text>
+                ) : null}
+              </Animated.View>
+            </GestureDetector>
+
+            {/* Bottom: soft buttons + note */}
+            <View style={styles.bottom}>
+              <View style={styles.btnRow}>
+                <View style={styles.half}>
+                  <PrimaryButton
+                    label={busy && picked === "DOWN" ? "…" : "DOWN"}
+                    tone="down"
+                    compact
+                    disabled={!canTrade && !(busy && picked === "DOWN")}
+                    onPress={() => onPick("DOWN")}
+                  />
+                </View>
+                <View style={styles.half}>
+                  <PrimaryButton
+                    label={busy && picked === "UP" ? "…" : "UP"}
+                    tone="up"
+                    compact
+                    disabled={!canTrade && !(busy && picked === "UP")}
+                    onPress={() => onPick("UP")}
+                  />
+                </View>
+              </View>
+              <Text style={styles.note}>{note}</Text>
+            </View>
+          </>
+        )}
       </View>
     </Screen>
   );
@@ -495,6 +518,34 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+  },
+  modeSegment: {
+    flexDirection: "row",
+    backgroundColor: colors.bgElevated,
+    borderRadius: radius.md,
+    padding: 4,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  modeTab: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: radius.sm,
+    alignItems: "center",
+  },
+  modeTabActive: {
+    backgroundColor: colors.brandDim,
+    borderColor: colors.brand,
+  },
+  modeTabText: {
+    fontFamily: type.bold,
+    fontSize: 12,
+    color: colors.muted,
+    letterSpacing: 0.5,
+  },
+  modeTabTextActive: {
+    color: colors.brand,
   },
   oneLiner: {
     color: colors.muted,
@@ -646,7 +697,9 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   actions: { gap: 10 },
+  bottom: { gap: 10 },
   row: { flexDirection: "row", gap: 10 },
+  btnRow: { flexDirection: "row", gap: 10 },
   half: { flex: 1 },
   note: {
     color: colors.muted,

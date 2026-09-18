@@ -157,9 +157,30 @@ export async function faucetWallet(address: string, amountAUSD = "1000") {
   let mintTx: string | undefined;
   if (needMint) {
     const qty = ethers.parseUnits(String(capped), 6);
-    const tx = await ausd.mint(address, qty);
-    await waitForReceipt(provider, tx.hash);
-    mintTx = tx.hash;
+    try {
+      // First try Agora official testnet faucet
+      const { agoraFaucetContract } = await import("../shared/chain");
+      const faucet = agoraFaucetContract(wallet, dep);
+      const tx = await faucet.requestFunds(address);
+      await waitForReceipt(provider, tx.hash);
+      mintTx = tx.hash;
+    } catch (e) {
+      // If Agora faucet has rate limit or fails, try hot-wallet transfer or mint
+      try {
+        const hotBal = await ausd.balanceOf(wallet.address);
+        if (hotBal >= qty) {
+          const sendAUSD = await ausd.transfer(address, qty);
+          await waitForReceipt(provider, sendAUSD.hash);
+          mintTx = sendAUSD.hash;
+        } else {
+          const tx = await ausd.mint(address, qty);
+          await waitForReceipt(provider, tx.hash);
+          mintTx = tx.hash;
+        }
+      } catch (inner) {
+        console.warn("[faucet] AUSD mint/transfer warning:", (inner as any)?.message || inner);
+      }
+    }
   }
 
   let monTx: string | undefined;

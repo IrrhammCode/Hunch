@@ -16,7 +16,15 @@ export const MONAD_TESTNET = {
   pyth: "0x2880aB155794e7179c9eE2e38200202908C17B43",
   // Official BTC/USD Pyth feed id (legacy key kept for compatibility)
   btcUsdFeedId: PYTH_FEEDS.BTC_USD,
-  ausd: null as string | null,
+  // Official Agora AUSD & Faucet on Monad Testnet
+  ausd: "0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC",
+  agoraFaucet: "0xd236c18D274E54FAccC3dd9DDA4b27965a73ee6C",
+  // Perpl Decentralized Perpetual Exchange on Monad Testnet
+  perpl: {
+    exchange: "0x1964C32f0bE608E7D29302AFF5E61268E72080cc",
+    apiUrl: "https://testnet.perpl.xyz/api",
+    wsUrl: "wss://testnet.perpl.xyz",
+  },
   usdc: "0x534b2f3A21130d7a60830c2Df862319e593943A3",
 } as const;
 

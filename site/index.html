@@ -144,24 +144,22 @@
 <body>
   <header class="hero">
     <div class="wrap">
-      <p class="kicker">Metropolis Track 01 · Agora · Privy · Pyth</p>
+      <p class="kicker">Metropolis Track 01 · Agora $10k Bounty · Privy · Pyth</p>
       <h1 class="wordmark">HUNCH</h1>
-      <p class="headline">Mobile multichain trading + options exchange — swipe UP or DOWN on short-horizon markets.</p>
+      <p class="headline">Mobile trading on Monad — Perpetual Futures via Perpl + 60s swipe hunches with Agora AUSD.</p>
       <p class="lede">
-        <strong>Markets</strong> blotter · <strong>Options Exchange</strong> (buy UP/DOWN at CPMM prices) · <strong>Trade</strong> swipe ticket.
-        Privy embedded wallet is the trader. Settlement hub on <strong>Monad</strong>, Base surface for multichain BOOK.
-        Event-market series — not TradFi vanilla options.
+        <strong>Perpetuals</strong> leverage trading on BTC, ETH, SOL, MON · <strong>60s Hunches</strong> with swipe gesture · <strong>Unified Portfolio</strong> margin & claims.
+        Privy embedded wallet is the trader. Full onchain settlement on <strong>Monad</strong> with official Agora AUSD collateral.
       </p>
       <div class="ticket" aria-label="Sample market ticket">
-        <div class="ticket-row"><span class="brand">ETH-USD</span><span>MONAD ★</span></div>
-        <div class="ticket-row"><span class="brand">31.4s</span><span class="up">UP 52¢</span><span class="down">DOWN 48¢</span></div>
-        <div class="ticket-row"><span style="color:var(--muted)">swipe</span><span class="up">→ UP</span><span class="down">DOWN ←</span></div>
+        <div class="ticket-row"><span class="brand">BTC PERP</span><span>PERPL DEX · MONAD</span></div>
+        <div class="ticket-row"><span class="brand">$78,240.00</span><span class="up">+2.45% 24h</span><span class="brand">10x LEV</span></div>
+        <div class="ticket-row"><span style="color:var(--muted)">60s HUNCH</span><span class="up">UP 52¢</span><span class="down">DOWN 48¢</span></div>
       </div>
       <div class="ctas">
         <a class="btn btn-primary" href="https://github.com/IrrhammCode/Hunch">GitHub</a>
-        <a class="btn" href="https://github.com/IrrhammCode/Hunch/blob/master/PIVOT_PLAN.md">Product plan</a>
+        <a class="btn" href="https://github.com/IrrhammCode/Hunch/blob/master/SUBMIT.md">Submit write-up</a>
         <a class="btn" href="https://github.com/IrrhammCode/Hunch/blob/master/mobile/DEMO.md">Try path</a>
-        <a class="btn" href="https://github.com/IrrhammCode/Hunch/blob/master/SUBMIT.md">Submit</a>
       </div>
     </div>
   </header>
@@ -170,43 +168,53 @@
     <div class="wrap">
       <h2>How the trading loop works</h2>
       <ol class="steps">
-        <li><span class="n">01</span><span>Privy email OTP / Apple → embedded wallet (same EOA on Monad + Base).</span></li>
-        <li><span class="n">02</span><span>Fund testnet AUSD + gas (capped faucet).</span></li>
-        <li><span class="n">03</span><span><strong>Markets</strong> blotter — BTC / ETH / SOL · countdown · odds.</span></li>
-        <li><span class="n">04</span><span><strong>Trade</strong> — swipe UP or DOWN; wallet signs commitBuy; relay execute + Pyth.</span></li>
-        <li><span class="n">05</span><span><strong>Portfolio</strong> — cross-chain BOOK · claim · MonadVision proof.</span></li>
+        <li><span class="n">01</span><span>Privy email OTP → embedded wallet created on Monad Testnet.</span></li>
+        <li><span class="n">02</span><span>Claim official testnet Agora AUSD + MON gas.</span></li>
+        <li><span class="n">03</span><span><strong>Trade Perpetuals</strong> — Long/Short leverage trading powered by Perpl DEX.</span></li>
+        <li><span class="n">04</span><span><strong>Trade 60s Hunches</strong> — Swipe UP or DOWN with sub-second Pyth settlement.</span></li>
+        <li><span class="n">05</span><span><strong>Portfolio</strong> — Track margin, close positions, and 1-tap claim winning hunch payouts.</span></li>
       </ol>
       <div class="tags">
+        <span class="tag"><strong>Agora</strong> Mobile Trading ($10k)</span>
+        <span class="tag"><strong>Perpl</strong> Perpetual DEX</span>
+        <span class="tag"><strong>Privy</strong> Embedded Wallet</span>
+        <span class="tag"><strong>Pyth</strong> Sub-Second Oracle</span>
         <span class="tag"><strong>Track 01</strong> Onchain Finance</span>
-        <span class="tag"><strong>Agora</strong> mobile trading</span>
-        <span class="tag"><strong>Privy</strong> wallet trader</span>
-        <span class="tag"><strong>Pyth</strong> BTC/ETH/SOL</span>
-        <span class="tag"><strong>Monad</strong> hub 10143</span>
-        <span class="tag"><strong>Base</strong> sepolia surface</span>
+        <span class="tag"><strong>Monad</strong> Testnet 10143</span>
       </div>
     </div>
   </section>
 
   <section>
     <div class="wrap">
-      <h2>Contracts · Monad testnet</h2>
+      <h2>Contracts & Protocols · Monad testnet</h2>
       <table>
-        <thead><tr><th>Contract</th><th>Address</th><th>Explorer</th></tr></thead>
+        <thead><tr><th>Protocol / Contract</th><th>Address / Endpoint</th><th>Explorer</th></tr></thead>
         <tbody>
           <tr>
-            <td>Factory</td>
+            <td>Agora AUSD (Official)</td>
+            <td class="mono">0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC</td>
+            <td><a href="https://testnet.monadvision.com/address/0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC" rel="noopener">MonadVision</a></td>
+          </tr>
+          <tr>
+            <td>Agora Faucet</td>
+            <td class="mono">0xd236c18D274E54FAccC3dd9DDA4b27965a73ee6C</td>
+            <td><a href="https://testnet.monadvision.com/address/0xd236c18D274E54FAccC3dd9DDA4b27965a73ee6C" rel="noopener">MonadVision</a></td>
+          </tr>
+          <tr>
+            <td>Perpl Perpetual Exchange</td>
+            <td class="mono">0x1964C32f0bE608E7D29302AFF5E61268E72080cc</td>
+            <td><a href="https://testnet.monadvision.com/address/0x1964C32f0bE608E7D29302AFF5E61268E72080cc" rel="noopener">MonadVision</a></td>
+          </tr>
+          <tr>
+            <td>Hunch Factory (60s Rounds)</td>
             <td class="mono">0x9b708E57B0a51d03207b0c65392D50de40e1B250</td>
             <td><a href="https://testnet.monadvision.com/address/0x9b708E57B0a51d03207b0c65392D50de40e1B250" rel="noopener">MonadVision</a></td>
           </tr>
           <tr>
-            <td>Vault</td>
+            <td>Hunch Vault (LP)</td>
             <td class="mono">0xe064D0B2edE1891ebD0F815eDADd45541c62C927</td>
             <td><a href="https://testnet.monadvision.com/address/0xe064D0B2edE1891ebD0F815eDADd45541c62C927" rel="noopener">MonadVision</a></td>
-          </tr>
-          <tr>
-            <td>MockAUSD</td>
-            <td class="mono">0xB5C6B27f0128A317171C5658eAfAC901d52f2989</td>
-            <td><a href="https://testnet.monadvision.com/address/0xB5C6B27f0128A317171C5658eAfAC901d52f2989" rel="noopener">MonadVision</a></td>
           </tr>
         </tbody>
       </table>

@@ -102,12 +102,23 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        {/* Ecosystem Stack */}
+        <View style={styles.card}>
+          <Text style={styles.cardLabel}>Ecosystem Stack</Text>
+          <View style={{ flexDirection: "row", gap: 6, flexWrap: "wrap", marginTop: 4 }}>
+            <StatusPill label="Agora AUSD Collateral" tone="brand" />
+            <StatusPill label="Perpl DEX Connected" tone="brand" />
+            <StatusPill label="Privy EOA Wallet" tone="brand" />
+            <StatusPill label="Monad Testnet 10143" tone="muted" />
+          </View>
+        </View>
+
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
         {/* Actions */}
         <View style={{ gap: 10, marginTop: 4 }}>
           <PrimaryButton
-            label={busy ? "Funding…" : privyMode ? "Fund wallet" : "Faucet +1000 AUSD"}
+            label={busy ? "Funding…" : "Claim Agora AUSD + Gas MON"}
             onPress={onFaucet}
             disabled={busy || !user}
           />

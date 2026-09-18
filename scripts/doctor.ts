@@ -72,13 +72,25 @@ async function checkLiveApi(baseUrl: string) {
   try {
     const r = await fetch(`${base}/v1/config`, { signal: AbortSignal.timeout(2500) });
     if (r.ok) {
-      const j = (await r.json()) as { chainId?: number; factory?: string };
-      ok(`API /v1/config chainId=${j.chainId ?? "?"} factory=${j.factory ? "present" : "missing"}`);
+      const j = (await r.json()) as { chainId?: number; factory?: string; perpl?: any; collateral?: any };
+      ok(`API /v1/config chainId=${j.chainId ?? "?"} factory=${j.factory ? "present" : "missing"} AUSD=${j.collateral?.address ? "Agora AUSD set" : "missing"}`);
     } else {
       warn(`API /v1/config status ${r.status}`);
     }
   } catch (e: any) {
     warn(`API /v1/config failed: ${e?.message || e}`);
+  }
+
+  try {
+    const p = await fetch(`${base}/v1/perpl/markets`, { signal: AbortSignal.timeout(3500) });
+    if (p.ok) {
+      const pj = (await p.json()) as { markets?: any[] };
+      ok(`API /v1/perpl/markets reachable (${pj.markets?.length ?? 0} perpetual markets)`);
+    } else {
+      warn(`API /v1/perpl/markets status ${p.status}`);
+    }
+  } catch (e: any) {
+    warn(`API /v1/perpl/markets failed: ${e?.message || e}`);
   }
 }
 

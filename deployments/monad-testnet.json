@@ -23,17 +23,25 @@
     }
   ],
   "collateral": {
-    "address": "0xB5C6B27f0128A317171C5658eAfAC901d52f2989",
+    "address": "0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC",
     "symbol": "AUSD",
     "decimals": 6,
-    "note": "MockAUSD testnet stand-in"
+    "faucet": "0xd236c18D274E54FAccC3dd9DDA4b27965a73ee6C",
+    "note": "Official Agora AUSD on Monad Testnet"
+  },
+  "perpl": {
+    "exchange": "0x1964C32f0bE608E7D29302AFF5E61268E72080cc",
+    "apiUrl": "https://testnet.perpl.xyz/api",
+    "wsUrl": "wss://testnet.perpl.xyz",
+    "chainId": 10143
   },
   "factory": "0x9b708E57B0a51d03207b0c65392D50de40e1B250",
   "vault": "0xe064D0B2edE1891ebD0F815eDADd45541c62C927",
   "explorer": {
-    "ausd": "https://testnet.monadvision.com/address/0xB5C6B27f0128A317171C5658eAfAC901d52f2989",
+    "ausd": "https://testnet.monadvision.com/address/0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC",
     "factory": "https://testnet.monadvision.com/address/0x9b708E57B0a51d03207b0c65392D50de40e1B250",
     "vault": "https://testnet.monadvision.com/address/0xe064D0B2edE1891ebD0F815eDADd45541c62C927",
-    "pyth": "https://testnet.monadvision.com/address/0x2880aB155794e7179c9eE2e38200202908C17B43"
+    "pyth": "https://testnet.monadvision.com/address/0x2880aB155794e7179c9eE2e38200202908C17B43",
+    "perpl": "https://testnet.monadvision.com/address/0x1964C32f0bE608E7D29302AFF5E61268E72080cc"
   }
 }

@@ -30,6 +30,15 @@ import {
   walletSnapshot,
   FAUCET,
 } from "./wallet";
+import {
+  listPerplMarkets,
+  getPerplMarket,
+  getUserPerplAccount,
+  buildPerplDepositCalldata,
+  placePerplOrder,
+  closePerplPosition,
+} from "./perpl";
+import { PERPL_TESTNET } from "../shared/perpl";
 
 loadEnv();
 
@@ -54,6 +63,12 @@ app.get("/v1/config", (c) => {
     pyth: dep.pyth,
     btcUsdFeedId: dep.btcUsdFeedId,
     markets: enabledMarkets(),
+    perpl: {
+      exchange: dep.perpl?.exchange || PERPL_TESTNET.exchange,
+      apiUrl: dep.perpl?.apiUrl || PERPL_TESTNET.apiUrl,
+      wsUrl: dep.perpl?.wsUrl || PERPL_TESTNET.wsUrl,
+      chainId: dep.perpl?.chainId || PERPL_TESTNET.chainId,
+    },
     chains: CHAINS.map((ch) => ({
       key: ch.key,
       name: ch.name,
@@ -65,6 +80,67 @@ app.get("/v1/config", (c) => {
     delayBlocks: 2,
     duration: 60,
   });
+});
+
+/** Perpl Perpetuals Routes (Agora Onchain Trading Bounty) */
+app.get("/v1/perpl/markets", async (c) => {
+  try {
+    return c.json(await listPerplMarkets());
+  } catch (e: any) {
+    return c.json({ error: e.message || String(e) }, 500);
+  }
+});
+
+app.get("/v1/perpl/market/:symbol", async (c) => {
+  try {
+    const symbol = c.req.param("symbol");
+    const market = await getPerplMarket(symbol);
+    if (!market) return c.json({ error: `market ${symbol} not found` }, 404);
+    return c.json({ market });
+  } catch (e: any) {
+    return c.json({ error: e.message || String(e) }, 500);
+  }
+});
+
+app.get("/v1/perpl/account/:address", async (c) => {
+  try {
+    const address = c.req.param("address");
+    return c.json(await getUserPerplAccount(address));
+  } catch (e: any) {
+    return c.json({ error: e.message || String(e) }, 400);
+  }
+});
+
+app.post("/v1/perpl/tx/deposit", async (c) => {
+  try {
+    const body = await c.req.json();
+    const { amountAUSD, address } = body;
+    const calldata = await buildPerplDepositCalldata(Number(amountAUSD), address);
+    return c.json(calldata);
+  } catch (e: any) {
+    return c.json({ error: e.message || String(e) }, 400);
+  }
+});
+
+app.post("/v1/perpl/order", async (c) => {
+  try {
+    const body = await c.req.json();
+    const result = await placePerplOrder(body);
+    return c.json(result);
+  } catch (e: any) {
+    return c.json({ error: e.message || String(e) }, 400);
+  }
+});
+
+app.post("/v1/perpl/order/close", async (c) => {
+  try {
+    const body = await c.req.json();
+    const { positionId, trader } = body;
+    const result = await closePerplPosition(positionId, trader);
+    return c.json(result);
+  } catch (e: any) {
+    return c.json({ error: e.message || String(e) }, 400);
+  }
 });
 
 /** Multichain market board — UP/DOWN short-horizon markets per settlement chain */

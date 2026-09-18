@@ -11,7 +11,8 @@ export type Deployment = {
   pyth: string;
   btcUsdFeedId: string;
   markets?: { symbol: string; pair: string; feedId: string }[];
-  collateral: { address: string; decimals: number; symbol: string };
+  collateral: { address: string; decimals: number; symbol: string; faucet?: string; note?: string };
+  perpl?: { exchange: string; apiUrl: string; wsUrl: string; chainId: number };
   vault?: string;
 };
 
@@ -95,6 +96,17 @@ export function ausdContract(signerOrProvider: ethers.Signer | ethers.Provider, 
       "function mint(address,uint256)",
       "function decimals() view returns (uint8)",
       "function transfer(address,uint256) returns (bool)",
+    ],
+    signerOrProvider,
+  );
+}
+
+export function agoraFaucetContract(signerOrProvider: ethers.Signer | ethers.Provider, dep = loadDeployment()) {
+  const faucetAddr = dep.collateral.faucet || "0xd236c18D274E54FAccC3dd9DDA4b27965a73ee6C";
+  return new Contract(
+    faucetAddr,
+    [
+      "function requestFunds(address recipient) external returns (bool)",
     ],
     signerOrProvider,
   );

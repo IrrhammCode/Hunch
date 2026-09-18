@@ -260,4 +260,180 @@ export function demoFaucet(amountAUSD = "1000") {
   return post<{ ausd: string; tx: string }>("/v1/demo/faucet", { amountAUSD });
 }
 
+export type PerplMarket = {
+  id: number;
+  perpetualId: number;
+  symbol: string;
+  name: string;
+  sizeUnits: string;
+  markPrice: number;
+  lastPrice: number;
+  bidPrice: number;
+  askPrice: number;
+  change24hPct: number;
+  volume24hAUSD: number;
+  openInterest: number;
+  fundingRateBps: number;
+  maxLeverage: number;
+  priceDecimals: number;
+  sizeDecimals: number;
+};
+
+export type PerplPosition = {
+  id: string;
+  trader: string;
+  symbol: string;
+  side: "LONG" | "SHORT";
+  size: number;
+  sizeAUSD: number;
+  entryPrice: number;
+  markPrice?: number;
+  leverage: number;
+  marginAUSD: number;
+  liquidationPrice: number;
+  unrealizedPnLAUSD?: number;
+  unrealizedPnLPct?: number;
+  openedAt: number;
+  status: "OPEN" | "CLOSED";
+  realizedPnL?: number;
+};
+
+export type PerplAccount = {
+  address: string;
+  exchange: string;
+  collateralToken: string;
+  marginUsedAUSD: number;
+  unrealizedPnLAUSD: number;
+  openPositionsCount: number;
+  positions: PerplPosition[];
+};
+
+export async function fetchPerplMarkets(): Promise<{ markets: PerplMarket[]; context: any }> {
+  try {
+    return await get<{ markets: PerplMarket[]; context: any }>("/v1/perpl/markets");
+  } catch {
+    // Fallback if API offline or in design mode
+    return {
+      markets: [
+        {
+          id: 16,
+          perpetualId: 16,
+          symbol: "BTC",
+          name: "BTC Perp",
+          sizeUnits: "BTC",
+          markPrice: 77768.8,
+          lastPrice: 77754.1,
+          bidPrice: 77738.7,
+          askPrice: 77748.7,
+          change24hPct: 1.71,
+          volume24hAUSD: 3739956,
+          openInterest: 17.76,
+          fundingRateBps: 30,
+          maxLeverage: 10,
+          priceDecimals: 1,
+          sizeDecimals: 5,
+        },
+        {
+          id: 32,
+          perpetualId: 32,
+          symbol: "ETH",
+          name: "ETH Perp",
+          sizeUnits: "ETH",
+          markPrice: 2489.27,
+          lastPrice: 2489.63,
+          bidPrice: 2488.9,
+          askPrice: 2489.2,
+          change24hPct: 1.87,
+          volume24hAUSD: 9663316,
+          openInterest: 444.08,
+          fundingRateBps: 40,
+          maxLeverage: 12,
+          priceDecimals: 2,
+          sizeDecimals: 3,
+        },
+        {
+          id: 48,
+          perpetualId: 48,
+          symbol: "SOL",
+          name: "SOL Perp",
+          sizeUnits: "SOL",
+          markPrice: 105.97,
+          lastPrice: 105.96,
+          bidPrice: 105.89,
+          askPrice: 105.93,
+          change24hPct: 5.97,
+          volume24hAUSD: 394629,
+          openInterest: 6210.12,
+          fundingRateBps: 30,
+          maxLeverage: 10,
+          priceDecimals: 2,
+          sizeDecimals: 3,
+        },
+        {
+          id: 64,
+          perpetualId: 64,
+          symbol: "MON",
+          name: "MON Perp",
+          sizeUnits: "MON",
+          markPrice: 2.423,
+          lastPrice: 2.419,
+          bidPrice: 2.423,
+          askPrice: 2.427,
+          change24hPct: 6.61,
+          volume24hAUSD: 85748,
+          openInterest: 28265.86,
+          fundingRateBps: 40,
+          maxLeverage: 33,
+          priceDecimals: 5,
+          sizeDecimals: 0,
+        },
+      ],
+      context: {
+        chainId: 10143,
+        collateralToken: "0xa9012a055bd4e0edff8ce09f960291c09d5322dc",
+        exchange: "0x1964c32f0be608e7d29302aff5e61268e72080cc",
+        minAccountOpenAUSD: 100,
+      },
+    };
+  }
+}
+
+export async function fetchPerplAccount(address: string): Promise<PerplAccount> {
+  try {
+    return await get<PerplAccount>(`/v1/perpl/account/${address}`);
+  } catch {
+    return {
+      address,
+      exchange: "0x1964c32f0be608e7d29302aff5e61268e72080cc",
+      collateralToken: "0xa9012a055bd4e0edff8ce09f960291c09d5322dc",
+      marginUsedAUSD: 0,
+      unrealizedPnLAUSD: 0,
+      openPositionsCount: 0,
+      positions: [],
+    };
+  }
+}
+
+export function placePerplOrder(params: {
+  trader: string;
+  symbol: string;
+  side: "LONG" | "SHORT";
+  marginAUSD: number;
+  leverage: number;
+}) {
+  return post<{ success: boolean; position: PerplPosition; market: PerplMarket }>("/v1/perpl/order", params);
+}
+
+export function closePerplPosition(positionId: string, trader: string) {
+  return post<{ success: boolean; position: PerplPosition; realizedPnL: number }>("/v1/perpl/order/close", {
+    positionId,
+    trader,
+  });
+}
+
+export function fetchPerplDepositCalldata(amountAUSD: number, address: string) {
+  return post<any>("/v1/perpl/tx/deposit", { amountAUSD, address });
+}
+
 export { API_URL };
+

@@ -49,9 +49,10 @@ Monad testnet (chainId **10143**) is the settlement layer for every round.
 
 | Sponsor | What we use |
 |---|---|
-| **Agora** | AUSD-shaped collateral (6 decimals). Testnet uses `MockAUSD`; production path is Agora AUSD. |
-| **Privy** | Email OTP login + Ethereum embedded wallet created on login. Wallet address is the onchain trader. |
-| **Pyth** | BTC/USD price feed for strike (open) and settlement (resolve). |
+| **Agora** | Official Agora AUSD Testnet (`0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC`) used as primary margin and settlement collateral across both Perpetuals and Hunches, with official Agora Faucet integration (`0xd236c18D274E54FAccC3dd9DDA4b27965a73ee6C`). |
+| **Perpl** | Monad-native decentralized perpetual futures exchange (`0x1964C32f0bE608E7D29302AFF5E61268E72080cc`). Live orderbook, funding rates, and leverage trading for BTC, ETH, SOL, MON. |
+| **Privy** | Email OTP login + Ethereum embedded wallet created on login. Wallet address is the onchain trader across all instruments. |
+| **Pyth** | Sub-second price feeds on Monad for strike determination and 60-second settlement. |
 
 ---
 
@@ -60,25 +61,24 @@ Monad testnet (chainId **10143**) is the settlement layer for every round.
 ```
 iOS Expo (Privy OTP + embedded wallet)
         ↓
-API :8787 — quote, calldata, faucet (capped), relayed executeBuy
+API :8787 — Perpl market proxy, quote, calldata, faucet, relayed executeBuy
         ↓
-Keeper — open → resolve (Pyth) → residual
-        ↓
-HunchVault → HunchFactory → HunchMarket  +  Pyth  +  AUSD/MockAUSD
+Perpl Exchange (0x1964C...80cc) · Perpetuals order execution & margin
+HunchVault → HunchFactory → HunchMarket  +  Pyth  +  Agora AUSD (0xa901...22dc)
 ```
-
-Trade path: phone `commitBuy` → API `executeBuy` after delay-blocks + Pyth → phone `redeem`.
 
 ---
 
-## Contracts (Monad testnet)
+## Contracts & Protocol Addresses (Monad testnet 10143)
 
-| Contract | Address | Explorer |
-|---|---|---|
-| Factory | `0x9b708E57B0a51d03207b0c65392D50de40e1B250` | [MonadVision](https://testnet.monadvision.com/address/0x9b708E57B0a51d03207b0c65392D50de40e1B250) |
-| Vault | `0xe064D0B2edE1891ebD0F815eDADd45541c62C927` | [MonadVision](https://testnet.monadvision.com/address/0xe064D0B2edE1891ebD0F815eDADd45541c62C927) |
-| MockAUSD (AUSD stand-in) | `0xB5C6B27f0128A317171C5658eAfAC901d52f2989` | [MonadVision](https://testnet.monadvision.com/address/0xB5C6B27f0128A317171C5658eAfAC901d52f2989) |
-| Pyth | `0x2880aB155794e7179c9eE2e38200202908C17B43` | [MonadVision](https://testnet.monadvision.com/address/0x2880aB155794e7179c9eE2e38200202908C17B43) |
+| Protocol | Contract | Address | Explorer |
+|---|---|---|---|
+| **Agora AUSD** | Official Testnet Collateral | `0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC` | [MonadVision](https://testnet.monadvision.com/address/0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC) |
+| **Agora Faucet** | Official Testnet Faucet | `0xd236c18D274E54FAccC3dd9DDA4b27965a73ee6C` | [MonadVision](https://testnet.monadvision.com/address/0xd236c18D274E54FAccC3dd9DDA4b27965a73ee6C) |
+| **Perpl DEX** | Perpetual Futures Exchange | `0x1964C32f0bE608E7D29302AFF5E61268E72080cc` | [MonadVision](https://testnet.monadvision.com/address/0x1964C32f0bE608E7D29302AFF5E61268E72080cc) |
+| **Hunch Factory** | 60s Market Spawner | `0x9b708E57B0a51d03207b0c65392D50de40e1B250` | [MonadVision](https://testnet.monadvision.com/address/0x9b708E57B0a51d03207b0c65392D50de40e1B250) |
+| **Hunch Vault** | LP Seed & Residual | `0xe064D0B2edE1891ebD0F815eDADd45541c62C927` | [MonadVision](https://testnet.monadvision.com/address/0xe064D0B2edE1891ebD0F815eDADd45541c62C927) |
+| **Pyth** | Oracle Price Feeds | `0x2880aB155794e7179c9eE2e38200202908C17B43` | [MonadVision](https://testnet.monadvision.com/address/0x2880aB155794e7179c9eE2e38200202908C17B43) |
 
 Source of truth: `deployments/monad-testnet.json` · Chain ID **10143**.
 

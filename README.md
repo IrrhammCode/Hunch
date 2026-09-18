@@ -1,15 +1,22 @@
-# Hunch
+# Hunch — Mobile Trading App on Monad
 
-Swipe UP or DOWN on short-horizon onchain markets — a **mobile multichain trading app** on Monad.
+Perpetual Futures (via **Perpl DEX**) + 60-Second Instant Hunches with **Agora AUSD** collateral on Monad.
 
-**Metropolis Track 01** · Agora Mobile · Privy · Pyth · Deadline Oct 13, 2026
+**Bounties & Tracks:**
+- **Best Mobile Trading App on Monad (Agora Onchain Trading Bounty)** — $10,000
+- **Metropolis Track 01 (Onchain Finance & Trading)** — $10,000
+- **Privy Embedded Wallets Bounty** — $5,000
+- **Pyth Oracle Integration**
 
-**Product:** Markets board (BTC / ETH / SOL) · **Options Exchange** (buy UP/DOWN at CPMM prices) · Trade (swipe) · Portfolio (cross-chain BOOK) · You  
-**Settlement:** Monad hub + Base Sepolia surface (same Privy wallet) · CPMM event markets, not TradFi options
+**Product:**
+1. **Perpetual Futures (Perpl DEX)**: Long & Short leverage trading on BTC, ETH, SOL, MON using official Agora AUSD collateral on Monad Testnet.
+2. **60-Second Instant Hunches**: Flagship UP/DOWN short-horizon binary markets with swipe gestures (CPMM + Pyth settlement).
+3. **Unified Portfolio**: Real-time margin tracking, unrealized PnL, and 1-tap claim for winning hunch payouts.
+4. **Non-Custodial Mobile Auth**: Privy email OTP with embedded EOA created on Monad Testnet.
 
 ## For judges
 
-**One-liner:** Swipe UP or DOWN. 60-second markets on Monad.
+**One-liner:** All-in-one mobile trading app on Monad: Perps via Perpl + 60s swipe hunches with Agora AUSD.
 
 | | Link |
 |---|---|
@@ -18,17 +25,13 @@ Swipe UP or DOWN on short-horizon onchain markets — a **mobile multichain trad
 | Form fields | [SUBMISSION_FORM.md](SUBMISSION_FORM.md) |
 | Day-of ops | [OPS.md](OPS.md) |
 | **Privy setup** | [PRIVY_SETUP.md](PRIVY_SETUP.md) |
-| **Agora bounty (Mera+AUSD+Perpl)** | [AGORA_BOUNTY.md](AGORA_BOUNTY.md) — testnet stack + eligibility gap |
+| **Agora bounty (AUSD+Perpl)** | [AGORA_BOUNTY.md](AGORA_BOUNTY.md) — testnet stack + eligibility |
 | **EAS / device** | [EAS_SETUP.md](EAS_SETUP.md) |
 | Landing page | [site/index.html](site/index.html) (GitHub Pages: Settings → Pages → `/site`) |
 | Video outline | [DEMO_VIDEO_SCRIPT.md](DEMO_VIDEO_SCRIPT.md) |
 | Mobile / EAS | [mobile/README.md](mobile/README.md) |
 
-**Honest blockers (host must do, not in repo):** Privy App ID + Client ID · EAS/TestFlight install · ngrok/public API URL if off-LAN · record demo video · funded testnet `PRIVATE_KEY`.
-
-**UI design (no backend):** [mobile/README.DESIGN.md](mobile/README.DESIGN.md) — kirim ke temen · [mobile/DESIGN.md](mobile/DESIGN.md) · `cd mobile && copy .env.design .env && npm run design`.
-
-Preflight + smoke (no trades):
+Preflight + smoke:
 
 ```bash
 npm run doctor       # env + repo readiness (secrets never printed)
@@ -37,32 +40,19 @@ npm run keeper       # terminal 2
 npm run smoke:demo   # terminal 3 — PASS/FAIL health + config + current round
 ```
 
-## Submit
-
-| Doc | Use |
-|---|---|
-| [SUBMIT.md](SUBMIT.md) | Paste-ready judge write-up |
-| [SUBMISSION_FORM.md](SUBMISSION_FORM.md) | Platform form answers + TODOs |
-| [PRIVY_SETUP.md](PRIVY_SETUP.md) | Dashboard click-path for OTP + wallet |
-| [EAS_SETUP.md](EAS_SETUP.md) | Dev client / TestFlight runbook |
-| [mobile/DEMO.md](mobile/DEMO.md) | 5-minute try path |
-| [OPS.md](OPS.md) | Day-of mentor checklist |
-| [DEMO_VIDEO_SCRIPT.md](DEMO_VIDEO_SCRIPT.md) | ~90s video shot list |
-| [mobile/README.md](mobile/README.md) | Privy + EAS / TestFlight runbook |
-
-> **EAS preview:** replace `EXPO_PUBLIC_API_URL` in `mobile/eas.json` (and `mobile/.env`) with your LAN IP or ngrok host **before** building. Do not ship the placeholder URL.
-
-> **Landing page:** open `site/index.html` in a browser. To publish: GitHub repo → **Settings → Pages → Deploy from branch → `master` / `/site`**.
-
 ---
 
 ## Try in 2 minutes
 
-1. Open the app on a phone (Expo Go is **not** enough for Privy — use a dev client).
+1. Open the app on a phone or dev client (`cd mobile && npx expo start --dev-client`).
 2. Log in with **email OTP** (Privy creates an embedded Monad wallet).
-3. Tap **Faucet** on YOU if balances are empty (MockAUSD + MON gas).
-4. On **HUNCH**: swipe **right = UP**, **left = DOWN** (or tap the soft buttons).
-5. Wait ~60s for the keeper to resolve → **BOOK** → **Claim**.
+3. Tap **YOU** tab -> **Claim Agora AUSD + Gas MON** (official Agora AUSD `0xa901...22dc`).
+4. On **TRADE**:
+   - Tap **📈 PERPETUALS**: Pick BTC/ETH, choose BUY / LONG, select 10x leverage, and tap **OPEN LONG**.
+   - Tap **⚡ 60s UP/DOWN**: Swipe **right = UP**, **left = DOWN** for quick 60s hunch.
+5. In **PORTFOLIO**:
+   - View live Perpl perpetual positions & PnL, or close position.
+   - Claim winning hunch payouts in Agora AUSD.
 
 ---
 
@@ -71,40 +61,25 @@ npm run smoke:demo   # terminal 3 — PASS/FAIL health + config + current round
 ```
 iOS Expo (mobile/) — Privy email OTP + embedded wallet
         ↓
-API :8787  ·  quote, calldata, faucet, relayed executeBuy
+API :8787  ·  Perpl proxy, quotes, faucet, relayed executeBuy
         ↓
-Indexer (events → data/index.json)  ·  Envio scaffold in /envio
-Keeper (open → resolve → claim residual → open)
-        ↓
-HunchVault (LP) → HunchFactory → HunchMarket  +  Pyth + MockAUSD
+Perpl Testnet (0x1964C...80cc)  ·  Perpetual CLOB orders + margin
+HunchVault (LP) → HunchFactory → HunchMarket  +  Pyth Oracle + Agora AUSD
 ```
-
-**Trade path (Privy):**
-1. Phone signs `approve` + `commitBuy` from the embedded wallet.
-2. API hot-wallet waits delay-blocks, pulls Pyth, calls `executeBuy` (shares credit the trader).
-3. Phone signs `redeem` after resolve.
-
-**Demo path:** `EXPO_PUBLIC_USE_DEMO_AUTH=1` uses a shared hot wallet end-to-end (local only).
 
 ---
 
-## Contracts (Monad testnet)
+## Contracts & Integrations (Monad testnet 10143)
 
-| Contract | Address | Explorer |
+| Protocol | Contract / Resource | Address / URL |
 |---|---|---|
-| Factory | `0x9b708E57B0a51d03207b0c65392D50de40e1B250` | [MonadVision](https://testnet.monadvision.com/address/0x9b708E57B0a51d03207b0c65392D50de40e1B250) |
-| Vault | `0xe064D0B2edE1891ebD0F815eDADd45541c62C927` | [MonadVision](https://testnet.monadvision.com/address/0xe064D0B2edE1891ebD0F815eDADd45541c62C927) |
-| MockAUSD | `0xB5C6B27f0128A317171C5658eAfAC901d52f2989` | [MonadVision](https://testnet.monadvision.com/address/0xB5C6B27f0128A317171C5658eAfAC901d52f2989) |
-| Pyth | `0x2880aB155794e7179c9eE2e38200202908C17B43` | [MonadVision](https://testnet.monadvision.com/address/0x2880aB155794e7179c9eE2e38200202908C17B43) |
-
-Chain ID **10143** · BTC/USD feed from Pyth. Source of truth: `deployments/monad-testnet.json`.
-
-| Contract | Role |
-|---|---|
-| `HunchFactory` | Spawn 60s rounds |
-| `HunchMarket` | CPMM YES/NO, delayed fills, resolve, redeem |
-| `HunchVault` | LP deposit/withdraw, seed rounds, reclaim residual |
-| `MockAUSD` | Testnet collateral (Agora AUSD on mainnet) |
+| **Agora AUSD** | Official Testnet Token | [`0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC`](https://testnet.monadvision.com/address/0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC) |
+| **Agora Faucet** | Official Testnet Faucet | [`0xd236c18D274E54FAccC3dd9DDA4b27965a73ee6C`](https://testnet.monadvision.com/address/0xd236c18D274E54FAccC3dd9DDA4b27965a73ee6C) |
+| **Perpl DEX** | Exchange Contract | [`0x1964C32f0bE608E7D29302AFF5E61268E72080cc`](https://testnet.monadvision.com/address/0x1964C32f0bE608E7D29302AFF5E61268E72080cc) |
+| **Perpl API** | Testnet REST & WS | `https://testnet.perpl.xyz/api` |
+| **Hunch Factory** | 60s Round Spawner | [`0x9b708E57B0a51d03207b0c65392D50de40e1B250`](https://testnet.monadvision.com/address/0x9b708E57B0a51d03207b0c65392D50de40e1B250) |
+| **Hunch Vault** | LP & Residual Pool | [`0xe064D0B2edE1891ebD0F815eDADd45541c62C927`](https://testnet.monadvision.com/address/0xe064D0B2edE1891ebD0F815eDADd45541c62C927) |
+| **Pyth Oracle** | Price Feeds | [`0x2880aB155794e7179c9eE2e38200202908C17B43`](https://testnet.monadvision.com/address/0x2880aB155794e7179c9eE2e38200202908C17B43) |
 
 ---
 

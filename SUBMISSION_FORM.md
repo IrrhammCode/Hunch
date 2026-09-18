@@ -12,7 +12,7 @@ Hunch
 
 ## Tagline / one-liner
 
-Swipe UP or DOWN. 60-second markets on Monad.
+All-in-one mobile trading app on Monad: Perps via Perpl + 60s swipe hunches with Agora AUSD.
 
 ## Track
 
@@ -20,20 +20,22 @@ Swipe UP or DOWN. 60-second markets on Monad.
 
 ## Short description (2–3 sentences)
 
-Hunch is a mobile arena for 60-second BTC/USD UP/DOWN markets on Monad testnet. Users log in with Privy email OTP; their embedded wallet is the onchain trader. After a swipe, the phone signs commitBuy, the API relays executeBuy with a fresh Pyth price, and winners claim with a one-tap MonadVision link.
+Hunch is an all-in-one mobile trading app on Monad testnet featuring Perpetual Futures (via Perpl DEX) and 60-second instant UP/DOWN hunches with Agora AUSD collateral. Users log in with Privy email OTP; their embedded wallet is the onchain trader across all instruments. Traders can open leveraged perps on BTC, ETH, SOL, MON or swipe 60s hunches with Pyth settlement, all settled on Monad.
 
 ## Long description
 
 See full write-up: [SUBMIT.md](./SUBMIT.md)
 
-Summary: Hunch turns short-horizon prediction into one gesture on iOS. Factory spawns 60s markets seeded by the Vault (AUSD-shaped collateral). Traders commit YES/NO (UP/DOWN) with delayed fills to blunt latency arb; settlement uses Pyth BTC/USD. Demo hardens the API with faucet caps and execute rate limits so mentors cannot drain the hot wallet mid-pitch.
+Summary: Hunch turns onchain trading into a tactile mobile experience on iOS/Android. It combines decentralized perpetuals (powered by Perpl's onchain CLOB) and short-horizon 60s binary event markets (CPMM + Pyth settlement), both unified under official Agora AUSD collateral. Traders sign directly from their Privy embedded wallet without seed phrase friction.
 
 ## Tech stack
 
 - **Mobile:** Expo Router (~57) · React Native · Reanimated + gesture-handler · Privy Expo SDK (`@privy-io/expo`)
-- **Contracts:** Solidity 0.8.24 · Hardhat · OpenZeppelin · HunchFactory / HunchMarket / HunchVault · MockAUSD
-- **Oracle:** Pyth BTC/USD pull updates (Hermes)
-- **Backend:** Node · Hono API on :8787 · keeper loop · file indexer (+ Envio scaffold)
+- **DEX & Margin:** Perpl Perpetual Exchange on Monad Testnet (`0x1964C32f0bE608E7D29302AFF5E61268E72080cc`)
+- **Collateral:** Agora AUSD (`0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC`) + Agora Faucet (`0xd236c18D274E54FAccC3dd9DDA4b27965a73ee6C`)
+- **Contracts:** Solidity 0.8.24 · Hardhat · HunchFactory / HunchMarket / HunchVault
+- **Oracle:** Pyth real-time price feeds (Hermes pull on Monad)
+- **Backend:** Node · Hono API on :8787 · Perpl proxy · keeper loop
 - **Chain:** Monad testnet, chainId **10143**
 
 ## Repo URL
@@ -54,8 +56,10 @@ TODO — paste YouTube / Loom / Drive link after recording ([DEMO_VIDEO_SCRIPT.m
 
 ## Sponsor bounties targeted
 
-- **Agora** — Best Mobile Trading App (AUSD-shaped collateral, iOS-first product)
-- **Privy** — email OTP + embedded wallet as trader of record
+- **Agora** — Best Mobile Trading App on Monad ($10,000): Official Agora AUSD collateral + mobile-first trading with Perpl integration.
+- **Privy** — Privy Bounty ($5,000): Email OTP + embedded non-custodial wallet as trader of record.
+- **Track 01** — Onchain Finance & Trading ($10,000): Fast settlement financial instruments on Monad.
+- **Perpl** — Best use of Perpl's API ($5,000): Mobile perpetual trading via Perpl testnet exchange & market context.
 
 ## Contract addresses
 
