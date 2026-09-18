@@ -385,46 +385,54 @@ export default function HunchScreen() {
           </View>
         </View>
 
-        {/* Trade Mode Segmenter (Perps vs 60s Hunch) */}
+        {/* Trade Mode Segmenter */}
         <View style={styles.modeSegment}>
-          <Pressable
-            onPress={() => {
-              setTradeMode("perps");
-              Haptics.selectionAsync();
-            }}
-            style={[styles.modeTab, tradeMode === "perps" && styles.modeTabActive]}
-          >
-            <Icon
-              name="trending-up"
-              size={14}
-              color={tradeMode === "perps" ? colors.brand : colors.muted}
-            />
-            <Text style={[styles.modeTabText, tradeMode === "perps" && styles.modeTabTextActive]}>
-              PERPETUALS
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={() => {
-              setTradeMode("hunch");
-              Haptics.selectionAsync();
-            }}
-            style={[styles.modeTab, tradeMode === "hunch" && styles.modeTabActive]}
-          >
-            <Icon
-              name="flash"
-              size={14}
-              color={tradeMode === "hunch" ? colors.brand : colors.muted}
-            />
-            <Text style={[styles.modeTabText, tradeMode === "hunch" && styles.modeTabTextActive]}>
-              60s UP/DOWN
-            </Text>
-          </Pressable>
+          <View style={styles.modeInner}>
+            <Pressable
+              onPress={() => {
+                setTradeMode("perps");
+                Haptics.selectionAsync();
+              }}
+              style={[styles.modeTab, tradeMode === "perps" && styles.modeTabActive]}
+            >
+              <Icon
+                name="trending-up"
+                size={14}
+                color={tradeMode === "perps" ? colors.brand : colors.muted}
+              />
+              <Text style={[styles.modeTabText, tradeMode === "perps" && styles.modeTabTextActive]}>
+                PERPETUALS
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                setTradeMode("hunch");
+                Haptics.selectionAsync();
+              }}
+              style={[styles.modeTab, tradeMode === "hunch" && styles.modeTabActive]}
+            >
+              <Icon
+                name="flash"
+                size={14}
+                color={tradeMode === "hunch" ? colors.brand : colors.muted}
+              />
+              <Text style={[styles.modeTabText, tradeMode === "hunch" && styles.modeTabTextActive]}>
+                60s UP/DOWN
+              </Text>
+            </Pressable>
+          </View>
         </View>
 
         {tradeMode === "perps" ? (
           <Animated.View
             entering={FadeIn.duration(200)}
-            style={{ flex: 1, width: "100%", alignSelf: "stretch", marginTop: 4, paddingBottom: 8 }}
+            style={{
+              flex: 1,
+              width: "100%",
+              alignSelf: "stretch",
+              marginTop: 0,
+              paddingBottom: 8,
+            }}
           >
             <PerpTradingTicket />
           </Animated.View>
@@ -434,6 +442,7 @@ export default function HunchScreen() {
             contentContainerStyle={{
               width: "100%",
               alignItems: "stretch",
+              paddingHorizontal: 12,
               paddingTop: 8,
               paddingBottom: 32,
               gap: 14,
@@ -605,7 +614,8 @@ const styles = StyleSheet.create({
     flex: 1,
     width: "100%",
     alignSelf: "stretch",
-    paddingHorizontal: 14,
+    // Full-bleed shell — horizontal inset applied on bars/scroll, not double-counted
+    paddingHorizontal: 0,
     backgroundColor: "#0A0B0D",
     paddingBottom: 0,
   },
@@ -614,6 +624,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingBottom: 6,
+    paddingHorizontal: 12,
+    width: "100%",
   },
   topBrandWrap: {
     flexDirection: "row",
@@ -677,12 +689,11 @@ const styles = StyleSheet.create({
   },
   modeSegment: {
     flexDirection: "row",
-    backgroundColor: "#12141A",
-    borderRadius: radius.md,
-    padding: 3,
+    width: "100%",
+    marginHorizontal: 0,
+    paddingHorizontal: 12,
+    backgroundColor: "transparent",
     marginBottom: 8,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
   },
   modeTab: {
     flex: 1,
@@ -690,8 +701,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    paddingVertical: 7,
+    paddingVertical: 8,
     borderRadius: radius.sm,
+  },
+  modeInner: {
+    flex: 1,
+    flexDirection: "row",
+    backgroundColor: "#12141A",
+    borderRadius: radius.md,
+    padding: 3,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
   },
   modeTabActive: {
     backgroundColor: "rgba(214,255,63,0.15)",
@@ -712,6 +732,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 4,
+    width: "100%",
   },
   stakeLabel: {
     color: colors.muted,
@@ -729,6 +750,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     marginBottom: 6,
+    width: "100%",
   },
   stakeChip: {
     flex: 1,
@@ -770,6 +792,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 4,
+    width: "100%",
   },
   swipeBearText: {
     color: colors.down,
@@ -784,10 +807,11 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   card: {
+    width: "100%",
     borderWidth: 1.5,
     borderColor: colors.cardBorder,
     borderRadius: radius.lg,
-    padding: 14,
+    padding: 16,
     backgroundColor: "#12141A",
     gap: 8,
     overflow: "hidden",
@@ -955,11 +979,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 10,
     marginTop: 4,
+    width: "100%",
   },
   bigDownBtn: {
     flex: 1,
+    width: "100%",
     backgroundColor: colors.down,
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderRadius: radius.md,
     alignItems: "center",
     justifyContent: "center",
@@ -978,8 +1004,9 @@ const styles = StyleSheet.create({
   },
   bigUpBtn: {
     flex: 1,
+    width: "100%",
     backgroundColor: colors.up,
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderRadius: radius.md,
     alignItems: "center",
     justifyContent: "center",

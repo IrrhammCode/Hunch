@@ -319,8 +319,9 @@ const styles = StyleSheet.create({
     width: "100%",
     alignSelf: "stretch",
     alignItems: "stretch",
-    paddingHorizontal: 14,
-    paddingTop: 10,
+    // Single gutter — parent trade shell has paddingHorizontal 0
+    paddingHorizontal: 12,
+    paddingTop: 4,
     paddingBottom: 36,
     gap: 12,
   },
@@ -375,6 +376,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: colors.cardBorder,
+    minHeight: 120,
   },
   heroMarketTop: {
     flexDirection: "row",
