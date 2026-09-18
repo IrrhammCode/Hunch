@@ -24,7 +24,8 @@ import {
 } from "@/src/api/client";
 import { useAuth } from "@/src/auth/AuthContext";
 import { BrandMark } from "@/src/components/BrandMark";
-import { Screen } from "@/src/components/Screen";
+import { Screen } from "@/src/components/Screen"
+import { Icon } from "@/src/components/Icon";
 import { useToast } from "@/src/components/Toast";
 import { AmountChip, BalanceChip, PrimaryButton } from "@/src/components/ui";
 import { explorerTx } from "@/src/config/chain";
@@ -393,8 +394,13 @@ export default function HunchScreen() {
             }}
             style={[styles.modeTab, tradeMode === "perps" && styles.modeTabActive]}
           >
+            <Icon
+              name="trending-up"
+              size={14}
+              color={tradeMode === "perps" ? colors.brand : colors.muted}
+            />
             <Text style={[styles.modeTabText, tradeMode === "perps" && styles.modeTabTextActive]}>
-              📈 PERPETUALS
+              PERPETUALS
             </Text>
           </Pressable>
           <Pressable
@@ -404,8 +410,13 @@ export default function HunchScreen() {
             }}
             style={[styles.modeTab, tradeMode === "hunch" && styles.modeTabActive]}
           >
+            <Icon
+              name="flash"
+              size={14}
+              color={tradeMode === "hunch" ? colors.brand : colors.muted}
+            />
             <Text style={[styles.modeTabText, tradeMode === "hunch" && styles.modeTabTextActive]}>
-              ⚡ 60s UP/DOWN
+              60s UP/DOWN
             </Text>
           </Pressable>
         </View>
@@ -419,7 +430,9 @@ export default function HunchScreen() {
             {/* Stake Amount Header */}
             <View style={styles.stakeHeaderRow}>
               <Text style={styles.stakeLabel}>STAKE AMOUNT</Text>
-              <Text style={styles.balanceSub}>Balance: {me ? Number(me.ausd).toFixed(2) : "1,250.00"} AUSD</Text>
+              <Text style={styles.balanceSub}>
+                Balance: {me ? Number(me.ausd).toFixed(2) : "—"} AUSD
+              </Text>
             </View>
 
             {/* Amount chips */}
@@ -460,7 +473,7 @@ export default function HunchScreen() {
                 {/* Card Top: Asset & Oracle Info */}
                 <View style={styles.cardHeaderRow}>
                   <View style={styles.assetBadge}>
-                    <Text style={styles.boltIcon}>⚡</Text>
+                    <Icon name="flash" size={14} color={colors.brand} />
                     <Text style={styles.assetName}>{getSelectedMarket().symbol} / USD</Text>
                   </View>
                   <Text style={styles.roundOracleText}>
@@ -544,7 +557,7 @@ export default function HunchScreen() {
 
             {/* Footnote */}
             <View style={styles.footnoteRow}>
-              <Text style={styles.checkIcon}>✔</Text>
+              <Icon name="checkmark-circle" size={16} color={colors.up} />
               <Text style={styles.footnoteText}>
                 Stake {amount}.00 AUSD • Sub-second Finality (&lt;40ms) • Zero Gas Fees
               </Text>
@@ -639,9 +652,12 @@ const styles = StyleSheet.create({
   },
   modeTab: {
     flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
     paddingVertical: 7,
     borderRadius: radius.sm,
-    alignItems: "center",
   },
   modeTabActive: {
     backgroundColor: "rgba(214,255,63,0.15)",

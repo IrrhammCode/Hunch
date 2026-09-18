@@ -5,6 +5,7 @@ import { useAuth } from "@/src/auth/AuthContext";
 import { useWallet } from "@/src/wallet/WalletContext";
 import { useToast } from "@/src/components/Toast";
 import { usePerplMarkets, placePerplOrder, PerplMarket } from "./perplClient";
+import { Icon } from "@/src/components/Icon";
 import { colors, radius, space, type, monoStyle } from "@/src/theme";
 
 const LEVERAGE_OPTIONS = [2, 5, 10, 20] as const;
@@ -143,7 +144,7 @@ export function PerpTradingTicket() {
             </View>
           </View>
           <View style={styles.subSecondBadge}>
-            <Text style={styles.subSecondText}>⚡ SUB-SECOND</Text>
+            <Text style={styles.subSecondText}>SUB-SECOND</Text>
           </View>
         </View>
 
@@ -295,7 +296,7 @@ export function PerpTradingTicket() {
           <ActivityIndicator color="#000" />
         ) : (
           <>
-            <Text style={styles.boltActionIcon}>⚡</Text>
+            <Icon name="flash" size={16} color={colors.brand} />
             <Text style={styles.mainActionText}>
               OPEN {side} {currentMark.symbol} ({leverage}X)
             </Text>

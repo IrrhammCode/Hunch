@@ -5,7 +5,8 @@ import { Linking, Pressable, ScrollView, StyleSheet, Text, View, ActivityIndicat
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { demoRedeem } from "@/src/api/client";
 import { useAuth } from "@/src/auth/AuthContext";
-import { Screen } from "@/src/components/Screen";
+import { Screen } from "@/src/components/Screen"
+import { Icon } from "@/src/components/Icon";
 import { useToast } from "@/src/components/Toast";
 import { explorerTx } from "@/src/config/chain";
 import { useWallet } from "@/src/wallet/WalletContext";
@@ -192,7 +193,7 @@ export default function PositionsScreen() {
             </View>
 
             <View style={styles.roundInfoRow}>
-              <Text style={styles.boltIcon}>⚡</Text>
+              <Icon name="flash" size={14} color={colors.brand} />
               <Text style={styles.roundTitle}>ROUND #1,841 • BTC 60s HUNCH</Text>
               <View style={styles.resolvedBadge}>
                 <Text style={styles.resolvedText}>RESOLVED</Text>
@@ -200,7 +201,7 @@ export default function PositionsScreen() {
             </View>
 
             <View style={styles.strikeProofRow}>
-              <Text style={styles.checkIcon}>✔</Text>
+              <Icon name="checkmark-circle" size={16} color={colors.up} />
               <Text style={styles.strikeProofText}>
                 UP WON (Settlement $78,210.00 &gt; Strike $78,150.00)
               </Text>
@@ -229,7 +230,7 @@ export default function PositionsScreen() {
               }}
               style={styles.claimAllBtn}
             >
-              <Text style={styles.claimBtnBolt}>⚡</Text>
+              <Icon name="flash" size={14} color="#0A0B0D" />
               <Text style={styles.claimBtnText}>CLAIM $185.00 AUSD</Text>
               <View style={styles.latencyMiniTag}>
                 <Text style={styles.latencyMiniText}>&lt;40ms</Text>
@@ -248,7 +249,7 @@ export default function PositionsScreen() {
               onPress={() => { setTab("perps"); Haptics.selectionAsync(); }}
               style={[styles.filterChip, tab === "perps" && styles.filterChipActive]}
             >
-              <Text style={styles.filterChipIcon}>📈</Text>
+              <Icon name="trending-up" size={13} color={colors.brand} />
               <Text style={[styles.filterChipText, tab === "perps" && styles.filterChipTextActive]}>
                 PERPETUALS ({displayPerps.length})
               </Text>
@@ -265,7 +266,7 @@ export default function PositionsScreen() {
             </Pressable>
 
             <View style={styles.filterRightPill}>
-              <Text style={styles.filterRightText}>⚙ FILTER</Text>
+              <Text style={styles.filterRightText}>FILTER</Text>
             </View>
           </View>
 

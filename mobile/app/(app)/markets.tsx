@@ -11,6 +11,7 @@ import {
   type PerplMarket,
 } from "@/src/api/client";
 import { Screen } from "@/src/components/Screen";
+import { AssetGlyph, Icon } from "@/src/components/Icon";
 import { getSelectedMarket, setSelectedMarket } from "@/src/market/selection";
 import { colors, monoStyle, radius, space, type } from "@/src/theme";
 
@@ -121,45 +122,30 @@ export default function MarketsScreen() {
   return (
     <Screen>
       <View style={[styles.wrap, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 8 }]}>
-        {/* Top Monad Network Bar */}
+        {/* Top network status */}
         <View style={styles.topStatus}>
           <View style={styles.statusLeft}>
             <View style={styles.greenDot} />
             <Text style={styles.networkText}>MONAD TESTNET</Text>
-            <Text style={styles.pipe}>|</Text>
-            <Text style={styles.tpsText}>10,143 TPS</Text>
-            <Text style={styles.pipe}>|</Text>
-            <Text style={styles.latencyText}>&lt;40ms</Text>
-          </View>
-          <View style={styles.balancePill}>
-            <Text style={styles.balanceA}>A</Text>
-            <Text style={styles.balanceVal}>$1,250.00</Text>
-            <Text style={styles.balanceUnit}>AUSD</Text>
-            <Text style={styles.plusIcon}>+</Text>
           </View>
         </View>
 
-        {/* Header with Title & Latency */}
+        {/* Header */}
         <View style={styles.header}>
-          <View style={styles.titleRow}>
-            <Text style={styles.title}>MARKETS</Text>
-            <View style={styles.hyperexecBadge}>
-              <Text style={styles.hyperexecText}>HYPEREXEC</Text>
-            </View>
-          </View>
+          <Text style={styles.title}>MARKETS</Text>
           <Pressable onPress={load} hitSlop={12} style={styles.latencyBadge}>
-            <Text style={styles.refreshIcon}>⟳</Text>
-            <Text style={styles.latencyBadgeText}>1s LATENCY</Text>
+            <Icon name="refresh" size={14} color={colors.muted} />
+            <Text style={styles.latencyBadgeText}>REFRESH</Text>
           </Pressable>
         </View>
 
         {/* Search Input Bar */}
         <View style={styles.searchBar}>
-          <Text style={styles.searchIcon}>🔍</Text>
+          <Icon name="search" size={18} color={colors.muted} />
           <TextInput
             value={search}
             onChangeText={setSearch}
-            placeholder="Search pairs (MON, BTC, ETH, AUSD)..."
+            placeholder="Search MON, BTC, ETH, SOL…"
             placeholderTextColor={colors.muted}
             style={styles.searchInput}
           />
@@ -175,17 +161,17 @@ export default function MarketsScreen() {
             style={[styles.filterPill, filter === "all" && styles.filterPillActive]}
           >
             <Text style={[styles.filterText, filter === "all" && styles.filterTextActive]}>
-              ALL MARKETS
+              ALL
             </Text>
-            {filter === "all" ? <View style={styles.activePillDot} /> : null}
           </Pressable>
 
           <Pressable
             onPress={() => { setFilter("blitz"); Haptics.selectionAsync(); }}
             style={[styles.filterPill, filter === "blitz" && styles.filterPillActive]}
           >
+            <Icon name="flash" size={13} color={filter === "blitz" ? colors.brand : colors.muted} />
             <Text style={[styles.filterText, filter === "blitz" && styles.filterTextActive]}>
-              ⚡ 60S BLITZ
+              60S BLITZ
             </Text>
           </Pressable>
 
@@ -193,8 +179,9 @@ export default function MarketsScreen() {
             onPress={() => { setFilter("perps"); Haptics.selectionAsync(); }}
             style={[styles.filterPill, filter === "perps" && styles.filterPillActive]}
           >
+            <Icon name="trending-up" size={13} color={filter === "perps" ? colors.brand : colors.muted} />
             <Text style={[styles.filterText, filter === "perps" && styles.filterTextActive]}>
-              📈 PERPS 20X
+              PERPS 20X
             </Text>
           </Pressable>
         </View>
@@ -205,7 +192,7 @@ export default function MarketsScreen() {
             <View style={styles.heroCard}>
               <View style={styles.heroTop}>
                 <View style={styles.heroTagWrap}>
-                  <Text style={styles.fireIcon}>🔥</Text>
+                  <Icon name="flame" size={14} color={colors.down} />
                   <Text style={styles.heroTag}>HOT ON MONAD</Text>
                   <Text style={styles.heroPair}>MON / AUSD</Text>
                 </View>
@@ -247,7 +234,8 @@ export default function MarketsScreen() {
               const isSol = m.symbol === "SOL";
               const isPump = m.symbol === "PUMP";
               const iconBg = isMon ? "#836EF9" : isBtc ? "#F7931A" : isSol ? "#14F195" : "#FF007A";
-              const iconGlyph = isMon ? "M" : isBtc ? "₿" : isSol ? "S" : "🚀";
+              const isEth = m.symbol === "ETH";
+              const iconGlyph = isMon ? "M" : isBtc ? "₿" : isEth ? "Ξ" : isSol ? "◎" : (m.symbol || "•").charAt(0);
 
               return (
                 <Pressable
@@ -311,7 +299,7 @@ export default function MarketsScreen() {
                       <Text style={styles.pairTitle}>ETH</Text>
                       <Text style={styles.pairSlash}>/AUSD</Text>
                       <View style={[styles.levBadge, { backgroundColor: "rgba(214,255,63,0.18)" }]}>
-                        <Text style={[styles.levBadgeText, { color: colors.brand }]}>⚡ 60S</Text>
+                        <Text style={[styles.levBadgeText, { color: colors.brand }]}>60S</Text>
                       </View>
                     </View>
                     <Text style={styles.volSub}>Round #1420 • 25.4k Pool</Text>

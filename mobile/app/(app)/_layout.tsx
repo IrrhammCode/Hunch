@@ -2,6 +2,7 @@ import { Redirect, Tabs } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useAuth } from "@/src/auth/AuthContext";
 import { BootScreen } from "@/src/components/BootScreen";
+import { Icon, type IconName } from "@/src/components/Icon";
 import { colors, radius, type } from "@/src/theme";
 
 type TabBarProps = {
@@ -16,34 +17,21 @@ type TabBarProps = {
   };
 };
 
+const TAB_ICONS: Record<string, IconName> = {
+  MARKETS: "stats-chart",
+  TRADE: "flash",
+  PORTFOLIO: "briefcase",
+  YOU: "person",
+};
+
 function TabIcon({ label, focused }: { label: string; focused: boolean }) {
-  const icon =
-    label === "MARKETS"
-      ? "📊"
-      : label === "TRADE"
-        ? "⚡"
-        : label === "PORTFOLIO"
-          ? "💼"
-          : "👤";
+  const name = TAB_ICONS[label] ?? "ellipse";
+  const color = focused ? colors.brand : colors.muted;
 
   return (
     <View style={styles.iconWrap}>
-      <View style={styles.iconContainer}>
-        <Text style={[styles.glyph, focused ? styles.glyphActive : styles.glyphIdle]}>{icon}</Text>
-        {label === "PORTFOLIO" ? (
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>1</Text>
-          </View>
-        ) : null}
-      </View>
-      <Text
-        style={[
-          styles.iconLabel,
-          focused ? styles.focusedBrand : styles.idle,
-        ]}
-      >
-        {label}
-      </Text>
+      <Icon name={name} size={22} color={color} />
+      <Text style={[styles.iconLabel, { color }]}>{label}</Text>
       {focused ? <View style={styles.activeDot} /> : <View style={styles.dotPlaceholder} />}
     </View>
   );
@@ -114,11 +102,11 @@ export default function AppLayout() {
 const styles = StyleSheet.create({
   bar: {
     flexDirection: "row",
-    backgroundColor: "#0A0B0D",
+    backgroundColor: colors.bg,
     borderTopWidth: 1,
-    borderTopColor: colors.cardBorder,
-    paddingTop: 8,
-    paddingBottom: 20,
+    borderTopColor: colors.line,
+    paddingTop: 10,
+    paddingBottom: 18,
     paddingHorizontal: 8,
   },
   tab: {
@@ -129,54 +117,17 @@ const styles = StyleSheet.create({
   },
   iconWrap: {
     alignItems: "center",
-    gap: 3,
-  },
-  iconContainer: {
-    position: "relative",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  glyph: {
-    fontSize: 18,
-  },
-  glyphActive: {
-    opacity: 1,
-  },
-  glyphIdle: {
-    opacity: 0.5,
-  },
-  badge: {
-    position: "absolute",
-    top: -4,
-    right: -8,
-    backgroundColor: colors.brand,
-    width: 15,
-    height: 15,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  badgeText: {
-    color: "#000000",
-    fontSize: 9,
-    fontFamily: type.bold,
-    lineHeight: 11,
+    gap: 4,
   },
   iconLabel: {
     fontFamily: type.bold,
     fontSize: 10,
     letterSpacing: 0.8,
   },
-  focusedBrand: {
-    color: colors.brand,
-  },
-  idle: {
-    color: colors.muted,
-  },
   activeDot: {
     width: 4,
     height: 4,
-    borderRadius: 2,
+    borderRadius: radius.pill,
     backgroundColor: colors.brand,
     marginTop: 2,
   },

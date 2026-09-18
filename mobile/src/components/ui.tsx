@@ -7,6 +7,7 @@ import {
   type TextInputProps,
 } from "react-native";
 import { colors, radius, space, type } from "../theme";
+import { Icon } from "./Icon";
 
 export function Field({ label, ...props }: TextInputProps & { label: string }) {
   return (
@@ -126,14 +127,20 @@ export function EmptyState({
   title,
   body,
   glyph,
+  icon = "trending-up",
 }: {
   title: string;
   body: string;
   glyph?: string;
+  icon?: "trending-up" | "time-outline" | "wallet-outline" | "flash";
 }) {
   return (
     <View style={styles.empty}>
-      {glyph ? <Text style={styles.emptyGlyph}>{glyph}</Text> : null}
+      {glyph ? (
+        <Text style={styles.emptyGlyph}>{glyph}</Text>
+      ) : (
+        <Icon name={icon} size={28} color={colors.brand} />
+      )}
       <Text style={styles.emptyTitle}>{title}</Text>
       <Text style={styles.emptyBody}>{body}</Text>
     </View>

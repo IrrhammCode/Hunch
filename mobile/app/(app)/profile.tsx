@@ -5,7 +5,8 @@ import { Pressable, ScrollView, StyleSheet, Text, View, ActivityIndicator } from
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { demoFaucet } from "@/src/api/client";
 import { useAuth } from "@/src/auth/AuthContext";
-import { Screen } from "@/src/components/Screen";
+import { Screen } from "@/src/components/Screen"
+import { Icon } from "@/src/components/Icon";
 import { useToast } from "@/src/components/Toast";
 import { copyToClipboard } from "@/src/utils/clipboard";
 import { fundPrivyWallet } from "@/src/wallet/privyTrade";
@@ -102,7 +103,7 @@ export default function ProfileScreen() {
             <Text style={styles.sub}>Manage Privy smart credentials &amp; testnet assets</Text>
           </View>
           <View style={styles.gearBtn}>
-            <Text style={styles.gearIcon}>⚙</Text>
+            <Icon name="settings-outline" size={20} color={colors.muted} />
           </View>
         </View>
 
@@ -110,7 +111,7 @@ export default function ProfileScreen() {
           {/* USER IDENTITY CARD */}
           <View style={styles.userCard}>
             <View style={styles.avatarWrap}>
-              <Text style={styles.avatarIcon}>👤</Text>
+              <Icon name="person-circle" size={48} color={colors.brand} />
               <View style={styles.onlineBadgeDot} />
             </View>
             <View style={{ flex: 1 }}>
@@ -135,7 +136,7 @@ export default function ProfileScreen() {
           <View style={styles.walletCard}>
             <View style={styles.walletTop}>
               <View style={styles.walletLeftHeader}>
-                <Text style={styles.shieldIcon}>🛡</Text>
+                <Icon name="shield-checkmark-outline" size={16} color={colors.brand} />
                 <View>
                   <Text style={styles.walletTitle}>Privy Embedded Smart Wallet</Text>
                   <Text style={styles.walletSub}>Self-Custodial • Monad Account Abstraction</Text>
@@ -153,7 +154,7 @@ export default function ProfileScreen() {
                 <Text style={styles.addrText}>{shortAddr(address)}</Text>
               </View>
               <Pressable onPress={onCopy} style={styles.copyBtn}>
-                <Text style={styles.copyIcon}>📋</Text>
+                <Icon name="copy-outline" size={16} color={colors.muted} />
                 <Text style={styles.copyBtnText}>{copied ? "Copied" : "Copy"}</Text>
               </Pressable>
               <View style={styles.qrBtn}>
@@ -200,7 +201,7 @@ export default function ProfileScreen() {
           <View style={styles.faucetCard}>
             <View style={styles.faucetTop}>
               <View style={styles.faucetSparkWrap}>
-                <Text style={styles.faucetSparkIcon}>❇</Text>
+                <Icon name="sparkles-outline" size={14} color={colors.brand} />
               </View>
               <View style={{ flex: 1 }}>
                 <View style={styles.faucetTitleRow}>
@@ -224,7 +225,7 @@ export default function ProfileScreen() {
                 <ActivityIndicator color="#000" />
               ) : (
                 <>
-                  <Text style={styles.faucetBtnIcon}>🚰</Text>
+                  <Icon name="water-outline" size={18} color="#0A0B0D" />
                   <Text style={styles.faucetBtnText}>CLAIM 1,000 AUSD FAUCET</Text>
                   <View style={styles.instantTag}>
                     <Text style={styles.instantTagText}>INSTANT &lt;40MS</Text>
@@ -255,7 +256,7 @@ export default function ProfileScreen() {
               </View>
               <View style={styles.perfItem}>
                 <Text style={styles.perfLabel}>60s STREAK</Text>
-                <Text style={styles.perfVal}>5 Wins 🔥</Text>
+                <Text style={styles.perfVal}>5 Wins</Text>
               </View>
               <View style={styles.perfItem}>
                 <Text style={styles.perfLabel}>24H VOLUME</Text>

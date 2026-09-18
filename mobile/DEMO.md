@@ -34,13 +34,13 @@ Repo: https://github.com/IrrhammCode/Hunch
 2. **Login** — enter your email → **Send code** → OTP → **Verify & enter** (Privy creates your embedded wallet on Monad Testnet).
 3. **YOU tab** — confirm **Privy wallet** + short `0x…` address. Tap **Claim Agora AUSD + Gas MON** (official Agora AUSD `0xa901...22dc`).
 4. **TRADE tab — Perpetuals (Perpl DEX)**:
-   - Tap **📈 PERPETUALS (PERPL)** at the top.
+   - Tap **PERPETUALS (PERPL)** at the top.
    - Pick **BTC** (or ETH/SOL/MON).
    - Choose **BUY / LONG**, select **10x** leverage, input margin (e.g. 50 AUSD).
    - Tap **OPEN LONG BTC** → Order executes on Monad.
    - Check **PORTFOLIO** tab → see open position, mark price, and live PnL. Tap **CLOSE POSITION** to take profit.
 5. **TRADE tab — 60s UP/DOWN Hunch**:
-   - Tap **⚡ 60s UP/DOWN**.
+   - Tap **60s UP/DOWN**.
    - Swipe **right = UP** or **left = DOWN** (or tap buttons) on the live round.
    - Wait ~60s → Pyth resolves.
    - Open **PORTFOLIO** → 60s Hunches → **Claim** your payout in Agora AUSD. Tap **View on MonadVision** for onchain proof.
