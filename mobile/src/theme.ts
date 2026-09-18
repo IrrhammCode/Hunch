@@ -22,6 +22,8 @@ export const colors = {
   dangerDim: "rgba(255,107,74,0.12)",
   /** Settlement hub badge (Monad) */
   hub: "#D6FF3F",
+  monadPurple: "#836EF9",
+  cardBorder: "#20242D",
   /** Chain not deployed / pending */
   pending: "#8B8E97",
 } as const;

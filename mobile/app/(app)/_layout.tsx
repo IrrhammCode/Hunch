@@ -17,23 +17,34 @@ type TabBarProps = {
 };
 
 function TabIcon({ label, focused }: { label: string; focused: boolean }) {
-  const primary = label === "TRADE" || label === "MARKETS" || label === "EXCHANGE";
+  const icon =
+    label === "MARKETS"
+      ? "📊"
+      : label === "TRADE"
+        ? "⚡"
+        : label === "PORTFOLIO"
+          ? "💼"
+          : "👤";
+
   return (
     <View style={styles.iconWrap}>
+      <View style={styles.iconContainer}>
+        <Text style={[styles.glyph, focused ? styles.glyphActive : styles.glyphIdle]}>{icon}</Text>
+        {label === "PORTFOLIO" ? (
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>1</Text>
+          </View>
+        ) : null}
+      </View>
       <Text
         style={[
           styles.iconLabel,
-          primary && styles.iconLabelPrimary,
-          focused
-            ? primary
-              ? styles.focusedBrand
-              : styles.focusedInk
-            : styles.idle,
+          focused ? styles.focusedBrand : styles.idle,
         ]}
       >
         {label}
       </Text>
-      {focused ? <View style={[styles.underline, primary && styles.underlineBrand]} /> : null}
+      {focused ? <View style={styles.activeDot} /> : <View style={styles.dotPlaceholder} />}
     </View>
   );
 }
@@ -103,43 +114,75 @@ export default function AppLayout() {
 const styles = StyleSheet.create({
   bar: {
     flexDirection: "row",
-    backgroundColor: "#0C0E12",
+    backgroundColor: "#0A0B0D",
     borderTopWidth: 1,
-    borderTopColor: colors.line,
-    paddingTop: 10,
-    paddingBottom: 18,
-    paddingHorizontal: 12,
+    borderTopColor: colors.cardBorder,
+    paddingTop: 8,
+    paddingBottom: 20,
+    paddingHorizontal: 8,
   },
   tab: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 48,
+    minHeight: 52,
   },
   iconWrap: {
     alignItems: "center",
-    gap: 6,
+    gap: 3,
+  },
+  iconContainer: {
+    position: "relative",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  glyph: {
+    fontSize: 18,
+  },
+  glyphActive: {
+    opacity: 1,
+  },
+  glyphIdle: {
+    opacity: 0.5,
+  },
+  badge: {
+    position: "absolute",
+    top: -4,
+    right: -8,
+    backgroundColor: colors.brand,
+    width: 15,
+    height: 15,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  badgeText: {
+    color: "#000000",
+    fontSize: 9,
+    fontFamily: type.bold,
+    lineHeight: 11,
   },
   iconLabel: {
     fontFamily: type.bold,
     fontSize: 10,
     letterSpacing: 0.8,
   },
-  iconLabelPrimary: {
-    fontSize: 11,
-    letterSpacing: 1,
+  focusedBrand: {
+    color: colors.brand,
   },
-  focusedBrand: { color: colors.brand },
-  focusedInk: { color: colors.ink },
-  idle: { color: colors.muted },
-  underline: {
-    width: 22,
-    height: 2,
-    borderRadius: radius.pill,
-    backgroundColor: colors.ink,
+  idle: {
+    color: colors.muted,
   },
-  underlineBrand: {
-    width: 28,
+  activeDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
     backgroundColor: colors.brand,
+    marginTop: 2,
+  },
+  dotPlaceholder: {
+    width: 4,
+    height: 4,
+    marginTop: 2,
   },
 });

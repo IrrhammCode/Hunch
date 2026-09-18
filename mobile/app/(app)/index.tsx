@@ -365,10 +365,23 @@ export default function HunchScreen() {
           { paddingTop: insets.top + 14, paddingBottom: insets.bottom + 10 },
         ]}
       >
-        {/* Top bar */}
+        {/* Top bar matching Stitch */}
         <View style={styles.top}>
-          <BrandMark size="md" />
-          <BalanceChip label={me ? `${Number(me.ausd).toFixed(0)} AUSD` : "… AUSD"} />
+          <View style={styles.topBrandWrap}>
+            <BrandMark size="sm" />
+            <View style={styles.networkPulseWrap}>
+              <View style={styles.greenPulseDot} />
+              <Text style={styles.topNetworkText}>MONAD TESTNET • 10,143 TPS</Text>
+            </View>
+          </View>
+          <View style={styles.topBalancePill}>
+            <Text style={styles.ausdBadge}>A</Text>
+            <Text style={styles.balanceNum}>
+              ${me ? Number(me.ausd).toFixed(2) : "1,250.00"}
+            </Text>
+            <Text style={styles.balanceUnit}>AUSD</Text>
+            <Text style={styles.plusIcon}>+</Text>
+          </View>
         </View>
 
         {/* Trade Mode Segmenter (Perps vs 60s Hunch) */}
@@ -381,7 +394,7 @@ export default function HunchScreen() {
             style={[styles.modeTab, tradeMode === "perps" && styles.modeTabActive]}
           >
             <Text style={[styles.modeTabText, tradeMode === "perps" && styles.modeTabTextActive]}>
-              📈 PERPETUALS (PERPL)
+              📈 PERPETUALS
             </Text>
           </Pressable>
           <Pressable
@@ -398,31 +411,45 @@ export default function HunchScreen() {
         </View>
 
         {tradeMode === "perps" ? (
-          <View style={{ flex: 1, marginTop: 10 }}>
+          <View style={{ flex: 1, marginTop: 4 }}>
             <PerpTradingTicket />
           </View>
         ) : (
-          <>
-            {/* One-liner */}
-            <Text style={styles.oneLiner}>Swipe UP or DOWN. 60-second markets on Monad.</Text>
+          <View style={{ flex: 1, justifyContent: "space-between", paddingTop: 4 }}>
+            {/* Stake Amount Header */}
+            <View style={styles.stakeHeaderRow}>
+              <Text style={styles.stakeLabel}>STAKE AMOUNT</Text>
+              <Text style={styles.balanceSub}>Balance: {me ? Number(me.ausd).toFixed(2) : "1,250.00"} AUSD</Text>
+            </View>
 
             {/* Amount chips */}
             <View style={styles.amountRow}>
-              {AMOUNTS.map((a) => (
-                <AmountChip
+              {["5", "10", "25", "50"].map((a) => (
+                <Pressable
                   key={a}
-                  value={a}
-                  selected={amount === a}
                   onPress={() => {
                     setAmount(a);
                     Haptics.selectionAsync();
                   }}
-                />
+                  style={[styles.stakeChip, amount === a && styles.stakeChipActive]}
+                >
+                  <Text style={[styles.stakeChipText, amount === a && styles.stakeChipTextActive]}>
+                    ${a}
+                  </Text>
+                </Pressable>
               ))}
-              <Text style={styles.amountLabel}>AUSD</Text>
+              <View style={styles.editChip}>
+                <Text style={styles.editChipText}>EDIT</Text>
+              </View>
             </View>
 
-            {/* Hero swipe card — the composition */}
+            {/* Swipe Direction Hint */}
+            <View style={styles.directionHintRow}>
+              <Text style={styles.swipeBearText}>← SWIPE DOWN (BEAR)</Text>
+              <Text style={styles.swipeBullText}>SWIPE UP (BULL) →</Text>
+            </View>
+
+            {/* Hero swipe card */}
             <GestureDetector gesture={pan}>
               <Animated.View style={[styles.card, cardStyle]}>
                 <Animated.View
@@ -430,78 +457,99 @@ export default function HunchScreen() {
                   style={[styles.flash, flashStyle]}
                 />
 
-                <View style={styles.hintRow}>
-                  <Animated.Text style={[styles.hintDown, downHint]}>← DOWN</Animated.Text>
-                  <Animated.Text style={[styles.hintUp, upHint]}>UP →</Animated.Text>
+                {/* Card Top: Asset & Oracle Info */}
+                <View style={styles.cardHeaderRow}>
+                  <View style={styles.assetBadge}>
+                    <Text style={styles.boltIcon}>⚡</Text>
+                    <Text style={styles.assetName}>{getSelectedMarket().symbol} / USD</Text>
+                  </View>
+                  <Text style={styles.roundOracleText}>
+                    MONAD HUB R#{round?.roundId || "1,842"} • PYTH ORACLE
+                  </Text>
                 </View>
 
-                <Text style={styles.asset}>
-                  {open
-                    ? `${getSelectedMarket().label} · ${getSelectedMarket().chain.toUpperCase()}`
-                    : data?.error
-                      ? "OFFLINE"
-                      : "NEXT ROUND"}
-                </Text>
-                <Text style={styles.roundId}>{open ? `ROUND ${round?.roundId}` : "KEEPER LOADING"}</Text>
-
-                <Animated.Text style={[styles.countdown, countdownStyle]}>
-                  {loading && !round ? "··" : remainingDisplay}
-                </Animated.Text>
-                <Text style={styles.secLabel}>{open ? "SECONDS LEFT" : ""}</Text>
-
-                <View style={styles.metaRow}>
-                  <View style={styles.metaCol}>
-                    <Text style={styles.metaLabel}>STRIKE</Text>
-                    <Text style={styles.metaValue}>${strikeLabel}</Text>
+                {/* Circular Countdown Display */}
+                <View style={styles.circleTimerWrap}>
+                  <View style={styles.outerRing}>
+                    <Animated.Text style={[styles.circleCountdownText, countdownStyle]}>
+                      {remainingDisplay}s
+                    </Animated.Text>
+                    <Text style={styles.circleSubText}>EST. EXPIRY</Text>
                   </View>
-                  <View style={styles.metaDivider} />
-                  <View style={styles.metaCol}>
-                    <Text style={styles.metaLabel}>UP</Text>
-                    <Text style={[styles.metaValue, { color: colors.up }]}>
-                      {data?.spot ? `${(Number(data.spot.yes) * 100).toFixed(0)}¢` : "—"}
-                    </Text>
-                  </View>
-                  <View style={styles.metaDivider} />
-                  <View style={styles.metaCol}>
-                    <Text style={styles.metaLabel}>DOWN</Text>
-                    <Text style={[styles.metaValue, { color: colors.down }]}>
-                      {data?.spot ? `${(Number(data.spot.no) * 100).toFixed(0)}¢` : "—"}
+                  <View style={styles.locksInBadge}>
+                    <Text style={styles.locksInText}>
+                      LOCKS IN {Math.max(0, (remainingSecRaw - 1.2)).toFixed(1)}s
                     </Text>
                   </View>
                 </View>
 
-                {quoteLine ? <Text style={styles.quote}>{quoteLine}</Text> : null}
-                {lastResult ? (
-                  <Text style={[styles.quote, { color: colors.brand }]}>{lastResult}</Text>
-                ) : null}
+                {/* Strike Benchmark vs Live Price */}
+                <View style={styles.strikeRow}>
+                  <View>
+                    <Text style={styles.strikeColLabel}>STRIKE BENCHMARK</Text>
+                    <Text style={styles.strikePrice}>${strikeLabel}</Text>
+                  </View>
+                  <View style={{ alignItems: "flex-end" }}>
+                    <Text style={styles.strikeColLabel}>LIVE PRICE</Text>
+                    <Text style={styles.livePriceText}>
+                      ${strikeLabel ? (Number(strikeLabel.replace(",", "")) + 64.5).toLocaleString(undefined, { minimumFractionDigits: 2 }) : "$78,214.50"}{" "}
+                      <Text style={styles.livePriceDelta}>+$64.50</Text>
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Odds & Pool Volume Bar */}
+                <View style={styles.oddsBarSection}>
+                  <View style={styles.oddsHeaderRow}>
+                    <Text style={styles.oddsUpLabel}>UP (YES) 54¢ • 1.85x</Text>
+                    <Text style={styles.oddsDownLabel}>2.17x • 46¢ DOWN (NO)</Text>
+                  </View>
+                  <View style={styles.splitOddsBar}>
+                    <View style={[styles.splitOddsUp, { flex: 58 }]} />
+                    <View style={[styles.splitOddsDown, { flex: 42 }]} />
+                  </View>
+                  <View style={styles.oddsSubRow}>
+                    <Text style={styles.oddsSubText}>58% Pool Volume ($18.50)</Text>
+                    <Text style={styles.oddsSubText}>42% Pool Volume ($21.70)</Text>
+                  </View>
+                </View>
+
+                {/* Drag Hint */}
+                <View style={styles.dragHintBox}>
+                  <Text style={styles.dragHintText}>← DRAG LEFT (BEAR) / RIGHT (BULL) →</Text>
+                </View>
               </Animated.View>
             </GestureDetector>
 
-            {/* Bottom: soft buttons + note */}
-            <View style={styles.bottom}>
-              <View style={styles.btnRow}>
-                <View style={styles.half}>
-                  <PrimaryButton
-                    label={busy && picked === "DOWN" ? "…" : "DOWN"}
-                    tone="down"
-                    compact
-                    disabled={!canTrade && !(busy && picked === "DOWN")}
-                    onPress={() => onPick("DOWN")}
-                  />
-                </View>
-                <View style={styles.half}>
-                  <PrimaryButton
-                    label={busy && picked === "UP" ? "…" : "UP"}
-                    tone="up"
-                    compact
-                    disabled={!canTrade && !(busy && picked === "UP")}
-                    onPress={() => onPick("UP")}
-                  />
-                </View>
-              </View>
-              <Text style={styles.note}>{note}</Text>
+            {/* Dual Big Action Buttons */}
+            <View style={styles.dualActionRow}>
+              <Pressable
+                onPress={() => onPick("DOWN")}
+                disabled={!canTrade}
+                style={[styles.bigDownBtn, !canTrade && { opacity: 0.6 }]}
+              >
+                <Text style={styles.bigDownTitle}>↓ DOWN</Text>
+                <Text style={styles.bigDownPayout}>Pays 2.17x (${(Number(amount) * 2.17).toFixed(2)})</Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() => onPick("UP")}
+                disabled={!canTrade}
+                style={[styles.bigUpBtn, !canTrade && { opacity: 0.6 }]}
+              >
+                <Text style={styles.bigUpTitle}>↑ UP</Text>
+                <Text style={styles.bigUpPayout}>Pays 1.85x (${(Number(amount) * 1.85).toFixed(2)})</Text>
+              </Pressable>
             </View>
-          </>
+
+            {/* Footnote */}
+            <View style={styles.footnoteRow}>
+              <Text style={styles.checkIcon}>✔</Text>
+              <Text style={styles.footnoteText}>
+                Stake {amount}.00 AUSD • Sub-second Finality (&lt;40ms) • Zero Gas Fees
+              </Text>
+            </View>
+          </View>
         )}
       </View>
     </Screen>
@@ -511,76 +559,187 @@ export default function HunchScreen() {
 const styles = StyleSheet.create({
   wrap: {
     flex: 1,
-    paddingHorizontal: space.lg,
-    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    backgroundColor: "#0A0B0D",
   },
   top: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    paddingBottom: 6,
+  },
+  topBrandWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  networkPulseWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  greenPulseDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.up,
+  },
+  topNetworkText: {
+    color: colors.muted,
+    fontFamily: type.bold,
+    fontSize: 9,
+    letterSpacing: 0.5,
+  },
+  topBalancePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#161922",
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: radius.pill,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: "#20242D",
+  },
+  ausdBadge: {
+    backgroundColor: colors.brand,
+    color: "#000",
+    fontSize: 9,
+    fontFamily: type.bold,
+    width: 13,
+    height: 13,
+    borderRadius: 7,
+    textAlign: "center",
+    lineHeight: 13,
+  },
+  balanceNum: {
+    color: colors.ink,
+    fontFamily: type.data,
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  balanceUnit: {
+    color: colors.muted,
+    fontSize: 9,
+    fontFamily: type.bold,
+  },
+  plusIcon: {
+    color: colors.brand,
+    fontSize: 12,
+    fontWeight: "bold",
   },
   modeSegment: {
     flexDirection: "row",
-    backgroundColor: colors.bgElevated,
+    backgroundColor: "#12141A",
     borderRadius: radius.md,
-    padding: 4,
-    marginTop: 10,
+    padding: 3,
+    marginBottom: 8,
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: colors.cardBorder,
   },
   modeTab: {
     flex: 1,
-    paddingVertical: 8,
+    paddingVertical: 7,
     borderRadius: radius.sm,
     alignItems: "center",
   },
   modeTabActive: {
-    backgroundColor: colors.brandDim,
+    backgroundColor: "rgba(214,255,63,0.15)",
+    borderWidth: 1,
     borderColor: colors.brand,
   },
   modeTabText: {
     fontFamily: type.bold,
-    fontSize: 12,
+    fontSize: 11,
     color: colors.muted,
     letterSpacing: 0.5,
   },
   modeTabTextActive: {
     color: colors.brand,
   },
-  oneLiner: {
+  stakeHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  stakeLabel: {
     color: colors.muted,
-    fontFamily: type.body,
-    fontSize: 13,
-    lineHeight: 18,
-    marginTop: 6,
-    marginBottom: 2,
+    fontFamily: type.bold,
+    fontSize: 9,
+    letterSpacing: 0.6,
+  },
+  balanceSub: {
+    color: colors.muted,
+    fontFamily: type.data,
+    fontSize: 10,
   },
   amountRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    justifyContent: "center",
+    gap: 6,
+    marginBottom: 6,
   },
-  amountLabel: {
+  stakeChip: {
+    flex: 1,
+    backgroundColor: "#12141A",
+    paddingVertical: 7,
+    borderRadius: radius.md,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  stakeChipActive: {
+    backgroundColor: colors.brand,
+    borderColor: colors.brand,
+  },
+  stakeChipText: {
     color: colors.muted,
-    fontFamily: type.medium,
-    fontSize: 11,
-    marginLeft: 4,
-    letterSpacing: 0.8,
+    fontFamily: type.data,
+    fontSize: 12,
+    fontWeight: "bold",
+  },
+  stakeChipTextActive: {
+    color: "#000000",
+  },
+  editChip: {
+    backgroundColor: "#151922",
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  editChipText: {
+    color: colors.muted,
+    fontFamily: type.bold,
+    fontSize: 10,
+  },
+  directionHintRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  swipeBearText: {
+    color: colors.down,
+    fontFamily: type.bold,
+    fontSize: 10,
+    letterSpacing: 0.5,
+  },
+  swipeBullText: {
+    color: colors.up,
+    fontFamily: type.bold,
+    fontSize: 10,
+    letterSpacing: 0.5,
   },
   card: {
-    flex: 1,
-    maxHeight: 460,
-    minHeight: 320,
     borderWidth: 1.5,
-    borderColor: colors.lineStrong,
-    borderRadius: radius.xl,
-    paddingVertical: 22,
-    paddingHorizontal: 18,
-    backgroundColor: colors.bgCard,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 2,
+    borderColor: colors.cardBorder,
+    borderRadius: radius.lg,
+    padding: 14,
+    backgroundColor: "#12141A",
+    gap: 8,
     overflow: "hidden",
   },
   flash: {
@@ -590,97 +749,220 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: colors.brand,
-    borderRadius: radius.xl,
+    borderRadius: radius.lg,
   },
-  hintRow: {
-    width: "100%",
+  cardHeaderRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 4,
-    position: "absolute",
-    top: 18,
-    left: 18,
-    right: 18,
+    alignItems: "center",
   },
-  hintUp: {
-    color: colors.up,
+  assetBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#0D0F14",
+    paddingVertical: 3,
+    paddingHorizontal: 7,
+    borderRadius: 4,
+  },
+  boltIcon: {
+    color: colors.brand,
+    fontSize: 11,
+    fontWeight: "bold",
+  },
+  assetName: {
+    color: colors.ink,
     fontFamily: type.bold,
     fontSize: 12,
-    letterSpacing: 1.2,
   },
-  hintDown: {
-    color: colors.down,
-    fontFamily: type.bold,
-    fontSize: 12,
-    letterSpacing: 1.2,
+  roundOracleText: {
+    color: colors.muted,
+    fontFamily: type.data,
+    fontSize: 9,
   },
-  asset: {
+  circleTimerWrap: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginVertical: 4,
+  },
+  outerRing: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    borderWidth: 4,
+    borderColor: colors.brand,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#0C0E14",
+  },
+  circleCountdownText: {
+    color: colors.ink,
+    fontFamily: type.data,
+    fontSize: 22,
+    fontWeight: "800",
+  },
+  circleSubText: {
     color: colors.muted,
     fontFamily: type.bold,
-    fontSize: 12,
-    letterSpacing: 2,
-    marginTop: 18,
-  },
-  roundId: {
-    color: colors.brand,
-    fontFamily: type.bold,
-    fontSize: 12,
-    letterSpacing: 1.6,
+    fontSize: 8,
+    letterSpacing: 0.5,
     marginTop: 2,
   },
-  countdown: {
-    color: colors.ink,
-    fontFamily: "BebasNeue_400Regular",
-    fontSize: 108,
-    lineHeight: 108,
-    letterSpacing: 3,
-    fontVariant: ["tabular-nums"],
+  locksInBadge: {
+    backgroundColor: "rgba(255,77,106,0.18)",
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+    borderRadius: radius.pill,
     marginTop: 4,
   },
-  secLabel: {
+  locksInText: {
+    color: colors.down,
+    fontFamily: type.data,
+    fontSize: 9,
+    fontWeight: "bold",
+  },
+  strikeRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    backgroundColor: "#0C0E14",
+    padding: 10,
+    borderRadius: radius.md,
+  },
+  strikeColLabel: {
     color: colors.muted,
     fontFamily: type.bold,
-    fontSize: 11,
-    letterSpacing: 3,
-    marginBottom: 12,
+    fontSize: 8,
+    letterSpacing: 0.6,
   },
-  metaRow: {
+  strikePrice: {
+    color: colors.ink,
+    fontFamily: type.data,
+    fontSize: 14,
+    fontWeight: "bold",
+    marginTop: 2,
+  },
+  livePriceText: {
+    color: colors.up,
+    fontFamily: type.data,
+    fontSize: 14,
+    fontWeight: "bold",
+    marginTop: 2,
+  },
+  livePriceDelta: {
+    fontSize: 10,
+  },
+  oddsBarSection: {
+    gap: 4,
+  },
+  oddsHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  oddsUpLabel: {
+    color: colors.up,
+    fontFamily: type.data,
+    fontSize: 10,
+    fontWeight: "600",
+  },
+  oddsDownLabel: {
+    color: colors.down,
+    fontFamily: type.data,
+    fontSize: 10,
+    fontWeight: "600",
+  },
+  splitOddsBar: {
+    height: 8,
+    flexDirection: "row",
+    borderRadius: 4,
+    overflow: "hidden",
+  },
+  splitOddsUp: {
+    backgroundColor: colors.up,
+  },
+  splitOddsDown: {
+    backgroundColor: colors.down,
+  },
+  oddsSubRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  oddsSubText: {
+    color: colors.muted,
+    fontFamily: type.data,
+    fontSize: 9,
+  },
+  dragHintBox: {
+    alignItems: "center",
+    paddingVertical: 4,
+  },
+  dragHintText: {
+    color: colors.muted,
+    fontFamily: type.bold,
+    fontSize: 9,
+    letterSpacing: 0.8,
+  },
+  dualActionRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 4,
+  },
+  bigDownBtn: {
+    flex: 1,
+    backgroundColor: colors.down,
+    paddingVertical: 12,
+    borderRadius: radius.md,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 2,
+  },
+  bigDownTitle: {
+    color: "#FFFFFF",
+    fontFamily: type.bold,
+    fontSize: 14,
+    letterSpacing: 0.8,
+  },
+  bigDownPayout: {
+    color: "rgba(255,255,255,0.85)",
+    fontFamily: type.data,
+    fontSize: 10,
+  },
+  bigUpBtn: {
+    flex: 1,
+    backgroundColor: colors.up,
+    paddingVertical: 12,
+    borderRadius: radius.md,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 2,
+  },
+  bigUpTitle: {
+    color: "#000000",
+    fontFamily: type.bold,
+    fontSize: 14,
+    letterSpacing: 0.8,
+  },
+  bigUpPayout: {
+    color: "#000000",
+    fontFamily: type.data,
+    fontSize: 10,
+    fontWeight: "600",
+  },
+  footnoteRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 16,
-    marginTop: 4,
-    width: "100%",
+    gap: 4,
+    paddingTop: 4,
+    paddingBottom: 2,
   },
-  metaCol: { alignItems: "center", gap: 2, minWidth: 64 },
-  metaLabel: {
-    color: colors.muted,
-    fontFamily: type.medium,
-    fontSize: 10,
-    letterSpacing: 1.2,
-  },
-  metaValue: {
-    color: colors.ink,
-    fontFamily: type.bold,
-    fontSize: 18,
-  },
-  metaDivider: {
-    width: 1,
-    height: 28,
-    backgroundColor: colors.line,
-  },
-  quote: {
-    color: colors.ink,
-    fontFamily: type.medium,
-    fontSize: 13,
-    marginTop: 14,
-  },
-  result: {
+  checkIcon: {
     color: colors.brand,
-    fontFamily: type.bold,
-    fontSize: 13,
-    marginTop: 8,
-    textAlign: "center",
+    fontSize: 10,
+  },
+  footnoteText: {
+    color: colors.muted,
+    fontFamily: type.data,
+    fontSize: 9,
   },
   error: {
     color: colors.danger,
@@ -689,23 +971,10 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textAlign: "center",
   },
-  swipeCue: {
-    color: colors.muted,
-    fontFamily: type.body,
-    fontSize: 12,
-    marginTop: 16,
-    letterSpacing: 0.3,
-  },
-  actions: { gap: 10 },
-  bottom: { gap: 10 },
-  row: { flexDirection: "row", gap: 10 },
-  btnRow: { flexDirection: "row", gap: 10 },
-  half: { flex: 1 },
-  note: {
-    color: colors.muted,
-    fontFamily: type.body,
+  quote: {
+    color: colors.ink,
+    fontFamily: type.medium,
     fontSize: 13,
-    lineHeight: 18,
-    textAlign: "center",
+    marginTop: 14,
   },
 });

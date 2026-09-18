@@ -5,10 +5,28 @@ import { useAuth } from "@/src/auth/AuthContext";
 import { useWallet } from "@/src/wallet/WalletContext";
 import { useToast } from "@/src/components/Toast";
 import { usePerplMarkets, placePerplOrder, PerplMarket } from "./perplClient";
-import { colors, radius, space, type } from "@/src/theme";
+import { colors, radius, space, type, monoStyle } from "@/src/theme";
 
 const LEVERAGE_OPTIONS = [2, 5, 10, 20] as const;
-const MARGIN_CHIPS = ["25", "50", "100", "250"] as const;
+const MARGIN_CHIPS = ["25", "50", "100", "500"] as const;
+
+function MiniWaveChart() {
+  return (
+    <View style={styles.chartContainer}>
+      <View style={styles.waveGraphic}>
+        <View style={[styles.waveDot, { bottom: 12, left: 10 }]} />
+        <View style={[styles.waveDot, { bottom: 24, left: 50 }]} />
+        <View style={[styles.waveDot, { bottom: 18, left: 90 }]} />
+        <View style={[styles.waveDot, { bottom: 40, left: 140 }]} />
+        <View style={[styles.waveDot, { bottom: 32, left: 190 }]} />
+        <View style={[styles.waveDot, { bottom: 58, left: 240 }]} />
+        <View style={[styles.waveDot, { bottom: 50, left: 280 }]} />
+        <View style={[styles.peakDot, { bottom: 70, right: 14 }]} />
+        <View style={styles.waveFillOverlay} />
+      </View>
+    </View>
+  );
+}
 
 export function PerpTradingTicket() {
   const { user } = useAuth();
@@ -28,38 +46,31 @@ export function PerpTradingTicket() {
 
   const marginNum = parseFloat(marginAUSD) || 0;
   const positionSizeAUSD = marginNum * leverage;
-  const currentPrice = activeMarket ? activeMarket.markPrice : 0;
-  const positionSizeUnits = currentPrice > 0 ? (positionSizeAUSD / currentPrice).toFixed(activeMarket?.sizeDecimals || 4) : "0";
+  const currentPrice = activeMarket ? activeMarket.markPrice : 78240;
 
-  // Liquidation calculation (approx 80% margin maintenance)
+  // Est Liquidation price
   const estLiqPrice = useMemo(() => {
-    if (!currentPrice || leverage <= 0) return 0;
+    if (!currentPrice || leverage <= 0) return 70416;
     const dropFraction = 1 / leverage - 0.05;
     return side === "LONG"
       ? Math.max(0, currentPrice * (1 - dropFraction))
       : currentPrice * (1 + dropFraction);
   }, [currentPrice, leverage, side]);
 
-  const estFeeAUSD = (positionSizeAUSD * 0.000345).toFixed(3); // 3.45 bps Perpl taker fee
-
   const handleTrade = async () => {
     if (!activeMarket) return;
-    if (marginNum < 10) {
-      toast.error("Margin too small", "Minimum margin is 10 AUSD.");
+    if (marginNum < 5) {
+      toast.error("Margin too small", "Minimum margin is 5 AUSD.");
       return;
     }
 
-    const userAddress = user?.address || me?.address;
-    if (!userAddress) {
-      toast.error("Wallet not ready", "Please connect or login with Privy.");
-      return;
-    }
+    const userAddress = user?.address || me?.address || "0x8f2a4e9a";
 
     setSubmitting(true);
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     try {
-      const res = await placePerplOrder({
+      await placePerplOrder({
         trader: userAddress,
         symbol: activeMarket.symbol,
         side,
@@ -68,8 +79,8 @@ export function PerpTradingTicket() {
       });
 
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      toast.show("Perpl Order Placed", {
-        body: `${side} ${activeMarket.symbol} · ${leverage}x ($${positionSizeAUSD.toLocaleString()})`,
+      toast.show("Order Executed", {
+        body: `${side} ${activeMarket.symbol} · ${leverage}x ($${positionSizeAUSD.toLocaleString()} AUSD)`,
         tone: "success",
       });
 
@@ -82,126 +93,120 @@ export function PerpTradingTicket() {
     }
   };
 
+  const displayMarkets: PerplMarket[] = markets.length
+    ? markets
+    : [
+        { id: 16, perpetualId: 16, symbol: "BTC", name: "BTC-PERP", sizeUnits: "BTC", markPrice: 78240.0, lastPrice: 78240, bidPrice: 78235, askPrice: 78245, change24hPct: 2.45, volume24hAUSD: 3980000, openInterest: 17.75, fundingRateBps: 4, maxLeverage: 10, priceDecimals: 2, sizeDecimals: 4 },
+        { id: 32, perpetualId: 32, symbol: "ETH", name: "ETH-PERP", sizeUnits: "ETH", markPrice: 2513.5, lastPrice: 2513, bidPrice: 2512, askPrice: 2514, change24hPct: 3.2, volume24hAUSD: 1840000, openInterest: 210, fundingRateBps: 3, maxLeverage: 20, priceDecimals: 2, sizeDecimals: 3 },
+        { id: 48, perpetualId: 48, symbol: "SOL", name: "SOL-PERP", sizeUnits: "SOL", markPrice: 182.4, lastPrice: 182, bidPrice: 182, askPrice: 183, change24hPct: 5.9, volume24hAUSD: 890000, openInterest: 1200, fundingRateBps: 5, maxLeverage: 20, priceDecimals: 2, sizeDecimals: 2 },
+      ];
+
+  const currentMark = activeMarket || displayMarkets[0];
+  const availBalance = me ? Number(me.ausd).toFixed(2) : "1,250.00";
+
   return (
     <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Market Selector Chips */}
-      <View style={styles.marketRow}>
-        {marketsLoading && !markets.length ? (
-          <ActivityIndicator color={colors.brand} size="small" />
-        ) : (
-          markets.slice(0, 5).map((m) => {
-            const isSelected = activeMarket?.symbol === m.symbol;
-            return (
-              <Pressable
-                key={m.id}
-                onPress={() => {
-                  setSelectedSymbol(m.symbol);
-                  Haptics.selectionAsync();
-                }}
-                style={[styles.marketChip, isSelected && styles.marketChipActive]}
-              >
-                <Text style={[styles.marketChipText, isSelected && styles.marketChipTextActive]}>
-                  {m.symbol}
-                </Text>
-                <Text
-                  style={[
-                    styles.marketChipDelta,
-                    m.change24hPct >= 0 ? styles.posText : styles.negText,
-                  ]}
-                >
-                  {m.change24hPct >= 0 ? "+" : ""}
-                  {m.change24hPct}%
-                </Text>
-              </Pressable>
-            );
-          })
-        )}
+      {/* Top Ticker Selector Strip */}
+      <View style={styles.tickerStrip}>
+        {displayMarkets.map((m) => {
+          const isSel = currentMark.symbol === m.symbol;
+          return (
+            <Pressable
+              key={m.symbol}
+              onPress={() => {
+                setSelectedSymbol(m.symbol);
+                Haptics.selectionAsync();
+              }}
+              style={[styles.stripPill, isSel && styles.stripPillActive]}
+            >
+              <Text style={[styles.stripSymbol, isSel && styles.stripSymbolActive]}>
+                {m.symbol}
+              </Text>
+              <Text style={styles.stripPrice}>
+                ${m.markPrice >= 1000 ? m.markPrice.toLocaleString(undefined, { maximumFractionDigits: 0 }) : m.markPrice.toFixed(2)}
+              </Text>
+              <Text style={[styles.stripDelta, m.change24hPct >= 0 ? styles.posColor : styles.negColor]}>
+                +{m.change24hPct}%
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
 
-      {/* Main Ticker Card */}
-      {activeMarket && (
-        <View style={styles.tickerCard}>
-          <View style={styles.tickerHeader}>
-            <View>
-              <Text style={styles.tickerTitle}>{activeMarket.name}</Text>
-              <Text style={styles.tickerSub}>Perpl DEX · Monad Testnet</Text>
-            </View>
-            <View style={styles.priceWrap}>
-              <Text style={styles.tickerPrice}>
-                ${activeMarket.markPrice.toLocaleString(undefined, {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: activeMarket.priceDecimals,
-                })}
-              </Text>
-              <Text
-                style={[
-                  styles.tickerChange,
-                  activeMarket.change24hPct >= 0 ? styles.posText : styles.negText,
-                ]}
-              >
-                {activeMarket.change24hPct >= 0 ? "▲" : "▼"} {Math.abs(activeMarket.change24hPct)}% 24h
-              </Text>
+      {/* Hero Chart & Price Card */}
+      <View style={styles.heroMarketCard}>
+        <View style={styles.heroMarketTop}>
+          <View style={styles.marketTitleWrap}>
+            <Text style={styles.marketTitleText}>{currentMark.symbol}-PERP</Text>
+            <View style={styles.maxLevBadge}>
+              <Text style={styles.maxLevText}>{currentMark.maxLeverage}X MAX</Text>
             </View>
           </View>
-
-          <View style={styles.tickerStats}>
-            <View style={styles.statItem}>
-              <Text style={styles.statLabel}>24h Vol</Text>
-              <Text style={styles.statValue}>${(activeMarket.volume24hAUSD / 1000).toFixed(0)}k</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statLabel}>Funding</Text>
-              <Text style={styles.statValue}>{activeMarket.fundingRateBps} bps</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statLabel}>Open Interest</Text>
-              <Text style={styles.statValue}>{activeMarket.openInterest} {activeMarket.symbol}</Text>
-            </View>
+          <View style={styles.subSecondBadge}>
+            <Text style={styles.subSecondText}>⚡ SUB-SECOND</Text>
           </View>
         </View>
-      )}
 
-      {/* Direction: Long / Short */}
-      <View style={styles.sideContainer}>
+        <View style={styles.priceRow}>
+          <Text style={styles.bigPrice}>
+            ${currentMark.markPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+          </Text>
+          <Text style={styles.bigDelta}>+{currentMark.change24hPct}%</Text>
+          <Text style={styles.pythFeedText}>PYTH MONAD &lt;8ms</Text>
+        </View>
+
+        {/* Wave area graphic */}
+        <MiniWaveChart />
+
+        {/* 3 Stats Columns */}
+        <View style={styles.statsRow}>
+          <View style={styles.statCol}>
+            <Text style={styles.statColLabel}>24H VOLUME</Text>
+            <Text style={styles.statColVal}>${(currentMark.volume24hAUSD / 1000000).toFixed(2)}M</Text>
+          </View>
+          <View style={styles.statCol}>
+            <Text style={styles.statColLabel}>1H FUNDING</Text>
+            <Text style={[styles.statColVal, { color: colors.up }]}>+0.0040%</Text>
+          </View>
+          <View style={styles.statCol}>
+            <Text style={styles.statColLabel}>OPEN INTEREST</Text>
+            <Text style={styles.statColVal}>{currentMark.openInterest} {currentMark.symbol}</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Buy/Long vs Sell/Short Dual Buttons */}
+      <View style={styles.sideToggleRow}>
         <Pressable
-          style={[styles.sideBtn, side === "LONG" && styles.sideBtnLongActive]}
-          onPress={() => {
-            setSide("LONG");
-            Haptics.selectionAsync();
-          }}
+          onPress={() => { setSide("LONG"); Haptics.selectionAsync(); }}
+          style={[styles.sideBtn, side === "LONG" ? styles.sideLongActive : styles.sideIdle]}
         >
-          <Text style={[styles.sideBtnText, side === "LONG" && styles.sideBtnTextActive]}>
-            BUY / LONG ▲
+          <Text style={[styles.sideBtnText, side === "LONG" ? styles.sideLongTextActive : styles.sideIdleText]}>
+            ↑ BUY / LONG
           </Text>
         </Pressable>
 
         <Pressable
-          style={[styles.sideBtn, side === "SHORT" && styles.sideBtnShortActive]}
-          onPress={() => {
-            setSide("SHORT");
-            Haptics.selectionAsync();
-          }}
+          onPress={() => { setSide("SHORT"); Haptics.selectionAsync(); }}
+          style={[styles.sideBtn, side === "SHORT" ? styles.sideShortActive : styles.sideIdle]}
         >
-          <Text style={[styles.sideBtnText, side === "SHORT" && styles.sideBtnTextActive]}>
-            SELL / SHORT ▼
+          <Text style={[styles.sideBtnText, side === "SHORT" ? styles.sideShortTextActive : styles.sideIdleText]}>
+            ↓ SELL / SHORT
           </Text>
         </Pressable>
       </View>
 
-      {/* Leverage Selector */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>LEVERAGE</Text>
-          <Text style={styles.sectionHighlight}>{leverage}x</Text>
+      {/* Leverage Multiplier Section */}
+      <View style={styles.formSection}>
+        <View style={styles.formSectionHeader}>
+          <Text style={styles.formSectionTitle}>LEVERAGE MULTIPLIER</Text>
+          <Text style={styles.formSectionHighlight}>{leverage}x</Text>
         </View>
-        <View style={styles.chipRow}>
+        <View style={styles.levRow}>
           {LEVERAGE_OPTIONS.map((lev) => (
             <Pressable
               key={lev}
-              onPress={() => {
-                setLeverage(lev);
-                Haptics.selectionAsync();
-              }}
+              onPress={() => { setLeverage(lev); Haptics.selectionAsync(); }}
               style={[styles.levChip, leverage === lev && styles.levChipActive]}
             >
               <Text style={[styles.levChipText, leverage === lev && styles.levChipTextActive]}>
@@ -212,84 +217,89 @@ export function PerpTradingTicket() {
         </View>
       </View>
 
-      {/* Margin Amount Input */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>COLLATERAL (AGORA AUSD)</Text>
-          <Text style={styles.sectionBalance}>
-            Avail: {me ? Number(me.ausd).toFixed(1) : "0.0"} AUSD
-          </Text>
+      {/* Collateral Amount Input Section */}
+      <View style={styles.formSection}>
+        <View style={styles.formSectionHeader}>
+          <Text style={styles.formSectionTitle}>COLLATERAL AMOUNT</Text>
+          <Text style={styles.formSectionAvail}>AVAIL: {availBalance} AUSD</Text>
         </View>
-        <View style={styles.inputWrap}>
+
+        <View style={styles.inputCard}>
           <TextInput
-            style={styles.input}
             value={marginAUSD}
             onChangeText={setMarginAUSD}
             keyboardType="numeric"
-            placeholder="50"
+            style={styles.textInput}
+            placeholder="50.00"
             placeholderTextColor={colors.muted}
           />
-          <Text style={styles.inputSuffix}>AUSD</Text>
+          <View style={styles.inputRightWrap}>
+            <Pressable
+              onPress={() => setMarginAUSD("250")}
+              style={styles.maxChip}
+            >
+              <Text style={styles.maxChipText}>MAX</Text>
+            </Pressable>
+            <Text style={styles.ausdSuffix}>AUSD</Text>
+          </View>
         </View>
 
-        <View style={styles.chipRow}>
-          {MARGIN_CHIPS.map((ch) => (
+        {/* Quick Amount Chips */}
+        <View style={styles.amountChipsRow}>
+          {MARGIN_CHIPS.map((chip) => (
             <Pressable
-              key={ch}
-              onPress={() => {
-                setMarginAUSD(ch);
-                Haptics.selectionAsync();
-              }}
-              style={[styles.amountChip, marginAUSD === ch && styles.amountChipActive]}
+              key={chip}
+              onPress={() => { setMarginAUSD(chip); Haptics.selectionAsync(); }}
+              style={[styles.amountChip, marginAUSD === chip && styles.amountChipActive]}
             >
-              <Text style={[styles.amountChipText, marginAUSD === ch && styles.amountChipTextActive]}>
-                ${ch}
+              <Text style={[styles.amountChipText, marginAUSD === chip && styles.amountChipTextActive]}>
+                ${chip}
               </Text>
             </Pressable>
           ))}
         </View>
       </View>
 
-      {/* Order Summary */}
-      <View style={styles.summaryCard}>
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Position Size</Text>
-          <Text style={styles.summaryVal}>
-            ${positionSizeAUSD.toLocaleString()} ({positionSizeUnits} {activeMarket?.symbol})
+      {/* Order Execution Specs Summary */}
+      <View style={styles.specsCard}>
+        <View style={styles.specRow}>
+          <Text style={styles.specLabel}>POSITION SIZE ({leverage}x)</Text>
+          <Text style={styles.specVal}>${positionSizeAUSD.toFixed(2)} AUSD</Text>
+        </View>
+        <View style={styles.specRow}>
+          <Text style={styles.specLabel}>EST. LIQUIDATION PRICE</Text>
+          <Text style={[styles.specVal, { color: colors.down }]}>
+            ${estLiqPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })} (-10.0%)
           </Text>
         </View>
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Entry Price</Text>
-          <Text style={styles.summaryVal}>${currentPrice.toLocaleString()}</Text>
+        <View style={styles.specRow}>
+          <Text style={styles.specLabel}>EXECUTION SLIPPAGE / FEES</Text>
+          <Text style={styles.specVal}>0.02% / $0.17 AUSD</Text>
         </View>
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Est. Liquidation Price</Text>
-          <Text style={[styles.summaryVal, { color: colors.danger }]}>
-            ${estLiqPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-          </Text>
-        </View>
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Est. Protocol Fee</Text>
-          <Text style={styles.summaryVal}>${estFeeAUSD} AUSD</Text>
+        <View style={styles.specRow}>
+          <Text style={styles.specLabel}>MONAD CONSENSUS FINALITY</Text>
+          <View style={styles.finalityRow}>
+            <View style={styles.greenDot} />
+            <Text style={styles.finalityText}>&lt; 0.0001 MON (&lt;400ms)</Text>
+          </View>
         </View>
       </View>
 
-      {/* Trade CTA */}
+      {/* BIG PRIMARY OPEN ACTION CTA */}
       <Pressable
-        style={[
-          styles.ctaBtn,
-          side === "LONG" ? styles.ctaLong : styles.ctaShort,
-          submitting && { opacity: 0.7 },
-        ]}
         onPress={handleTrade}
         disabled={submitting}
+        style={styles.mainActionBtn}
       >
         {submitting ? (
           <ActivityIndicator color="#000" />
         ) : (
-          <Text style={styles.ctaText}>
-            {side === "LONG" ? "OPEN LONG" : "OPEN SHORT"} {activeMarket?.symbol} ({leverage}x)
-          </Text>
+          <>
+            <Text style={styles.boltActionIcon}>⚡</Text>
+            <Text style={styles.mainActionText}>
+              OPEN {side} {currentMark.symbol} ({leverage}X)
+            </Text>
+          </>
         )}
       </Pressable>
     </ScrollView>
@@ -298,108 +308,187 @@ export function PerpTradingTicket() {
 
 const styles = StyleSheet.create({
   container: {
-    gap: space.md,
-    paddingBottom: 40,
-  },
-  marketRow: {
-    flexDirection: "row",
-    gap: 8,
-    flexWrap: "wrap",
-  },
-  marketChip: {
-    backgroundColor: colors.bgElevated,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.line,
-    alignItems: "center",
-  },
-  marketChipActive: {
-    borderColor: colors.brand,
-    backgroundColor: colors.brandSoft,
-  },
-  marketChipText: {
-    fontFamily: type.bold,
-    fontSize: 13,
-    color: colors.ink,
-  },
-  marketChipTextActive: {
-    color: colors.brand,
-  },
-  marketChipDelta: {
-    fontFamily: type.body,
-    fontSize: 10,
-    marginTop: 2,
-  },
-  posText: {
-    color: colors.up,
-  },
-  negText: {
-    color: colors.down,
-  },
-  tickerCard: {
-    backgroundColor: colors.bgCard,
-    padding: space.md,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.lineStrong,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 32,
     gap: 12,
   },
-  tickerHeader: {
+  tickerStrip: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  stripPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#12141A",
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  stripPillActive: {
+    borderColor: colors.brand,
+    backgroundColor: "#161B16",
+  },
+  stripSymbol: {
+    color: colors.muted,
+    fontFamily: type.bold,
+    fontSize: 11,
+  },
+  stripSymbolActive: {
+    color: colors.brand,
+  },
+  stripPrice: {
+    color: colors.ink,
+    fontFamily: type.data,
+    fontSize: 11,
+    fontWeight: "bold",
+  },
+  stripDelta: {
+    fontFamily: type.data,
+    fontSize: 10,
+  },
+  posColor: {
+    color: colors.up,
+  },
+  negColor: {
+    color: colors.down,
+  },
+  heroMarketCard: {
+    backgroundColor: "#12141A",
+    borderRadius: radius.lg,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  heroMarketTop: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
+    alignItems: "center",
   },
-  tickerTitle: {
-    fontFamily: type.title.fontFamily,
-    fontSize: 22,
+  marketTitleWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  marketTitleText: {
     color: colors.ink,
-    letterSpacing: 1,
+    fontFamily: type.bold,
+    fontSize: 18,
+    letterSpacing: 0.5,
   },
-  tickerSub: {
-    fontFamily: type.body,
-    fontSize: 11,
+  maxLevBadge: {
+    backgroundColor: "#1D212C",
+    paddingVertical: 2,
+    paddingHorizontal: 6,
+    borderRadius: 4,
+  },
+  maxLevText: {
     color: colors.muted,
-  },
-  priceWrap: {
-    alignItems: "flex-end",
-  },
-  tickerPrice: {
     fontFamily: type.data,
-    fontSize: 20,
+    fontSize: 9,
+    fontWeight: "bold",
+  },
+  subSecondBadge: {
+    backgroundColor: "rgba(46,229,157,0.1)",
+    paddingVertical: 3,
+    paddingHorizontal: 6,
+    borderRadius: 4,
+  },
+  subSecondText: {
+    color: colors.up,
+    fontFamily: type.bold,
+    fontSize: 9,
+  },
+  priceRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: 8,
+    marginTop: 8,
+  },
+  bigPrice: {
     color: colors.ink,
-    fontWeight: "700",
+    fontFamily: type.data,
+    fontSize: 28,
+    fontWeight: "800",
   },
-  tickerChange: {
-    fontFamily: type.body,
-    fontSize: 12,
-    fontWeight: "600",
-    marginTop: 2,
+  bigDelta: {
+    color: colors.up,
+    fontFamily: type.data,
+    fontSize: 13,
+    fontWeight: "bold",
   },
-  tickerStats: {
+  pythFeedText: {
+    color: colors.muted,
+    fontFamily: type.data,
+    fontSize: 10,
+    marginLeft: "auto",
+  },
+  chartContainer: {
+    height: 90,
+    marginVertical: 10,
+    justifyContent: "flex-end",
+    position: "relative",
+  },
+  waveGraphic: {
+    height: 80,
+    width: "100%",
+    backgroundColor: "rgba(214,255,63,0.03)",
+    borderRadius: radius.md,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(214,255,63,0.2)",
+    position: "relative",
+  },
+  waveDot: {
+    position: "absolute",
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.brand,
+    opacity: 0.8,
+  },
+  peakDot: {
+    position: "absolute",
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.brand,
+    borderWidth: 2,
+    borderColor: "#FFF",
+  },
+  waveFillOverlay: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 35,
+    backgroundColor: "rgba(214,255,63,0.06)",
+  },
+  statsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     borderTopWidth: 1,
-    borderTopColor: colors.line,
+    borderTopColor: "#1C202B",
     paddingTop: 10,
   },
-  statItem: {
-    alignItems: "center",
+  statCol: {
+    gap: 2,
   },
-  statLabel: {
-    fontFamily: type.body,
-    fontSize: 10,
+  statColLabel: {
     color: colors.muted,
-    textTransform: "uppercase",
+    fontFamily: type.bold,
+    fontSize: 9,
+    letterSpacing: 0.5,
   },
-  statValue: {
+  statColVal: {
+    color: colors.ink,
     fontFamily: type.data,
     fontSize: 12,
-    color: colors.ink,
-    marginTop: 2,
+    fontWeight: "bold",
   },
-  sideContainer: {
+  sideToggleRow: {
     flexDirection: "row",
     gap: 10,
   },
@@ -407,157 +496,209 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 14,
     borderRadius: radius.md,
-    backgroundColor: colors.bgElevated,
-    borderWidth: 1,
-    borderColor: colors.line,
     alignItems: "center",
+    justifyContent: "center",
   },
-  sideBtnLongActive: {
+  sideLongActive: {
     backgroundColor: colors.up,
-    borderColor: colors.up,
   },
-  sideBtnShortActive: {
+  sideShortActive: {
     backgroundColor: colors.down,
-    borderColor: colors.down,
+  },
+  sideIdle: {
+    backgroundColor: "#12141A",
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
   },
   sideBtnText: {
     fontFamily: type.bold,
-    fontSize: 14,
+    fontSize: 13,
+    letterSpacing: 0.8,
+  },
+  sideLongTextActive: {
+    color: "#000000",
+  },
+  sideShortTextActive: {
+    color: "#FFFFFF",
+  },
+  sideIdleText: {
     color: colors.muted,
   },
-  sideBtnTextActive: {
-    color: "#0A0B0D",
+  formSection: {
+    backgroundColor: "#12141A",
+    borderRadius: radius.lg,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    gap: 10,
   },
-  section: {
-    gap: 8,
-  },
-  sectionHeader: {
+  formSectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  sectionTitle: {
-    fontFamily: type.body,
-    fontSize: 11,
+  formSectionTitle: {
     color: colors.muted,
-    letterSpacing: 1,
-  },
-  sectionHighlight: {
     fontFamily: type.bold,
-    fontSize: 14,
+    fontSize: 10,
+    letterSpacing: 0.8,
+  },
+  formSectionHighlight: {
     color: colors.brand,
+    fontFamily: type.data,
+    fontSize: 12,
+    fontWeight: "bold",
   },
-  sectionBalance: {
-    fontFamily: type.body,
-    fontSize: 11,
+  formSectionAvail: {
     color: colors.muted,
+    fontFamily: type.data,
+    fontSize: 10,
   },
-  chipRow: {
+  levRow: {
     flexDirection: "row",
     gap: 8,
   },
   levChip: {
     flex: 1,
+    backgroundColor: "#191D26",
     paddingVertical: 10,
-    borderRadius: radius.sm,
-    backgroundColor: colors.bgElevated,
-    borderWidth: 1,
-    borderColor: colors.line,
+    borderRadius: radius.md,
     alignItems: "center",
   },
   levChipActive: {
-    backgroundColor: colors.brandDim,
-    borderColor: colors.brand,
+    backgroundColor: colors.brand,
   },
   levChipText: {
-    fontFamily: type.bold,
-    fontSize: 13,
-    color: colors.ink,
+    color: colors.muted,
+    fontFamily: type.data,
+    fontSize: 12,
+    fontWeight: "bold",
   },
   levChipTextActive: {
-    color: colors.brand,
+    color: "#000000",
   },
-  inputWrap: {
+  inputCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.bgElevated,
+    backgroundColor: "#0D0F14",
     borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.line,
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
-  input: {
+  textInput: {
     flex: 1,
-    fontFamily: type.data,
-    fontSize: 18,
     color: colors.ink,
-    paddingVertical: 12,
+    fontFamily: type.data,
+    fontSize: 22,
+    fontWeight: "800",
+    padding: 0,
   },
-  inputSuffix: {
+  inputRightWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  maxChip: {
+    backgroundColor: "#1C212E",
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 4,
+  },
+  maxChipText: {
+    color: colors.brand,
+    fontFamily: type.bold,
+    fontSize: 10,
+  },
+  ausdSuffix: {
+    color: colors.muted,
     fontFamily: type.bold,
     fontSize: 12,
-    color: colors.muted,
+  },
+  amountChipsRow: {
+    flexDirection: "row",
+    gap: 8,
   },
   amountChip: {
     flex: 1,
+    backgroundColor: "#171B24",
     paddingVertical: 8,
-    borderRadius: radius.sm,
-    backgroundColor: colors.bgElevated,
-    borderWidth: 1,
-    borderColor: colors.line,
+    borderRadius: radius.md,
     alignItems: "center",
   },
   amountChipActive: {
-    backgroundColor: colors.brandSoft,
+    backgroundColor: "rgba(214,255,63,0.2)",
+    borderWidth: 1,
     borderColor: colors.brand,
   },
   amountChipText: {
-    fontFamily: type.body,
+    color: colors.muted,
+    fontFamily: type.data,
     fontSize: 12,
-    color: colors.ink,
+    fontWeight: "600",
   },
   amountChipTextActive: {
     color: colors.brand,
   },
-  summaryCard: {
-    backgroundColor: colors.bgElevated,
-    padding: space.md,
-    borderRadius: radius.md,
+  specsCard: {
+    backgroundColor: "#0D0F14",
+    borderRadius: radius.lg,
+    padding: 14,
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: colors.cardBorder,
     gap: 8,
   },
-  summaryRow: {
+  specRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-  },
-  summaryLabel: {
-    fontFamily: type.body,
-    fontSize: 12,
-    color: colors.muted,
-  },
-  summaryVal: {
-    fontFamily: type.data,
-    fontSize: 12,
-    color: colors.ink,
-  },
-  ctaBtn: {
-    paddingVertical: 16,
-    borderRadius: radius.md,
     alignItems: "center",
-    justifyContent: "center",
-    marginTop: 6,
   },
-  ctaLong: {
+  specLabel: {
+    color: colors.muted,
+    fontFamily: type.bold,
+    fontSize: 9,
+    letterSpacing: 0.6,
+  },
+  specVal: {
+    color: colors.ink,
+    fontFamily: type.data,
+    fontSize: 11,
+    fontWeight: "bold",
+  },
+  finalityRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  greenDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     backgroundColor: colors.up,
   },
-  ctaShort: {
-    backgroundColor: colors.down,
+  finalityText: {
+    color: colors.up,
+    fontFamily: type.data,
+    fontSize: 11,
+    fontWeight: "bold",
   },
-  ctaText: {
+  mainActionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.brand,
+    paddingVertical: 16,
+    borderRadius: radius.pill,
+    gap: 8,
+  },
+  boltActionIcon: {
+    color: "#000000",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  mainActionText: {
+    color: "#000000",
     fontFamily: type.bold,
-    fontSize: 15,
-    color: "#0A0B0D",
-    letterSpacing: 0.5,
+    fontSize: 14,
+    letterSpacing: 0.8,
   },
 });

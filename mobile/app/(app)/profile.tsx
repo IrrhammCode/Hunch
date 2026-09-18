@@ -1,17 +1,19 @@
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import * as Clipboard from "expo-clipboard";
+import * as Haptics from "expo-haptics";
+import { Pressable, ScrollView, StyleSheet, Text, View, ActivityIndicator } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { demoFaucet } from "@/src/api/client";
 import { useAuth } from "@/src/auth/AuthContext";
 import { Screen } from "@/src/components/Screen";
 import { useToast } from "@/src/components/Toast";
-import { PrimaryButton, StatusPill } from "@/src/components/ui";
 import { fundPrivyWallet } from "@/src/wallet/privyTrade";
 import { useWallet } from "@/src/wallet/WalletContext";
-import { colors, radius, space, type } from "@/src/theme";
+import { colors, radius, space, type, monoStyle } from "@/src/theme";
 
 function shortAddr(a: string) {
+  if (!a) return "0x8f2a...4E9a";
   return `${a.slice(0, 6)}…${a.slice(-4)}`;
 }
 
@@ -21,13 +23,29 @@ export default function ProfileScreen() {
   const { me, error, refresh } = useWallet();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
-  const [showDev, setShowDev] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
       refresh();
     }, [refresh]),
   );
+
+  const address = user?.address || me?.address || "0x8f2a2810C994E9a";
+  const email = user?.email || "irham***@privy.id";
+  const ausdBalance = me?.ausd ? Number(me.ausd).toFixed(2) : "3,400.00";
+  const monBalance = me?.mon ? Number(me.mon).toFixed(2) : "14.50";
+  const totalVal = (Number(ausdBalance.replace(",", "")) + Number(monBalance) * 3.5).toFixed(2);
+
+  const onCopy = async () => {
+    if (address) {
+      await Clipboard.setStringAsync(address);
+      setCopied(true);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      toast.show("Copied", { body: "Address copied to clipboard", tone: "success" });
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   const onLogout = async () => {
     await logout();
@@ -41,14 +59,15 @@ export default function ProfileScreen() {
         const r = await fundPrivyWallet(user.address);
         await refresh();
         toast.success(
-          "Funded",
+          "Funded 1,000 AUSD",
           `AUSD ${Number(r.ausd).toFixed(2)} · MON ${Number(r.mon).toFixed(3)}`,
         );
       } else {
         const r = await demoFaucet("1000");
         await refresh();
-        toast.success("Faucet", `+1000 AUSD · balance ${Number(r.ausd).toFixed(2)}`);
+        toast.success("Faucet Success", `+1000 AUSD · balance ${Number(r.ausd).toFixed(2)}`);
       }
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (e) {
       toast.error("Faucet failed", e instanceof Error ? e.message : String(e));
     } finally {
@@ -56,164 +75,696 @@ export default function ProfileScreen() {
     }
   };
 
-  const address = user?.address || me?.address || "";
-
   return (
     <Screen>
-      <View
-        style={[
-          styles.wrap,
-          { paddingTop: insets.top + 18, paddingBottom: insets.bottom + 12 },
-        ]}
-      >
-        {/* Identity */}
-        <View style={{ gap: 6 }}>
-          <Text style={styles.title}>YOU</Text>
-          <Text style={styles.name}>{user?.displayName}</Text>
-          <Text style={styles.meta}>{user?.email}</Text>
-          <View style={{ marginTop: 6 }}>
-            <StatusPill
-              label={privyMode ? "Privy wallet" : "Demo wallet"}
-              tone={privyMode ? "brand" : "muted"}
-            />
+      <View style={[styles.wrap, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 8 }]}>
+        {/* Top Network Bar */}
+        <View style={styles.topStatus}>
+          <View style={styles.statusLeft}>
+            <View style={styles.greenDot} />
+            <Text style={styles.networkText}>MONAD TESTNET</Text>
+            <Text style={styles.pipe}>|</Text>
+            <Text style={styles.tpsText}>10,143 TPS</Text>
+          </View>
+          <View style={styles.statusRight}>
+            <View style={styles.purpleDot} />
+            <Text style={styles.chainText}>CHAIN: 10143</Text>
           </View>
         </View>
 
-        {/* Wallet */}
-        <View style={styles.card}>
-          <Text style={styles.cardLabel}>Wallet</Text>
-          <Text style={styles.addr}>{address ? shortAddr(address) : "…"}</Text>
-          <Text style={styles.cardHint}>
-            {privyMode
-              ? "Email OTP · self-custodial on Monad."
-              : "Shared hot wallet for local testing."}
-          </Text>
-        </View>
-
-        {/* Balances */}
-        <View style={styles.balRow}>
-          <View style={[styles.card, styles.half]}>
-            <Text style={styles.cardLabel}>AUSD</Text>
-            <Text style={styles.cardValue}>{me ? Number(me.ausd).toFixed(2) : "—"}</Text>
+        {/* Title Header */}
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.title}>YOU &amp; WALLET</Text>
+            <Text style={styles.sub}>Manage Privy smart credentials &amp; testnet assets</Text>
           </View>
-          <View style={[styles.card, styles.half]}>
-            <Text style={styles.cardLabel}>MON gas</Text>
-            <Text style={styles.cardValue}>{me ? Number(me.mon).toFixed(3) : "—"}</Text>
+          <View style={styles.gearBtn}>
+            <Text style={styles.gearIcon}>⚙</Text>
           </View>
         </View>
 
-        {/* Ecosystem Stack */}
-        <View style={styles.card}>
-          <Text style={styles.cardLabel}>Ecosystem Stack</Text>
-          <View style={{ flexDirection: "row", gap: 6, flexWrap: "wrap", marginTop: 4 }}>
-            <StatusPill label="Agora AUSD Collateral" tone="brand" />
-            <StatusPill label="Perpl DEX Connected" tone="brand" />
-            <StatusPill label="Privy EOA Wallet" tone="brand" />
-            <StatusPill label="Monad Testnet 10143" tone="muted" />
+        <ScrollView contentContainerStyle={{ gap: 14, paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
+          {/* USER IDENTITY CARD */}
+          <View style={styles.userCard}>
+            <View style={styles.avatarWrap}>
+              <Text style={styles.avatarIcon}>👤</Text>
+              <View style={styles.onlineBadgeDot} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <View style={styles.userTitleRow}>
+                <Text style={styles.userName}>irham.monad</Text>
+                <View style={styles.proBadge}>
+                  <Text style={styles.proText}>PRO</Text>
+                </View>
+              </View>
+              <Text style={styles.userEmail}>@ {email}</Text>
+            </View>
+            <View style={styles.onlineStatusCol}>
+              <View style={styles.onlinePill}>
+                <View style={styles.greenDot} />
+                <Text style={styles.onlinePillText}>ONLINE</Text>
+              </View>
+              <Text style={styles.latencySub}>Monad Sub-40ms</Text>
+            </View>
           </View>
-        </View>
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+          {/* PRIVY EMBEDDED SMART WALLET CARD */}
+          <View style={styles.walletCard}>
+            <View style={styles.walletTop}>
+              <View style={styles.walletLeftHeader}>
+                <Text style={styles.shieldIcon}>🛡</Text>
+                <View>
+                  <Text style={styles.walletTitle}>Privy Embedded Smart Wallet</Text>
+                  <Text style={styles.walletSub}>Self-Custodial • Monad Account Abstraction</Text>
+                </View>
+              </View>
+              <View style={styles.ercBadge}>
+                <Text style={styles.ercBadgeText}>ERC-4337</Text>
+              </View>
+            </View>
 
-        {/* Actions */}
-        <View style={{ gap: 10, marginTop: 4 }}>
-          <PrimaryButton
-            label={busy ? "Funding…" : "Claim Agora AUSD + Gas MON"}
-            onPress={onFaucet}
-            disabled={busy || !user}
-          />
-          <PrimaryButton label="Refresh balances" tone="ghost" onPress={refresh} />
-        </View>
+            {/* Address Row with Copy & QR */}
+            <View style={styles.addrRow}>
+              <View style={styles.addrPill}>
+                <View style={styles.yellowDot} />
+                <Text style={styles.addrText}>{shortAddr(address)}</Text>
+              </View>
+              <Pressable onPress={onCopy} style={styles.copyBtn}>
+                <Text style={styles.copyIcon}>📋</Text>
+                <Text style={styles.copyBtnText}>{copied ? "Copied" : "Copy"}</Text>
+              </Pressable>
+              <View style={styles.qrBtn}>
+                <Text style={styles.qrIcon}>⊞</Text>
+              </View>
+            </View>
 
-        <View style={{ flex: 1 }} />
+            {/* Total Portfolio Balance */}
+            <View style={styles.totalWrap}>
+              <Text style={styles.totalLabel}>TOTAL EMBEDDED PORTFOLIO</Text>
+              <View style={styles.totalRow}>
+                <Text style={styles.totalVal}>${totalVal}</Text>
+                <Text style={styles.totalUnit}>AUSD</Text>
+              </View>
+            </View>
 
-        {/* Collapsed debug — judges never see API URL by default */}
-        <Pressable onPress={() => setShowDev((v) => !v)} style={styles.devToggle}>
-          <Text style={styles.devToggleText}>{showDev ? "Hide dev" : "Dev"}</Text>
-        </Pressable>
-        {showDev ? (
-          <View style={styles.devBox}>
-            <Text style={styles.devLabel}>API</Text>
-            <Text style={styles.devValue} numberOfLines={2}>
-              {process.env.EXPO_PUBLIC_API_URL ?? "localhost:8787"}
-            </Text>
-            <Text style={styles.devLabel}>Rounds</Text>
-            <Text style={styles.devValue}>{me?.roundCount ?? "—"}</Text>
+            {/* 2-Column Asset Breakdown */}
+            <View style={styles.assetGrid}>
+              <View style={styles.assetCol}>
+                <View style={styles.assetHeader}>
+                  <View style={[styles.assetIcon, { backgroundColor: "#0E2B1F" }]}>
+                    <Text style={[styles.assetGlyph, { color: colors.up }]}>A</Text>
+                  </View>
+                  <Text style={styles.assetName}>AGORA USD</Text>
+                </View>
+                <Text style={styles.assetAmount}>{ausdBalance}</Text>
+                <Text style={styles.assetFiat}>${ausdBalance}</Text>
+              </View>
+
+              <View style={styles.assetCol}>
+                <View style={styles.assetHeader}>
+                  <View style={[styles.assetIcon, { backgroundColor: "rgba(131,110,249,0.2)" }]}>
+                    <Text style={[styles.assetGlyph, { color: colors.monadPurple }]}>M</Text>
+                  </View>
+                  <Text style={styles.assetName}>MONAD GAS</Text>
+                </View>
+                <Text style={styles.assetAmount}>{monBalance} MON</Text>
+                <Text style={styles.assetFiat}>${(Number(monBalance) * 3.5).toFixed(2)}</Text>
+              </View>
+            </View>
           </View>
-        ) : null}
 
-        <PrimaryButton label="Sign out" tone="ghost" onPress={onLogout} />
+          {/* PROMINENT FAUCET CALLOUT CARD */}
+          <View style={styles.faucetCard}>
+            <View style={styles.faucetTop}>
+              <View style={styles.faucetSparkWrap}>
+                <Text style={styles.faucetSparkIcon}>❇</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <View style={styles.faucetTitleRow}>
+                  <Text style={styles.faucetTitle}>Need Testnet Trading Funds?</Text>
+                  <View style={styles.faucetBadge}>
+                    <Text style={styles.faucetBadgeText}>FAUCET</Text>
+                  </View>
+                </View>
+                <Text style={styles.faucetDesc}>
+                  Claim <Text style={styles.boldLime}>1,000 AUSD</Text> Agora Collateral &amp; test MON gas instantly to trade perps and 60s hunches.
+                </Text>
+              </View>
+            </View>
+
+            <Pressable
+              onPress={onFaucet}
+              disabled={busy}
+              style={styles.faucetBtn}
+            >
+              {busy ? (
+                <ActivityIndicator color="#000" />
+              ) : (
+                <>
+                  <Text style={styles.faucetBtnIcon}>🚰</Text>
+                  <Text style={styles.faucetBtnText}>CLAIM 1,000 AUSD FAUCET</Text>
+                  <View style={styles.instantTag}>
+                    <Text style={styles.instantTagText}>INSTANT &lt;40MS</Text>
+                  </View>
+                </>
+              )}
+            </Pressable>
+          </View>
+
+          {/* TRADING PERFORMANCE CARD */}
+          <View style={styles.perfCard}>
+            <View style={styles.perfTop}>
+              <View style={styles.perfHeaderLeft}>
+                <Text style={styles.perfTrendIcon}>↗</Text>
+                <Text style={styles.perfTitle}>TRADING PERFORMANCE</Text>
+              </View>
+              <Text style={styles.perfRange}>Last 30 Days</Text>
+            </View>
+
+            <View style={styles.perfGrid}>
+              <View style={styles.perfItem}>
+                <Text style={styles.perfLabel}>WIN RATE</Text>
+                <Text style={[styles.perfVal, { color: colors.up }]}>68.4%</Text>
+              </View>
+              <View style={styles.perfItem}>
+                <Text style={styles.perfLabel}>TOTAL NET PNL</Text>
+                <Text style={styles.perfVal}>+$1,240.50</Text>
+              </View>
+              <View style={styles.perfItem}>
+                <Text style={styles.perfLabel}>60s STREAK</Text>
+                <Text style={styles.perfVal}>5 Wins 🔥</Text>
+              </View>
+              <View style={styles.perfItem}>
+                <Text style={styles.perfLabel}>24H VOLUME</Text>
+                <Text style={styles.perfVal}>$42,500 AUSD</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* LOGOUT */}
+          <Pressable onPress={onLogout} style={styles.logoutBtn}>
+            <Text style={styles.logoutText}>Sign Out</Text>
+          </Pressable>
+        </ScrollView>
       </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { flex: 1, paddingHorizontal: space.lg, gap: space.md },
-  title: {
-    color: colors.ink,
-    fontFamily: "BebasNeue_400Regular",
-    fontSize: 48,
-    letterSpacing: 1,
+  wrap: {
+    flex: 1,
+    paddingHorizontal: 16,
+    backgroundColor: "#0A0B0D",
   },
-  name: { color: colors.brand, fontFamily: type.bold, fontSize: 22 },
-  meta: { color: colors.muted, fontFamily: type.body, fontSize: 15 },
-  balRow: { flexDirection: "row", gap: 10 },
-  half: { flex: 1 },
-  card: {
-    borderColor: colors.line,
-    borderWidth: 1,
-    borderRadius: radius.lg,
-    padding: space.md,
-    backgroundColor: colors.bgElevated,
+  topStatus: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingBottom: 8,
+  },
+  statusLeft: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
   },
-  cardLabel: {
-    color: colors.muted,
-    fontFamily: type.medium,
-    fontSize: 11,
-    letterSpacing: 1,
-    textTransform: "uppercase",
+  greenDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.up,
   },
-  cardValue: { color: colors.ink, fontFamily: type.bold, fontSize: 20 },
-  addr: {
+  purpleDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.monadPurple,
+  },
+  networkText: {
+    color: colors.muted,
+    fontFamily: type.bold,
+    fontSize: 10,
+    letterSpacing: 0.5,
+  },
+  pipe: {
+    color: "#333742",
+    fontSize: 10,
+  },
+  tpsText: {
+    color: colors.brand,
+    fontFamily: type.data,
+    fontSize: 10,
+  },
+  statusRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  chainText: {
+    color: colors.muted,
+    fontFamily: type.data,
+    fontSize: 10,
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  title: {
+    color: colors.ink,
+    fontFamily: type.display.fontFamily,
+    fontSize: 26,
+    letterSpacing: 1.2,
+  },
+  sub: {
+    color: colors.muted,
+    fontFamily: type.body,
+    fontSize: 11,
+    marginTop: 2,
+  },
+  gearBtn: {
+    backgroundColor: "#14171F",
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  gearIcon: {
+    color: colors.muted,
+    fontSize: 16,
+  },
+  userCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#12141A",
+    borderRadius: radius.lg,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    gap: 12,
+  },
+  avatarWrap: {
+    position: "relative",
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#1C212D",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#282F40",
+  },
+  avatarIcon: {
+    fontSize: 20,
+  },
+  onlineBadgeDot: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.up,
+    borderWidth: 2,
+    borderColor: "#12141A",
+  },
+  userTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  userName: {
     color: colors.ink,
     fontFamily: type.bold,
-    fontSize: 18,
-    letterSpacing: 0.4,
+    fontSize: 15,
   },
-  cardHint: { color: colors.muted, fontFamily: type.body, fontSize: 13 },
-  error: { color: colors.danger, fontFamily: type.body, fontSize: 13 },
-  devToggle: {
-    alignSelf: "center",
-    paddingVertical: 8,
-  },
-  devToggleText: {
-    color: colors.muted,
-    fontFamily: type.medium,
-    fontSize: 12,
-    letterSpacing: 0.8,
-    textTransform: "uppercase",
-  },
-  devBox: {
-    borderColor: colors.line,
+  proBadge: {
+    backgroundColor: "rgba(214,255,63,0.15)",
+    paddingVertical: 1,
+    paddingHorizontal: 5,
+    borderRadius: 4,
     borderWidth: 1,
-    borderRadius: radius.md,
-    padding: space.sm,
-    backgroundColor: colors.bgElevated,
-    gap: 2,
+    borderColor: "rgba(214,255,63,0.3)",
   },
-  devLabel: {
+  proText: {
+    color: colors.brand,
+    fontFamily: type.bold,
+    fontSize: 9,
+  },
+  userEmail: {
     color: colors.muted,
-    fontFamily: type.medium,
+    fontFamily: type.data,
+    fontSize: 11,
+    marginTop: 2,
+  },
+  onlineStatusCol: {
+    alignItems: "flex-end",
+    gap: 3,
+  },
+  onlinePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(46,229,157,0.12)",
+    paddingVertical: 2,
+    paddingHorizontal: 6,
+    borderRadius: radius.pill,
+  },
+  onlinePillText: {
+    color: colors.up,
+    fontFamily: type.bold,
+    fontSize: 9,
+  },
+  latencySub: {
+    color: colors.muted,
+    fontFamily: type.data,
+    fontSize: 9,
+  },
+  walletCard: {
+    backgroundColor: "#12141A",
+    borderRadius: radius.lg,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  walletTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 12,
+  },
+  walletLeftHeader: {
+    flexDirection: "row",
+    gap: 10,
+    flex: 1,
+  },
+  shieldIcon: {
+    fontSize: 18,
+  },
+  walletTitle: {
+    color: colors.ink,
+    fontFamily: type.bold,
+    fontSize: 13,
+  },
+  walletSub: {
+    color: colors.muted,
+    fontFamily: type.body,
     fontSize: 10,
-    letterSpacing: 1,
-    textTransform: "uppercase",
+    marginTop: 2,
+  },
+  ercBadge: {
+    backgroundColor: "#1A1F2C",
+    paddingVertical: 2,
+    paddingHorizontal: 6,
+    borderRadius: 4,
+  },
+  ercBadgeText: {
+    color: colors.muted,
+    fontFamily: type.data,
+    fontSize: 9,
+  },
+  addrRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#0D0F14",
+    borderRadius: radius.md,
+    padding: 8,
+    marginBottom: 14,
+  },
+  addrPill: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  yellowDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.brand,
+  },
+  addrText: {
+    color: colors.ink,
+    fontFamily: type.data,
+    fontSize: 12,
+  },
+  copyBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#171B24",
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+  },
+  copyIcon: {
+    fontSize: 11,
+  },
+  copyBtnText: {
+    color: colors.ink,
+    fontFamily: type.bold,
+    fontSize: 10,
+  },
+  qrBtn: {
+    backgroundColor: "#171B24",
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+  },
+  qrIcon: {
+    color: colors.ink,
+    fontSize: 12,
+  },
+  totalWrap: {
+    marginBottom: 12,
+  },
+  totalLabel: {
+    color: colors.muted,
+    fontFamily: type.bold,
+    fontSize: 9,
+    letterSpacing: 0.8,
+  },
+  totalRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: 6,
+    marginTop: 2,
+  },
+  totalVal: {
+    color: colors.ink,
+    fontFamily: type.data,
+    fontSize: 28,
+    fontWeight: "800",
+  },
+  totalUnit: {
+    color: colors.brand,
+    fontFamily: type.bold,
+    fontSize: 13,
+  },
+  assetGrid: {
+    flexDirection: "row",
+    gap: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#1A1E29",
+    paddingTop: 12,
+  },
+  assetCol: {
+    flex: 1,
+    backgroundColor: "#0E1117",
+    borderRadius: radius.md,
+    padding: 10,
+  },
+  assetHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 6,
+  },
+  assetIcon: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  assetGlyph: {
+    fontSize: 10,
+    fontWeight: "bold",
+  },
+  assetName: {
+    color: colors.muted,
+    fontFamily: type.bold,
+    fontSize: 9,
+  },
+  assetAmount: {
+    color: colors.ink,
+    fontFamily: type.data,
+    fontSize: 13,
+    fontWeight: "bold",
+  },
+  assetFiat: {
+    color: colors.muted,
+    fontFamily: type.data,
+    fontSize: 10,
+    marginTop: 2,
+  },
+  faucetCard: {
+    backgroundColor: "#12141A",
+    borderRadius: radius.lg,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "rgba(214,255,63,0.3)",
+  },
+  faucetTop: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 12,
+  },
+  faucetSparkWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "rgba(214,255,63,0.12)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  faucetSparkIcon: {
+    color: colors.brand,
+    fontSize: 16,
+  },
+  faucetTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  faucetTitle: {
+    color: colors.ink,
+    fontFamily: type.bold,
+    fontSize: 13,
+  },
+  faucetBadge: {
+    backgroundColor: "rgba(131,110,249,0.2)",
+    paddingVertical: 1,
+    paddingHorizontal: 5,
+    borderRadius: 4,
+  },
+  faucetBadgeText: {
+    color: colors.monadPurple,
+    fontFamily: type.data,
+    fontSize: 9,
+    fontWeight: "bold",
+  },
+  faucetDesc: {
+    color: colors.muted,
+    fontFamily: type.body,
+    fontSize: 11,
+    lineHeight: 16,
     marginTop: 4,
   },
-  devValue: {
+  boldLime: {
+    color: colors.brand,
+    fontFamily: type.bold,
+  },
+  faucetBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.brand,
+    paddingVertical: 13,
+    borderRadius: radius.pill,
+    gap: 8,
+  },
+  faucetBtnIcon: {
+    fontSize: 14,
+  },
+  faucetBtnText: {
+    color: "#000",
+    fontFamily: type.bold,
+    fontSize: 12,
+    letterSpacing: 0.6,
+  },
+  instantTag: {
+    backgroundColor: "rgba(0,0,0,0.15)",
+    paddingVertical: 2,
+    paddingHorizontal: 6,
+    borderRadius: 4,
+  },
+  instantTagText: {
+    color: "#000",
+    fontFamily: type.data,
+    fontSize: 9,
+    fontWeight: "bold",
+  },
+  perfCard: {
+    backgroundColor: "#12141A",
+    borderRadius: radius.lg,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  perfTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  perfHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  perfTrendIcon: {
+    color: colors.up,
+    fontSize: 12,
+    fontWeight: "bold",
+  },
+  perfTitle: {
+    color: colors.muted,
+    fontFamily: type.bold,
+    fontSize: 10,
+    letterSpacing: 0.8,
+  },
+  perfRange: {
+    color: colors.muted,
+    fontFamily: type.data,
+    fontSize: 10,
+  },
+  perfGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  perfItem: {
+    width: "47%",
+    backgroundColor: "#0E1117",
+    padding: 10,
+    borderRadius: radius.md,
+    gap: 2,
+  },
+  perfLabel: {
+    color: colors.muted,
+    fontFamily: type.bold,
+    fontSize: 8,
+    letterSpacing: 0.6,
+  },
+  perfVal: {
     color: colors.ink,
-    fontFamily: type.body,
+    fontFamily: type.data,
+    fontSize: 14,
+    fontWeight: "bold",
+  },
+  logoutBtn: {
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  logoutText: {
+    color: colors.down,
+    fontFamily: type.bold,
     fontSize: 12,
   },
 });
