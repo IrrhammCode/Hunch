@@ -32,11 +32,11 @@ export default function ProfileScreen() {
     }, [refresh]),
   );
 
-  const address = user?.address || me?.address || "0x8f2a2810C994E9a";
-  const email = user?.email || "irham***@privy.id";
-  const ausdBalance = me?.ausd ? Number(me.ausd).toFixed(2) : "3,400.00";
-  const monBalance = me?.mon ? Number(me.mon).toFixed(2) : "14.50";
-  const totalVal = (Number(ausdBalance.replace(",", "")) + Number(monBalance) * 3.5).toFixed(2);
+  const address = user?.address || me?.address || "";
+  const email = user?.email || "—";
+  const ausdBalance = me?.ausd ? Number(me.ausd).toFixed(2) : "—";
+  const monBalance = me?.mon ? Number(me.mon).toFixed(2) : "—";
+  const totalVal = ausdBalance === "—" ? "—" : ausdBalance;
 
   const onCopy = async () => {
     if (!address) return;
@@ -87,20 +87,14 @@ export default function ProfileScreen() {
           <View style={styles.statusLeft}>
             <View style={styles.greenDot} />
             <Text style={styles.networkText}>MONAD TESTNET</Text>
-            <Text style={styles.pipe}>|</Text>
-            <Text style={styles.tpsText}>10,143 TPS</Text>
-          </View>
-          <View style={styles.statusRight}>
-            <View style={styles.purpleDot} />
-            <Text style={styles.chainText}>CHAIN: 10143</Text>
           </View>
         </View>
 
         {/* Title Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.title}>YOU &amp; WALLET</Text>
-            <Text style={styles.sub}>Manage Privy smart credentials &amp; testnet assets</Text>
+            <Text style={styles.title}>YOU</Text>
+            <Text style={styles.sub}>Wallet, balances, faucet</Text>
           </View>
           <View style={styles.gearBtn}>
             <Icon name="settings-outline" size={20} color={colors.muted} />
@@ -115,20 +109,16 @@ export default function ProfileScreen() {
               <View style={styles.onlineBadgeDot} />
             </View>
             <View style={{ flex: 1 }}>
-              <View style={styles.userTitleRow}>
-                <Text style={styles.userName}>irham.monad</Text>
-                <View style={styles.proBadge}>
-                  <Text style={styles.proText}>PRO</Text>
-                </View>
-              </View>
-              <Text style={styles.userEmail}>@ {email}</Text>
+              <Text style={styles.userName} numberOfLines={1}>
+                {user?.displayName || "Trader"}
+              </Text>
+              <Text style={styles.userEmail} numberOfLines={1}>{email}</Text>
             </View>
             <View style={styles.onlineStatusCol}>
               <View style={styles.onlinePill}>
                 <View style={styles.greenDot} />
-                <Text style={styles.onlinePillText}>ONLINE</Text>
+                <Text style={styles.onlinePillText}>{privyMode ? "PRIVY" : "DEMO"}</Text>
               </View>
-              <Text style={styles.latencySub}>Monad Sub-40ms</Text>
             </View>
           </View>
 
@@ -139,11 +129,11 @@ export default function ProfileScreen() {
                 <Icon name="shield-checkmark-outline" size={16} color={colors.brand} />
                 <View>
                   <Text style={styles.walletTitle}>Privy Embedded Smart Wallet</Text>
-                  <Text style={styles.walletSub}>Self-Custodial • Monad Account Abstraction</Text>
+                  <Text style={styles.walletSub}>Embedded wallet · Monad testnet</Text>
                 </View>
               </View>
               <View style={styles.ercBadge}>
-                <Text style={styles.ercBadgeText}>ERC-4337</Text>
+                
               </View>
             </View>
 
@@ -158,13 +148,13 @@ export default function ProfileScreen() {
                 <Text style={styles.copyBtnText}>{copied ? "Copied" : "Copy"}</Text>
               </Pressable>
               <View style={styles.qrBtn}>
-                <Text style={styles.qrIcon}>⊞</Text>
+                <Icon name="qr-code-outline" size={16} color={colors.muted} />
               </View>
             </View>
 
             {/* Total Portfolio Balance */}
             <View style={styles.totalWrap}>
-              <Text style={styles.totalLabel}>TOTAL EMBEDDED PORTFOLIO</Text>
+              <Text style={styles.totalLabel}>PORTFOLIO</Text>
               <View style={styles.totalRow}>
                 <Text style={styles.totalVal}>${totalVal}</Text>
                 <Text style={styles.totalUnit}>AUSD</Text>

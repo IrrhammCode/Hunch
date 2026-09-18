@@ -80,7 +80,7 @@ export default function PositionsScreen() {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       const pnl = res.realizedPnL >= 0 ? `+$${res.realizedPnL}` : `-$${Math.abs(res.realizedPnL)}`;
       toast.show("Position Closed", {
-        body: `${pos.side} ${pos.symbol} closed · Realized PnL: ${pnl} AUSD`,
+        body: `${pos.symbol} ${pos.side} · ${pnl} AUSD`,
         tone: res.realizedPnL >= 0 ? "success" : "neutral",
       });
       refreshPerpl();
@@ -92,10 +92,10 @@ export default function PositionsScreen() {
     }
   };
 
-  const totalCollateral = me?.ausd ? Number(me.ausd).toFixed(2) : "1,250.00";
-  const marginInUse = perplAccount?.marginUsedAUSD ? perplAccount.marginUsedAUSD.toFixed(2) : "150.00";
-  const unrealizedPnL = perplAccount?.unrealizedPnLAUSD ? perplAccount.unrealizedPnLAUSD.toFixed(2) : "+85.50";
-  const totalEquity = (Number(totalCollateral.replace(",", "")) + Number(marginInUse.replace(",", ""))).toFixed(2);
+  const totalCollateral = me?.ausd ? Number(me.ausd).toFixed(2) : "—";
+  const marginInUse = perplAccount?.marginUsedAUSD != null ? perplAccount.marginUsedAUSD.toFixed(2) : "0.00";
+  const unrealizedPnL = perplAccount?.unrealizedPnLAUSD != null ? perplAccount.unrealizedPnLAUSD.toFixed(2) : "0.00";
+  const totalEquity = totalCollateral === "—" ? "—" : (Number(totalCollateral.replace(",", "")) + Number(marginInUse.replace(",", ""))).toFixed(2);
 
   // Fallback demo positions matching Stitch if empty
   const displayPerps: PerplPosition[] = perpPositions.length

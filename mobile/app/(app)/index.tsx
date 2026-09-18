@@ -1,6 +1,6 @@
 import * as Haptics from "expo-haptics";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Dimensions, Linking, Pressable, StyleSheet, Text, View } from "react-native";
+import { Dimensions, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   FadeIn,
@@ -24,7 +24,7 @@ import {
 } from "@/src/api/client";
 import { useAuth } from "@/src/auth/AuthContext";
 import { BrandMark } from "@/src/components/BrandMark";
-import { Screen } from "@/src/components/Screen"
+import { Screen } from "@/src/components/Screen";
 import { Icon } from "@/src/components/Icon";
 import { useToast } from "@/src/components/Toast";
 import { AmountChip, BalanceChip, PrimaryButton } from "@/src/components/ui";
@@ -372,7 +372,7 @@ export default function HunchScreen() {
             <BrandMark size="sm" />
             <View style={styles.networkPulseWrap}>
               <View style={styles.greenPulseDot} />
-              <Text style={styles.topNetworkText}>MONAD TESTNET • 10,143 TPS</Text>
+              <Text style={styles.topNetworkText}>MONAD TESTNET</Text>
             </View>
           </View>
           <View style={styles.topBalancePill}>
@@ -426,7 +426,12 @@ export default function HunchScreen() {
             <PerpTradingTicket />
           </View>
         ) : (
-          <View style={{ flex: 1, justifyContent: "space-between", paddingTop: 4 }}>
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{ paddingTop: 4, paddingBottom: 24, gap: 14, flexGrow: 1, justifyContent: "space-between" }}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
             {/* Stake Amount Header */}
             <View style={styles.stakeHeaderRow}>
               <Text style={styles.stakeLabel}>STAKE AMOUNT</Text>
@@ -452,14 +457,14 @@ export default function HunchScreen() {
                 </Pressable>
               ))}
               <View style={styles.editChip}>
-                <Text style={styles.editChipText}>EDIT</Text>
+                <Text style={styles.editChipText}>AUSD</Text>
               </View>
             </View>
 
             {/* Swipe Direction Hint */}
             <View style={styles.directionHintRow}>
-              <Text style={styles.swipeBearText}>← SWIPE DOWN (BEAR)</Text>
-              <Text style={styles.swipeBullText}>SWIPE UP (BULL) →</Text>
+              <Text style={styles.swipeBearText}>← DOWN</Text>
+              <Text style={styles.swipeBullText}>UP →</Text>
             </View>
 
             {/* Hero swipe card */}
@@ -477,7 +482,7 @@ export default function HunchScreen() {
                     <Text style={styles.assetName}>{getSelectedMarket().symbol} / USD</Text>
                   </View>
                   <Text style={styles.roundOracleText}>
-                    MONAD HUB R#{round?.roundId || "1,842"} • PYTH ORACLE
+                    Monad · R#{round?.roundId || "—"} · Pyth
                   </Text>
                 </View>
 
@@ -487,26 +492,31 @@ export default function HunchScreen() {
                     <Animated.Text style={[styles.circleCountdownText, countdownStyle]}>
                       {remainingDisplay}s
                     </Animated.Text>
-                    <Text style={styles.circleSubText}>EST. EXPIRY</Text>
+                    <Text style={styles.circleSubText}>SECONDS LEFT</Text>
                   </View>
                   <View style={styles.locksInBadge}>
                     <Text style={styles.locksInText}>
-                      LOCKS IN {Math.max(0, (remainingSecRaw - 1.2)).toFixed(1)}s
+                      OPEN
                     </Text>
                   </View>
                 </View>
 
-                {/* Strike Benchmark vs Live Price */}
+                {/* Strike */}
                 <View style={styles.strikeRow}>
-                  <View>
-                    <Text style={styles.strikeColLabel}>STRIKE BENCHMARK</Text>
-                    <Text style={styles.strikePrice}>${strikeLabel}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.strikeColLabel}>STRIKE</Text>
+                    <Text style={styles.strikePrice} numberOfLines={1}>
+                      ${strikeLabel}
+                    </Text>
                   </View>
-                  <View style={{ alignItems: "flex-end" }}>
-                    <Text style={styles.strikeColLabel}>LIVE PRICE</Text>
-                    <Text style={styles.livePriceText}>
-                      ${strikeLabel ? (Number(strikeLabel.replace(",", "")) + 64.5).toLocaleString(undefined, { minimumFractionDigits: 2 }) : "$78,214.50"}{" "}
-                      <Text style={styles.livePriceDelta}>+$64.50</Text>
+                  <View style={{ alignItems: "flex-end", maxWidth: "42%" }}>
+                    <Text style={styles.strikeColLabel}>SPOT</Text>
+                    <Text style={styles.livePriceText} numberOfLines={1}>
+                      {data?.spot
+                        ? `${(Number(data.spot.yes) * 100).toFixed(0)}¢ / ${(
+                            Number(data.spot.no) * 100
+                          ).toFixed(0)}¢`
+                        : "—"}
                     </Text>
                   </View>
                 </View>
@@ -514,22 +524,27 @@ export default function HunchScreen() {
                 {/* Odds & Pool Volume Bar */}
                 <View style={styles.oddsBarSection}>
                   <View style={styles.oddsHeaderRow}>
-                    <Text style={styles.oddsUpLabel}>UP (YES) 54¢ • 1.85x</Text>
-                    <Text style={styles.oddsDownLabel}>2.17x • 46¢ DOWN (NO)</Text>
+                    <Text style={styles.oddsUpLabel}>
+                      UP {data?.spot ? `${(Number(data.spot.yes) * 100).toFixed(0)}¢` : "—"}
+                    </Text>
+                    <Text style={styles.oddsDownLabel}>
+                      {data?.spot ? `${(Number(data.spot.no) * 100).toFixed(0)}¢ ` : ""}DOWN
+                    </Text>
                   </View>
                   <View style={styles.splitOddsBar}>
                     <View style={[styles.splitOddsUp, { flex: 58 }]} />
                     <View style={[styles.splitOddsDown, { flex: 42 }]} />
                   </View>
                   <View style={styles.oddsSubRow}>
-                    <Text style={styles.oddsSubText}>58% Pool Volume ($18.50)</Text>
-                    <Text style={styles.oddsSubText}>42% Pool Volume ($21.70)</Text>
+                    <Text style={styles.oddsSubText} numberOfLines={1}>
+                      {quoteLine || "CPMM odds · live"}
+                    </Text>
                   </View>
                 </View>
 
                 {/* Drag Hint */}
                 <View style={styles.dragHintBox}>
-                  <Text style={styles.dragHintText}>← DRAG LEFT (BEAR) / RIGHT (BULL) →</Text>
+                  <Text style={styles.dragHintText}>Swipe card · or tap below</Text>
                 </View>
               </Animated.View>
             </GestureDetector>
@@ -539,30 +554,36 @@ export default function HunchScreen() {
               <Pressable
                 onPress={() => onPick("DOWN")}
                 disabled={!canTrade}
-                style={[styles.bigDownBtn, !canTrade && { opacity: 0.6 }]}
+                style={[styles.bigDownBtn, !canTrade && { opacity: 0.45 }]}
               >
-                <Text style={styles.bigDownTitle}>↓ DOWN</Text>
-                <Text style={styles.bigDownPayout}>Pays 2.17x (${(Number(amount) * 2.17).toFixed(2)})</Text>
+                <Text style={styles.bigDownTitle}>DOWN</Text>
+                <Text style={styles.bigDownPayout} numberOfLines={1}>
+                  {amount} AUSD
+                </Text>
               </Pressable>
 
               <Pressable
                 onPress={() => onPick("UP")}
                 disabled={!canTrade}
-                style={[styles.bigUpBtn, !canTrade && { opacity: 0.6 }]}
+                style={[styles.bigUpBtn, !canTrade && { opacity: 0.45 }]}
               >
-                <Text style={styles.bigUpTitle}>↑ UP</Text>
-                <Text style={styles.bigUpPayout}>Pays 1.85x (${(Number(amount) * 1.85).toFixed(2)})</Text>
+                <Text style={styles.bigUpTitle}>UP</Text>
+                <Text style={styles.bigUpPayout} numberOfLines={1}>
+                  {amount} AUSD
+                </Text>
               </Pressable>
             </View>
 
             {/* Footnote */}
             <View style={styles.footnoteRow}>
-              <Icon name="checkmark-circle" size={16} color={colors.up} />
-              <Text style={styles.footnoteText}>
-                Stake {amount}.00 AUSD • Sub-second Finality (&lt;40ms) • Zero Gas Fees
+              <Icon name="shield-checkmark-outline" size={14} color={colors.muted} />
+              <Text style={styles.footnoteText} numberOfLines={2}>
+                {canTrade
+                  ? "Onchain · Monad testnet · Pyth settle"
+                  : "Waiting for a live round"}
               </Text>
             </View>
-          </View>
+          </ScrollView>
         )}
       </View>
     </Screen>

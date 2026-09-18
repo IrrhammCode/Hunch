@@ -145,13 +145,12 @@ export default function MarketsScreen() {
           <TextInput
             value={search}
             onChangeText={setSearch}
-            placeholder="Search MON, BTC, ETH, SOL…"
+            placeholder="Search markets"
             placeholderTextColor={colors.muted}
             style={styles.searchInput}
+            autoCapitalize="characters"
+            clearButtonMode="while-editing"
           />
-          <View style={styles.cmdKBadge}>
-            <Text style={styles.cmdKText}>CMD+K</Text>
-          </View>
         </View>
 
         {/* Filter Pills */}
@@ -221,9 +220,9 @@ export default function MarketsScreen() {
 
           {/* TABLE HEADERS */}
           <View style={styles.tableHeaderRow}>
-            <Text style={[styles.tableColHeader, { flex: 2 }]}>PAIRS & LEVERAGE</Text>
-            <Text style={[styles.tableColHeader, { flex: 1, textAlign: "center" }]}>24H TREND</Text>
-            <Text style={[styles.tableColHeader, { flex: 2, textAlign: "right" }]}>PRICE / 24H</Text>
+            <Text style={[styles.tableColHeader, { flex: 2 }]}>MARKET</Text>
+            <Text style={[styles.tableColHeader, { flex: 1, textAlign: "center" }]}>TREND</Text>
+            <Text style={[styles.tableColHeader, { flex: 2, textAlign: "right" }]}>PRICE</Text>
           </View>
 
           {/* MARKET ROWS */}
@@ -249,14 +248,14 @@ export default function MarketsScreen() {
                     </View>
                     <View>
                       <View style={styles.pairWithBadge}>
-                        <Text style={styles.pairTitle}>{m.symbol}</Text>
+                        <Text style={styles.pairTitle} numberOfLines={1}>{m.symbol}</Text>
                         <Text style={styles.pairSlash}>/AUSD</Text>
                         <View style={styles.levBadge}>
                           <Text style={styles.levBadgeText}>{m.maxLeverage}X</Text>
                         </View>
                       </View>
-                      <Text style={styles.volSub}>
-                        Vol ${(m.volume24hAUSD / 1000).toFixed(0)}k • +{(m.fundingRateBps / 1000).toFixed(3)}%
+                      <Text style={styles.volSub} numberOfLines={1}>
+                        Vol ${(m.volume24hAUSD / 1000).toFixed(0)}k · 20x max
                       </Text>
                     </View>
                   </View>
@@ -266,7 +265,7 @@ export default function MarketsScreen() {
                   </View>
 
                   <View style={styles.rowRight}>
-                    <Text style={styles.priceNum}>
+                    <Text style={styles.priceNum} numberOfLines={1}>
                       ${m.markPrice >= 1000
                         ? m.markPrice.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
                         : m.markPrice >= 1
@@ -302,7 +301,7 @@ export default function MarketsScreen() {
                         <Text style={[styles.levBadgeText, { color: colors.brand }]}>60S</Text>
                       </View>
                     </View>
-                    <Text style={styles.volSub}>Round #1420 • 25.4k Pool</Text>
+                    <Text style={styles.volSub} numberOfLines={1}>60s UP/DOWN · live</Text>
                   </View>
                 </View>
 
@@ -311,7 +310,7 @@ export default function MarketsScreen() {
                 </View>
 
                 <View style={styles.rowRight}>
-                  <Text style={styles.priceNum}>$3,420.10</Text>
+                  <Text style={styles.priceNum} numberOfLines={1}>$3,420.10</Text>
                   <Text style={[styles.deltaNum, styles.negColor]}>-1.42%</Text>
                 </View>
               </Pressable>
@@ -322,9 +321,8 @@ export default function MarketsScreen() {
           <View style={styles.oracleFooter}>
             <View style={styles.oracleLeft}>
               <View style={styles.greenDot} />
-              <Text style={styles.oracleText}>Pyth Oracle Engine: 12ms feed</Text>
+              <Text style={styles.oracleText}>Pyth · Monad testnet</Text>
             </View>
-            <Text style={styles.epochText}>Epoch #884920</Text>
           </View>
         </ScrollView>
       </View>
@@ -335,7 +333,7 @@ export default function MarketsScreen() {
 const styles = StyleSheet.create({
   wrap: {
     flex: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: 18,
     backgroundColor: "#0A0B0D",
   },
   topStatus: {

@@ -166,6 +166,7 @@ const styles = StyleSheet.create({
     fontSize: 17,
     paddingHorizontal: space.md,
     paddingVertical: 14,
+    flexShrink: 1,
   },
   btn: {
     alignItems: "center",

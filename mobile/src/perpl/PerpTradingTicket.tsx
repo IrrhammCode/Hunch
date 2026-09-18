@@ -65,7 +65,7 @@ export function PerpTradingTicket() {
       return;
     }
 
-    const userAddress = user?.address || me?.address || "0x8f2a4e9a";
+    const userAddress = user?.address || me?.address || "";
 
     setSubmitting(true);
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -103,7 +103,7 @@ export function PerpTradingTicket() {
       ];
 
   const currentMark = activeMarket || displayMarkets[0];
-  const availBalance = me ? Number(me.ausd).toFixed(2) : "1,250.00";
+  const availBalance = me?.ausd != null ? Number(me.ausd).toFixed(2) : "—";
 
   return (
     <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
@@ -126,8 +126,9 @@ export function PerpTradingTicket() {
               <Text style={styles.stripPrice}>
                 ${m.markPrice >= 1000 ? m.markPrice.toLocaleString(undefined, { maximumFractionDigits: 0 }) : m.markPrice.toFixed(2)}
               </Text>
-              <Text style={[styles.stripDelta, m.change24hPct >= 0 ? styles.posColor : styles.negColor]}>
-                +{m.change24hPct}%
+              <Text style={styles.stripDelta} numberOfLines={1}>
+                {m.change24hPct >= 0 ? "+" : ""}
+                {m.change24hPct}%
               </Text>
             </Pressable>
           );
@@ -144,7 +145,7 @@ export function PerpTradingTicket() {
             </View>
           </View>
           <View style={styles.subSecondBadge}>
-            <Text style={styles.subSecondText}>SUB-SECOND</Text>
+            <Text style={styles.subSecondText}>PERP</Text>
           </View>
         </View>
 
@@ -153,7 +154,7 @@ export function PerpTradingTicket() {
             ${currentMark.markPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}
           </Text>
           <Text style={styles.bigDelta}>+{currentMark.change24hPct}%</Text>
-          <Text style={styles.pythFeedText}>PYTH MONAD &lt;8ms</Text>
+          <Text style={styles.pythFeedText}>Pyth · Monad</Text>
         </View>
 
         {/* Wave area graphic */}
@@ -162,12 +163,14 @@ export function PerpTradingTicket() {
         {/* 3 Stats Columns */}
         <View style={styles.statsRow}>
           <View style={styles.statCol}>
-            <Text style={styles.statColLabel}>24H VOLUME</Text>
+            <Text style={styles.statColLabel}>VOLUME 24H</Text>
             <Text style={styles.statColVal}>${(currentMark.volume24hAUSD / 1000000).toFixed(2)}M</Text>
           </View>
           <View style={styles.statCol}>
             <Text style={styles.statColLabel}>1H FUNDING</Text>
-            <Text style={[styles.statColVal, { color: colors.up }]}>+0.0040%</Text>
+            <Text style={[styles.statColVal, { color: colors.up }]}>
+            {(currentMark.fundingRateBps / 10000).toFixed(4)}%
+          </Text>
           </View>
           <View style={styles.statCol}>
             <Text style={styles.statColLabel}>OPEN INTEREST</Text>
@@ -274,14 +277,14 @@ export function PerpTradingTicket() {
           </Text>
         </View>
         <View style={styles.specRow}>
-          <Text style={styles.specLabel}>EXECUTION SLIPPAGE / FEES</Text>
-          <Text style={styles.specVal}>0.02% / $0.17 AUSD</Text>
+          <Text style={styles.specLabel}>FEES</Text>
+          <Text style={styles.specVal} numberOfLines={1}>Exchange + gas</Text>
         </View>
         <View style={styles.specRow}>
-          <Text style={styles.specLabel}>MONAD CONSENSUS FINALITY</Text>
+          <Text style={styles.specLabel}>FINALITY</Text>
           <View style={styles.finalityRow}>
             <View style={styles.greenDot} />
-            <Text style={styles.finalityText}>&lt; 0.0001 MON (&lt;400ms)</Text>
+            <Text style={styles.finalityText} numberOfLines={1}>Fast · Monad</Text>
           </View>
         </View>
       </View>
