@@ -30,8 +30,7 @@ export function perplAuthConfigured() {
 }
 
 function privKeyBytes() {
-  const hex = perplEnv().apiSecret;
-  return Buffer.from(hex, "hex");
+  return Buffer.from(perplEnv().apiSecret, "hex");
 }
 
 async function signCanonical(canonical: string) {
@@ -72,23 +71,16 @@ export async function perplSignedFetch(
 }
 
 export type PerplWsOrderInput = {
-  /** On-chain account id from createAccount */
   accountId: number;
   marketId: number;
   side: "LONG" | "SHORT";
-  /** Human size in asset units (e.g. BTC) */
   size: number;
   sizeDecimals: number;
   leverage: number;
-  /** 0 = market IOC; scaled limit price optional */
   limitPriceScaled?: number;
   lastExecutionBlock?: number;
 };
 
-/**
- * Place order on Perpl trading WS (mt: 22 OrderRequest).
- * Requires on-chain exchange account + trade-scoped API key.
- */
 export async function placePerplOrderWs(input: PerplWsOrderInput): Promise<{
   accepted: boolean;
   code?: number;
@@ -102,7 +94,8 @@ export async function placePerplOrderWs(input: PerplWsOrderInput): Promise<{
     );
   }
 
-  const WebSocketImpl = (globalThis as any).WebSocket || (await import("ws")).default;
+  const WebSocketImpl =
+    (globalThis as any).WebSocket || (await import("ws")).default;
   const url = `${e.wsUrl}/ws/v1/trading`;
 
   return new Promise((resolve, reject) => {
@@ -150,12 +143,10 @@ export async function placePerplOrderWs(input: PerplWsOrderInput): Promise<{
       }
 
       if (msg?.mt === 19) {
-        // WalletSnapshot — seed account id + last request id if present
         const accs = msg?.d?.accs || msg?.d?.accounts || [];
         const first = Array.isArray(accs) && accs[0];
         if (first?.lfr != null) rq = Number(first.lfr) + 1;
-        const accountId =
-          input.accountId || (first?.id != null ? Number(first.id) : 0);
+        const accountId = input.accountId || (first?.id != null ? Number(first.id) : 0);
         if (!accountId) {
           clearTimeout(timeout);
           try {
@@ -184,7 +175,7 @@ export async function placePerplOrderWs(input: PerplWsOrderInput): Promise<{
           t: input.side === "LONG" ? 1 : 2,
           p: input.limitPriceScaled ?? 0,
           s: sizeScaled,
-          fl: input.limitPriceScaled ? 0 : 4, // IOC if market
+          fl: input.limitPriceScaled ? 0 : 4,
           lv: Math.round(input.leverage * 100),
           lb: input.lastExecutionBlock || 0,
         };
@@ -220,13 +211,11 @@ export async function placePerplOrderWs(input: PerplWsOrderInput): Promise<{
 }
 
 export async function perplFetchFills(count = 20) {
-  const target = `/v1/trading/fills?count=${count}`;
-  const res = await perplSignedFetch("GET", target);
-  return res.json();
+  return (await perplSignedFetch("GET", `/v1/trading/fills?count=${count}`)).json();
 }
 
 export async function perplFetchPositionHistory(count = 20) {
-  const target = `/v1/trading/position-history?count=${count}`;
-  const res = await perplSignedFetch("GET", target);
-  return res.json();
+  return (
+    await perplSignedFetch("GET", `/v1/trading/position-history?count=${count}`)
+  ).json();
 }

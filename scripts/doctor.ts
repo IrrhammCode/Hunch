@@ -114,7 +114,8 @@ async function main() {
 
   if (present(rootEnv.MONAD_RPC_URL)) ok(`MONAD_RPC_URL ${maskHint(rootEnv.MONAD_RPC_URL)}`);
   else info("MONAD_RPC_URL unset — using default testnet RPC");
-  if (/quicknode/i.test(rootEnv.MONAD_RPC_URL || "")) ok("Monad RPC = Quicknode (perk)");
+  if (/quiknode\.pro|quicknode\.com/i.test(rootEnv.MONAD_RPC_URL || ""))
+    ok("Monad RPC = Quicknode (perk)");
   else if (present(rootEnv.MONAD_RPC_URL) && !/testnet-rpc\.monad\.xyz/i.test(rootEnv.MONAD_RPC_URL))
     ok("Monad RPC custom endpoint set");
   else warn("Monad RPC is public default — claim Quicknode perk to avoid rate limits");

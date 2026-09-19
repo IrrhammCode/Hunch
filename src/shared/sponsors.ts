@@ -17,7 +17,8 @@ export function sponsorEnv() {
 }
 
 export function isQuicknodeRpc(url: string) {
-  return /quicknode\.com/i.test(url || "");
+  // Official Quicknode hosts use quiknode.pro (not quicknode.com)
+  return /quiknode\.pro|quicknode\.com/i.test(url || "");
 }
 
 export function tenderlyConfigured() {
