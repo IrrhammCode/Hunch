@@ -114,7 +114,7 @@ export async function placePrivyTrade(params: {
 }): Promise<PrivyTradeResult> {
   const { provider, address, side, amountAUSD, symbol, market } = params;
   if (!address || !/^0x[a-fA-F0-9]{40}$/.test(address)) {
-    throw new Error("Privy wallet required — email OTP first.");
+    throw new Error("Wallet required — Mera passkey or Privy login first.");
   }
   await ensureChain(provider);
 

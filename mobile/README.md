@@ -121,7 +121,7 @@ Use this checklist after a clean install:
 4. Cold open → splash → **Login** with your email → **Send code**.
 5. Enter OTP → lands on **HUNCH**.
 6. Open **YOU**: pill says **Privy wallet**; address is a real `0x…` (not demo fake).
-7. Tap **Fund wallet** (faucet MockAUSD + MON).
+7. Login with **Mera passkey** (Agora) or Privy OTP, then tap **Fund wallet** (Agora AUSD faucet + MON).
 8. On **HUNCH** (round open, ≥12s left): swipe or tap UP/DOWN.
 9. Toast shows filled; **BOOK** shows OPEN position.
 10. After resolve → **Claim** → toast success; explorer link works.

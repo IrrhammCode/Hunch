@@ -74,26 +74,26 @@ Mainnet AUSD (not required for demo): `0x00000000eFE302BEAA2b3e6e1b18d08D69a9012
 
 ---
 
-## Eligibility gap vs Hunch today
+## Eligibility path vs Hunch today
 
-| Requirement | Hunch current | Needed for Agora bounty |
+| Requirement | Status in repo | Still manual |
 |---|---|---|
-| Auth | Privy OTP / Apple | **Mera passkey** |
-| Balance | MockAUSD (mintable) | **Agora AUSD** testnet `0xa901…22dC` |
-| Trade | HunchMarket CPMM UP/DOWN | **Perpl** exchange account + ≥1 order |
+| **Mera passkey auth** | Wired: `@category-labs/mera` + login UI + EIP-1193 provider (`mobile/src/auth/mera.ts`) | Host AASA/assetlinks + EAS rebuild + Team ID |
+| **AUSD balance** | Deployments + faucet prefer official Agora testnet `0xa901…22dC` via `requestFunds` | Confirm faucet on-chain in demo video |
+| **Perpl trade** | API proxy + mobile ticket → `POST /v1/perpl/order` | `PERPL_API_KEY` (trade scope) + on-chain `createAccount` ≥100 AUSD |
 
-**Note:** Hunch UP/DOWN / Options Exchange can remain as extra product surface. **Agora $10k** requires the **Mera + AUSD + Perpl** path in the **same mobile demo**.
+**Note:** Hunch UP/DOWN / Options Exchange can remain as extra product surface. **Agora $10k** requires the **Mera + AUSD + Perpl** path in the **same mobile demo**. Setup details: `MERA_SETUP.md`.
 
 ---
 
 ## Demo script for judges (Agora path)
 
-1. Open mobile app (dev client)  
-2. **Mera** passkey login (Face ID) → show `0x…` address  
-3. Faucet **MON** (gas) + **AUSD** (`0xd236…e6C` / `requestFunds`) — enough for **≥100 AUSD** to open Perpl account  
-4. Show **AUSD balance** on-chain (Agora testnet token)  
-5. **Perpl testnet** — createAccount / deposit collateral → place **one trade** (e.g. BTC market_id 16)  
-6. Optional: show Hunch Markets / Exchange as additional UX  
+1. Open mobile app (native dev client — not Expo Go)  
+2. Login → **Continue with Passkey (Mera)** → Face ID → show `0x…` address  
+3. YOU tab faucet → **MON** gas + **AUSD** via Agora `requestFunds` (`0xd236…e6C`) — need **≥100 AUSD** for Perpl account  
+4. Show **AUSD** balance (Agora testnet token `0xa901…22dC`)  
+5. **Perpl testnet** — approve AUSD → `createAccount` → place **one trade** (BTC market_id 16)  
+6. Optional: Hunch Markets / Exchange swipe as additional UX  
 
 ---
 

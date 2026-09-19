@@ -4,6 +4,7 @@ import { useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   StyleSheet,
   Text,
   View,
@@ -19,6 +20,7 @@ import {
   PRIVY_CLIENT_ID,
   PRIVY_CLIENT_ID_OK,
 } from "@/src/config/chain";
+import { MERA_RP_ID } from "@/src/auth/mera";
 import { colors, radius, space, type } from "@/src/theme";
 
 export default function LoginScreen() {
@@ -26,9 +28,11 @@ export default function LoginScreen() {
     user,
     privyMode,
     missingPrivyConfig,
+    meraAvailable,
     sendOtp,
     loginWithOtp,
     loginWithApple,
+    loginWithMera,
     loginWithEmail,
     otpStatus,
   } = useAuth();
@@ -77,6 +81,23 @@ export default function LoginScreen() {
     }
   };
 
+  const onMera = async (mode: "create" | "signin" | "auto") => {
+    setBusy(true);
+    setError(null);
+    try {
+      await loginWithMera(mode);
+      router.replace("/(app)");
+    } catch (e) {
+      setError(
+        e instanceof Error
+          ? e.message
+          : "Passkey login failed — check Mera rpId association files",
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const onApple = async () => {
     setBusy(true);
     setError(null);
@@ -104,7 +125,9 @@ export default function LoginScreen() {
       >
         <Animated.View entering={FadeInUp.duration(320)} style={styles.hero}>
           <BrandMark size="lg" />
-          <Text style={styles.tagline}>Swipe UP or DOWN. 60s markets on Monad.</Text>
+          <Text style={styles.tagline}>
+            Passkey wallet · AUSD · Perpl on Monad. Swipe UP/DOWN on 60s markets.
+          </Text>
         </Animated.View>
 
         <View style={styles.form}>
@@ -128,6 +151,34 @@ export default function LoginScreen() {
               </Text>
             </View>
           ) : null}
+
+          <View style={styles.meraBlock}>
+            <Text style={styles.meraLabel}>AGORA PATH · PASSKEY</Text>
+            <PrimaryButton
+              label={busy ? "Waiting for Face ID…" : "Continue with Passkey (Mera)"}
+              onPress={() => onMera("auto")}
+              disabled={busy || !meraAvailable}
+            />
+            <View style={styles.meraRow}>
+              <Pressable onPress={() => onMera("create")} hitSlop={8} disabled={busy || !meraAvailable}>
+                <Text style={styles.footerLink}>Create new passkey</Text>
+              </Pressable>
+              <Pressable onPress={() => onMera("signin")} hitSlop={8} disabled={busy || !meraAvailable}>
+                <Text style={styles.footerLink}>Use existing passkey</Text>
+              </Pressable>
+            </View>
+            <Text style={styles.hint}>
+              {meraAvailable
+                ? `rpId ${MERA_RP_ID} · EOA on Monad testnet · AUSD + Perpl`
+                : "Passkeys need the native dev client (iOS/Android), not Expo Go."}
+            </Text>
+          </View>
+
+          <View style={styles.orRow}>
+            <View style={styles.orLine} />
+            <Text style={styles.orText}>or track 01 privy</Text>
+            <View style={styles.orLine} />
+          </View>
 
           <Field
             label="Email"
@@ -241,6 +292,25 @@ const styles = StyleSheet.create({
     maxWidth: 260,
   },
   form: { gap: space.md },
+  meraBlock: {
+    gap: 10,
+    borderWidth: 1,
+    borderColor: colors.brand,
+    borderRadius: radius.md,
+    padding: space.md,
+    backgroundColor: colors.brandDim,
+  },
+  meraLabel: {
+    color: colors.brand,
+    fontFamily: type.data,
+    fontSize: 11,
+    letterSpacing: 1.2,
+  },
+  meraRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 12,
+  },
   otpBlock: { gap: space.md },
   orRow: {
     flexDirection: "row",
