@@ -3,7 +3,6 @@ import { useFocusEffect } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View, ActivityIndicator } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { demoRedeem } from "@/src/api/client";
 import { useAuth } from "@/src/auth/AuthContext";
 import { Screen } from "@/src/components/Screen"
 import { Icon } from "@/src/components/Icon";

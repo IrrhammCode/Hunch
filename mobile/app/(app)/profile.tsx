@@ -3,8 +3,6 @@ import { useCallback, useState } from "react";
 import * as Haptics from "expo-haptics";
 import { Pressable, ScrollView, StyleSheet, Text, View, ActivityIndicator } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { demoFaucet } from "@/src/api/client";
-import { fetchZerionPortfolio } from "@/src/api/client";
 import { useAuth } from "@/src/auth/AuthContext";
 import { Screen } from "@/src/components/Screen"
 import { Icon } from "@/src/components/Icon";
