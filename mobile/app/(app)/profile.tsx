@@ -78,7 +78,7 @@ export default function ProfileScreen() {
     setBusy(true);
     try {
       if (!user?.address) {
-        toast.error("Wallet not ready", "Sign in with Privy first.");
+        toast.error("Wallet not ready", "Sign in with Mera passkey or Privy first.");
         return;
       }
       const r = await fundPrivyWallet(user.address);
@@ -231,7 +231,7 @@ export default function ProfileScreen() {
                   </View>
                 </View>
                 <Text style={styles.faucetDesc}>
-                  Claim <Text style={styles.boldLime}>1,000 AUSD</Text> Agora Collateral &amp; test MON gas instantly to trade perps and 60s hunches.
+                  Request <Text style={styles.boldLime}>Agora AUSD</Text> testnet collateral and MON gas to trade on Perpl and 60s hunches.
                 </Text>
               </View>
             </View>
@@ -246,41 +246,40 @@ export default function ProfileScreen() {
               ) : (
                 <>
                   <Icon name="water-outline" size={18} color="#0A0B0D" />
-                  <Text style={styles.faucetBtnText}>CLAIM 1,000 AUSD FAUCET</Text>
-                  <View style={styles.instantTag}>
-                    <Text style={styles.instantTagText}>INSTANT &lt;40MS</Text>
-                  </View>
+                  <Text style={styles.faucetBtnText}>CLAIM AUSD FAUCET</Text>
                 </>
               )}
             </Pressable>
           </View>
 
-          {/* TRADING PERFORMANCE CARD */}
+          {/* REAL WALLET STATS — no hardcoded performance */}
           <View style={styles.perfCard}>
             <View style={styles.perfTop}>
               <View style={styles.perfHeaderLeft}>
                 <Text style={styles.perfTrendIcon}>↗</Text>
-                <Text style={styles.perfTitle}>TRADING PERFORMANCE</Text>
+                <Text style={styles.perfTitle}>WALLET ACTIVITY</Text>
               </View>
-              <Text style={styles.perfRange}>Last 30 Days</Text>
+              <Text style={styles.perfRange}>Onchain</Text>
             </View>
 
             <View style={styles.perfGrid}>
               <View style={styles.perfItem}>
-                <Text style={styles.perfLabel}>WIN RATE</Text>
-                <Text style={[styles.perfVal, { color: colors.up }]}>68.4%</Text>
+                <Text style={styles.perfLabel}>AUSD BALANCE</Text>
+                <Text style={styles.perfVal}>{ausdBalance}</Text>
               </View>
               <View style={styles.perfItem}>
-                <Text style={styles.perfLabel}>TOTAL NET PNL</Text>
-                <Text style={styles.perfVal}>+$1,240.50</Text>
+                <Text style={styles.perfLabel}>MON GAS</Text>
+                <Text style={styles.perfVal}>{monBalance}</Text>
               </View>
               <View style={styles.perfItem}>
-                <Text style={styles.perfLabel}>60s STREAK</Text>
-                <Text style={styles.perfVal}>5 Wins</Text>
+                <Text style={styles.perfLabel}>HUNCH POSITIONS</Text>
+                <Text style={styles.perfVal}>{String(me?.positions?.length ?? 0)}</Text>
               </View>
               <View style={styles.perfItem}>
-                <Text style={styles.perfLabel}>24H VOLUME</Text>
-                <Text style={styles.perfVal}>$42,500 AUSD</Text>
+                <Text style={styles.perfLabel}>REDEEMABLE</Text>
+                <Text style={[styles.perfVal, { color: colors.up }]}>
+                  {String((me?.positions ?? []).filter((p) => p.redeemable).length)}
+                </Text>
               </View>
             </View>
           </View>

@@ -20,7 +20,7 @@ Host/mentor should have:
 - [ ] Root `.env` has `PRIVATE_KEY` funded with **MON** (gas for execute + Pyth pull)
 - [ ] Vault has AUSD seed (`npm run deploy:vault` once; vault not underfunded)
 - [ ] `npm run api` + `npm run keeper` running
-- [ ] `mobile/.env` Privy App ID + Client ID set (or demo flag only if Privy broken)
+- [ ] `mobile/.env` Mera rpId + Privy App ID + Client ID set (real auth only)
 - [ ] Off-LAN judges: ngrok/tunnel URL in the build (`EXPO_PUBLIC_API_URL`)
 - [ ] Smoke once: Fund → swipe → Claim → MonadVision link opens
 
@@ -54,7 +54,7 @@ You’re done. That’s the full loop: Privy identity → Agora AUSD collateral 
 | Endpoint | Limit |
 |---|---|
 | `POST /v1/wallet/faucet` | Max **1000** AUSD/request · MON top-up **0.05** only if below **0.02** · **1 / address / 10 min** · already funded → **200 no-op** |
-| `POST /v1/demo/faucet` | Same mint caps · **4 / IP / 10 min** |
+| `POST /v1/wallet/faucet` | Agora AUSD + MON · rate-limited |
 | `POST /v1/trade/execute` | **4 / trader / min** · **12 / IP / min** · market must be a recent factory round · one in-flight execute at a time |
 
 Limits are **in-memory** (reset if API restarts). Errors return `{ error, retryAfterSec? }` with HTTP 429.

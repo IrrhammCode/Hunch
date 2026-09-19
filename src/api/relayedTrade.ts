@@ -8,7 +8,7 @@ import {
   pythContract,
 } from "../shared/chain";
 import { pullPythOnchain, waitForReceipt } from "../shared/pythPull";
-import { invalidateDemoWalletCache } from "./wallet";
+import { clearWalletCache } from "./wallet";
 
 async function sleep(ms: number) {
   await new Promise((r) => setTimeout(r, ms));
@@ -103,7 +103,7 @@ export async function executeCommittedIntent(params: {
   const collateralIn = (intent.collateralIn ?? intent[2]) as bigint;
   const sharesOut = sideNum === 0 ? yes : no;
 
-  invalidateDemoWalletCache();
+  clearWalletCache();
 
   return {
     mode: "relayed-execute",

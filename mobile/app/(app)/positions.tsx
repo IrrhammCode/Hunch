@@ -44,8 +44,8 @@ export default function PositionsScreen() {
     try {
       let txHash = "";
       let payoutLine = "";
-      if (!user?.address || !privyMode) {
-        throw new Error("Sign in with Privy to claim onchain.");
+      if (!user?.address) {
+        throw new Error("Sign in with Mera passkey or Privy to claim onchain.");
       }
       const provider = await getEthereumProvider();
       const r = await redeemPrivyPosition({ provider, address: user.address, market });
@@ -167,66 +167,63 @@ export default function PositionsScreen() {
             </View>
           </View>
 
-          {/* READY TO CLAIM HERO BANNER */}
-          <View style={styles.claimHeroCard}>
-            <View style={styles.claimHeaderRow}>
-              <View style={styles.claimReadyLeft}>
-                <View style={styles.limePulseDot} />
-                <Text style={styles.claimReadyTitle}>READY TO CLAIM • 1 PAYOUT READY</Text>
+          {/* REAL REDEEMABLE HUNCH ONLY — no hardcoded payouts */}
+          {redeemableHunches.length > 0 ? (
+            <View style={styles.claimHeroCard}>
+              <View style={styles.claimHeaderRow}>
+                <View style={styles.claimReadyLeft}>
+                  <View style={styles.limePulseDot} />
+                  <Text style={styles.claimReadyTitle}>
+                    READY TO CLAIM • {redeemableHunches.length} PAYOUT
+                    {redeemableHunches.length > 1 ? "S" : ""} READY
+                  </Text>
+                </View>
+                <Text style={styles.epochText}>ONCHAIN</Text>
               </View>
-              <Text style={styles.epochText}>EPOCH #1841</Text>
-            </View>
 
-            <View style={styles.roundInfoRow}>
-              <Icon name="flash" size={14} color={colors.brand} />
-              <Text style={styles.roundTitle}>ROUND #1,841 • BTC 60s HUNCH</Text>
-              <View style={styles.resolvedBadge}>
-                <Text style={styles.resolvedText}>RESOLVED</Text>
+              {redeemableHunches.slice(0, 3).map((h) => (
+                <View key={h.roundId} style={styles.roundInfoRow}>
+                  <Icon name="flash" size={14} color={colors.brand} />
+                  <Text style={styles.roundTitle}>
+                    ROUND #{h.roundId} · {h.yesWins ? "UP WON" : "DOWN WON"}
+                  </Text>
+                  <View style={styles.resolvedBadge}>
+                    <Text style={styles.resolvedText}>RESOLVED</Text>
+                  </View>
+                </View>
+              ))}
+
+              <View style={styles.payoutGrid}>
+                <View>
+                  <Text style={styles.payoutLabel}>PAYOUT AMOUNT</Text>
+                  <Text style={styles.payoutValue}>
+                    +{redeemableHunches
+                      .reduce((s, h) => s + Number(h.estimatedPayout || 0), 0)
+                      .toFixed(2)}{" "}
+                    <Text style={styles.payoutUnit}>AUSD</Text>
+                  </Text>
+                </View>
               </View>
-            </View>
 
-            <View style={styles.strikeProofRow}>
-              <Icon name="checkmark-circle" size={16} color={colors.up} />
-              <Text style={styles.strikeProofText}>
-                UP WON (Settlement $78,210.00 &gt; Strike $78,150.00)
-              </Text>
+              <Pressable
+                onPress={() => {
+                  const first = redeemableHunches[0];
+                  if (first) onRedeemHunch(first.roundId, first.market);
+                }}
+                style={styles.claimAllBtn}
+                disabled={busyId !== null}
+              >
+                <Icon name="flash" size={14} color="#0A0B0D" />
+                <Text style={styles.claimBtnText}>
+                  CLAIM $
+                  {redeemableHunches
+                    .reduce((s, h) => s + Number(h.estimatedPayout || 0), 0)
+                    .toFixed(2)}{" "}
+                  AUSD
+                </Text>
+              </Pressable>
             </View>
-
-            <View style={styles.payoutGrid}>
-              <View>
-                <Text style={styles.payoutLabel}>PAYOUT AMOUNT</Text>
-                <Text style={styles.payoutValue}>+185.00 <Text style={styles.payoutUnit}>AUSD</Text></Text>
-              </View>
-              <View style={{ alignItems: "flex-end" }}>
-                <Text style={styles.returnLabel}>RETURN RATE</Text>
-                <Text style={styles.returnMultiplier}>1.85x Multiplier</Text>
-                <Text style={styles.stakedSub}>Staked 100.00 AUSD</Text>
-              </View>
-            </View>
-
-            <Pressable
-              onPress={() => {
-                if (redeemableHunches[0]) {
-                  onRedeemHunch(redeemableHunches[0].roundId, redeemableHunches[0].market);
-                } else {
-                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                  toast.show("Claim Success", { body: "+185.00 AUSD deposited to wallet", tone: "success" });
-                }
-              }}
-              style={styles.claimAllBtn}
-            >
-              <Icon name="flash" size={14} color="#0A0B0D" />
-              <Text style={styles.claimBtnText}>CLAIM $185.00 AUSD</Text>
-              <View style={styles.latencyMiniTag}>
-                <Text style={styles.latencyMiniText}>&lt;40ms</Text>
-              </View>
-            </Pressable>
-
-            <View style={styles.claimFooterRow}>
-              <Text style={styles.proofLink}>View on-chain proof on MonadVision ↗</Text>
-              <Text style={styles.gasFeeText}>Gas: $0.00008</Text>
-            </View>
-          </View>
+          ) : null}
 
           {/* SECTION TABS */}
           <View style={styles.filterRow}>
@@ -244,20 +241,24 @@ export default function PositionsScreen() {
               onPress={() => { setTab("hunch"); Haptics.selectionAsync(); }}
               style={[styles.filterChip, tab === "hunch" && styles.filterChipActive]}
             >
-              <Text style={styles.filterChipIcon}>⏱</Text>
+              <Icon name="time-outline" size={13} color={colors.brand} />
               <Text style={[styles.filterChipText, tab === "hunch" && styles.filterChipTextActive]}>
-                60s HUNCHES (2)
+                60s HUNCHES ({hunchPositions.length})
               </Text>
             </Pressable>
-
-            <View style={styles.filterRightPill}>
-              <Text style={styles.filterRightText}>FILTER</Text>
-            </View>
           </View>
 
-          {/* PERPETUAL POSITIONS LIST */}
+          {/* PERPETUAL POSITIONS LIST — live Perpl data only */}
           {tab === "perps" && (
             <View style={styles.posList}>
+              {displayPerps.length === 0 ? (
+                <View style={styles.posCard}>
+                  <Text style={styles.posSymbol}>No open Perpl positions</Text>
+                  <Text style={styles.posStatLabel}>
+                    Place a trade on TRADE tab after linking a Perpl account.
+                  </Text>
+                </View>
+              ) : null}
               {displayPerps.map((pos) => {
                 const isClosing = closingId === pos.id;
                 return (
@@ -265,13 +266,15 @@ export default function PositionsScreen() {
                     <View style={styles.posCardTop}>
                       <View style={styles.posLeftHeader}>
                         <View style={styles.longBadge}>
-                          <Text style={styles.longBadgeText}>LONG 10x</Text>
+                          <Text style={styles.longBadgeText}>
+                            {pos.side} {pos.leverage}x
+                          </Text>
                         </View>
-                        <Text style={styles.posSymbol}>BTC / AUSD PERP</Text>
+                        <Text style={styles.posSymbol}>{pos.symbol} / AUSD PERP</Text>
                       </View>
                       <View style={styles.oracleStatusRow}>
                         <View style={styles.greenPulse} />
-                        <Text style={styles.oracleStatusText}>ORACLE LIVE</Text>
+                        <Text style={styles.oracleStatusText}>PERPL LIVE</Text>
                       </View>
                     </View>
 
@@ -291,7 +294,7 @@ export default function PositionsScreen() {
                       <View style={[styles.posStatCol, { alignItems: "flex-end" }]}>
                         <Text style={styles.posStatLabel}>UNREALIZED PnL</Text>
                         <Text style={[styles.posStatVal, styles.posColor]}>
-                          +${(pos.unrealizedPnLAUSD ?? 0).toFixed(2)} (+{(pos.unrealizedPnLPct ?? 0).toFixed(1)}%)
+                          ${(pos.unrealizedPnLAUSD ?? 0).toFixed(2)} ({(pos.unrealizedPnLPct ?? 0).toFixed(1)}%)
                         </Text>
                       </View>
                     </View>
@@ -313,41 +316,71 @@ export default function PositionsScreen() {
             </View>
           )}
 
-          {/* 60s HUNCHES LIST */}
+          {/* 60s HUNCHES LIST — onchain wallet positions only */}
           {tab === "hunch" && (
             <View style={styles.posList}>
-              <View style={styles.posCard}>
-                <View style={styles.posCardTop}>
-                  <View style={styles.posLeftHeader}>
-                    <View style={[styles.longBadge, { backgroundColor: "rgba(214,255,63,0.18)" }]}>
-                      <Text style={[styles.longBadgeText, { color: colors.brand }]}>UP</Text>
+              {hunchPositions.length === 0 ? (
+                <View style={styles.posCard}>
+                  <Text style={styles.posSymbol}>No hunch positions</Text>
+                  <Text style={styles.posStatLabel}>
+                    Swipe UP/DOWN on HUNCH tab to open a 60s market.
+                  </Text>
+                </View>
+              ) : null}
+              {hunchPositions.map((h) => (
+                <View key={h.roundId} style={styles.posCard}>
+                  <View style={styles.posCardTop}>
+                    <View style={styles.posLeftHeader}>
+                      <View style={[styles.longBadge, { backgroundColor: "rgba(214,255,63,0.18)" }]}>
+                        <Text style={[styles.longBadgeText, { color: colors.brand }]}>
+                          {Number(h.yes) > 0 ? "UP" : "DOWN"}
+                        </Text>
+                      </View>
+                      <Text style={styles.posSymbol}>ROUND #{h.roundId}</Text>
                     </View>
-                    <Text style={styles.posSymbol}>BTC / USD • Round #1,842</Text>
+                    <View style={styles.oracleStatusRow}>
+                      <Text style={[styles.oracleStatusText, { color: colors.brand }]}>
+                        {h.status === "open" ? "OPEN" : "RESOLVED"}
+                      </Text>
+                    </View>
                   </View>
-                  <View style={styles.oracleStatusRow}>
-                    <Text style={[styles.oracleStatusText, { color: colors.brand }]}>⏱ 12s LEFT</Text>
-                  </View>
-                </View>
 
-                <View style={styles.posStatsGrid}>
-                  <View style={styles.posStatCol}>
-                    <Text style={styles.posStatLabel}>STRIKE</Text>
-                    <Text style={styles.posStatVal}>$78,150.00</Text>
+                  <View style={styles.posStatsGrid}>
+                    <View style={styles.posStatCol}>
+                      <Text style={styles.posStatLabel}>YES SHARES</Text>
+                      <Text style={styles.posStatVal}>{h.yes}</Text>
+                    </View>
+                    <View style={styles.posStatCol}>
+                      <Text style={styles.posStatLabel}>NO SHARES</Text>
+                      <Text style={styles.posStatVal}>{h.no}</Text>
+                    </View>
+                    <View style={styles.posStatCol}>
+                      <Text style={styles.posStatLabel}>EST. PAYOUT</Text>
+                      <Text style={styles.posStatVal}>{h.estimatedPayout} AUSD</Text>
+                    </View>
+                    <View style={[styles.posStatCol, { alignItems: "flex-end" }]}>
+                      <Text style={styles.posStatLabel}>REDEEMABLE</Text>
+                      <Text style={[styles.posStatVal, h.redeemable ? styles.posColor : undefined]}>
+                        {h.redeemable ? "YES" : "NO"}
+                      </Text>
+                    </View>
                   </View>
-                  <View style={styles.posStatCol}>
-                    <Text style={styles.posStatLabel}>LIVE PRICE</Text>
-                    <Text style={[styles.posStatVal, styles.posColor]}>$78,214.50</Text>
-                  </View>
-                  <View style={styles.posStatCol}>
-                    <Text style={styles.posStatLabel}>STAKE</Text>
-                    <Text style={styles.posStatVal}>10.00 AUSD</Text>
-                  </View>
-                  <View style={[styles.posStatCol, { alignItems: "flex-end" }]}>
-                    <Text style={styles.posStatLabel}>POTENTIAL PAYOUT</Text>
-                    <Text style={[styles.posStatVal, styles.posColor]}>18.50 AUSD (1.85x)</Text>
-                  </View>
+
+                  {h.redeemable ? (
+                    <Pressable
+                      onPress={() => onRedeemHunch(h.roundId, h.market)}
+                      disabled={busyId === h.roundId}
+                      style={styles.closeBtn}
+                    >
+                      {busyId === h.roundId ? (
+                        <ActivityIndicator color={colors.brand} size="small" />
+                      ) : (
+                        <Text style={styles.closeBtnText}>CLAIM ONCHAIN</Text>
+                      )}
+                    </Pressable>
+                  ) : null}
                 </View>
-              </View>
+              ))}
             </View>
           )}
         </ScrollView>

@@ -4,29 +4,25 @@ Swipe UP or DOWN on 60-second onchain markets on Monad.
 
 **Track 01 · Agora Mobile · Privy · Pyth** · Bundle ID `com.hunch123.app`
 
-## Design mode (UI only — mock data)
+## Real auth only
 
-For designers / Android / **browser** without API or Privy:
+Mera passkey (Agora) or Privy OTP. **No demo/mock login.** No `/v1/demo/*` endpoints.
 
-→ **Kirim ke temen design:** [README.DESIGN.md](./README.DESIGN.md) (bahasa gampang)  
-→ Detail: [DESIGN.md](./DESIGN.md)
+| Env | Required | Notes |
+|---|---|---|
+| `EXPO_PUBLIC_API_URL` | yes | LAN IP or ngrok — not localhost |
+| `EXPO_PUBLIC_MERA_RP_ID` | yes | default `accounts.hunch.app` · see `MERA_SETUP.md` |
+| `EXPO_PUBLIC_PRIVY_APP_ID` | Track 01 path | see `PRIVY_SETUP.md` |
+| `EXPO_PUBLIC_PRIVY_CLIENT_ID` | Track 01 path | `client-…`, not bundle id |
+| `EXPO_PUBLIC_MONAD_RPC_URL` | optional | Quicknode if claimed |
 
-```powershell
-cd mobile
-npm install
-copy .env.design .env
-npm run design
-```
+`EXPO_PUBLIC_USE_DEMO_AUTH` / design-mode flags are **removed**.
 
-Then open the web URL (or press `w`). Auto-login + full mock fixtures.
-
----
-
-Privy requires a **custom development client** (or TestFlight/ad-hoc build). **Expo Go will not work** for real Privy.
+Privy + Mera require a **custom development client** (or TestFlight/ad-hoc). **Expo Go will not work** for passkeys or Privy.
 
 ---
 
-## Privy dashboard setup (once)
+## Privy dashboard setup (once — Track 01 path)
 
 1. Open [https://dashboard.privy.io](https://dashboard.privy.io) → create an app named **Hunch**.
 2. **Login methods** → enable **Email** (OTP).
@@ -52,9 +48,9 @@ Edit `mobile/.env` (never commit it):
 | Key | Required | Notes |
 |---|---|---|
 | `EXPO_PUBLIC_API_URL` | yes | Phone → API. LAN `http://<PC_IP>:8787` or public tunnel |
-| `EXPO_PUBLIC_PRIVY_APP_ID` | for real OTP | From Privy dashboard |
-| `EXPO_PUBLIC_PRIVY_CLIENT_ID` | for real OTP | Mobile App Client ID |
-| `EXPO_PUBLIC_USE_DEMO_AUTH` | optional | `1` = local UI shell without Privy — **not for judges** |
+| `EXPO_PUBLIC_MERA_RP_ID` | Agora path | default `accounts.hunch.app` |
+| `EXPO_PUBLIC_PRIVY_APP_ID` | Track 01 path | From Privy dashboard |
+| `EXPO_PUBLIC_PRIVY_CLIENT_ID` | Track 01 path | Mobile App Client ID |
 | `EXPO_PUBLIC_MONAD_RPC_URL` | no | Default `https://testnet-rpc.monad.xyz` |
 
 Find your PC LAN IP:
@@ -115,20 +111,20 @@ npm run start:dev
 
 Use this checklist after a clean install:
 
-1. `mobile/.env` has App ID + Client ID filled; `EXPO_PUBLIC_USE_DEMO_AUTH` is **unset**.
+1. `mobile/.env` has Mera rpId + (optional) Privy App ID + Client ID filled.
 2. Root `npm run api` + `npm run keeper` are running.
 3. Build is a **dev client** (not Expo Go).
 4. Cold open → splash → **Login** with your email → **Send code**.
 5. Enter OTP → lands on **HUNCH**.
-6. Open **YOU**: pill says **Privy wallet**; address is a real `0x…` (not demo fake).
+6. Open **YOU**: address is a real `0x…` from Mera passkey or Privy.
 7. Login with **Mera passkey** (Agora) or Privy OTP, then tap **Fund wallet** (Agora AUSD faucet + MON).
 8. On **HUNCH** (round open, ≥12s left): swipe or tap UP/DOWN.
 9. Toast shows filled; **BOOK** shows OPEN position.
 10. After resolve → **Claim** → toast success; explorer link works.
 
-If YOU shows the Privy setup box instead of login, env vars did not load — fix `.env` and restart Metro.
+If YOU shows the setup box instead of login, env vars did not load — fix `.env` and restart Metro.
 
-**Demo auth fallback (local only):** set `EXPO_PUBLIC_USE_DEMO_AUTH=1` **only if** Privy IDs are empty for UI work. With Privy IDs set, the app always uses **real Privy** + **real** `placePrivyTrade` / Perpl API — no server hot-wallet demo path in the mobile UI.
+**Real path only:** Mera passkey or Privy. No demo auth, no `/v1/demo/*`, no mock balances.
 
 ---
 

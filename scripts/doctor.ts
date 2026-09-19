@@ -173,15 +173,17 @@ async function main() {
     fail("EXPO_PUBLIC_PRIVY_CLIENT_ID empty — see PRIVY_SETUP.md");
   }
 
+  if (present(mEnv.EXPO_PUBLIC_MERA_RP_ID)) {
+    ok(`EXPO_PUBLIC_MERA_RP_ID ${maskHint(mEnv.EXPO_PUBLIC_MERA_RP_ID)}`);
+  } else {
+    warn("EXPO_PUBLIC_MERA_RP_ID unset — defaulting to accounts.hunch.app (see MERA_SETUP.md)");
+  }
+
   const demo = mEnv.EXPO_PUBLIC_USE_DEMO_AUTH?.trim();
   if (present(demo) && demo !== "0") {
-    fail(
-      "EXPO_PUBLIC_USE_DEMO_AUTH is set — judge mode expects real Privy. Unset and restart Metro.",
-    );
-  } else if (!present(mEnv.EXPO_PUBLIC_PRIVY_APP_ID) && !present(mEnv.EXPO_PUBLIC_PRIVY_CLIENT_ID)) {
-    warn("Privy keys empty — app will show setup, not mock data");
+    fail("EXPO_PUBLIC_USE_DEMO_AUTH is set — demo auth is removed. Unset and restart Metro.");
   } else {
-    ok("EXPO_PUBLIC_USE_DEMO_AUTH unset (real Privy path)");
+    ok("Demo auth flag unused (real Mera/Privy only)");
   }
 
   // eas.json preview placeholder

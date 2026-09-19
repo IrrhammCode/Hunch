@@ -224,13 +224,16 @@ export default function LoginScreen() {
                 label={
                   busy || sending
                     ? "Sending…"
-                    : privyMode
-                      ? "Send code"
-                      : "Continue (demo)"
+                    : "Send code (Privy)"
                 }
                 onPress={onSendCode}
-                disabled={busy || sending || !email || missingPrivyConfig}
+                disabled={busy || sending || !email || missingPrivyConfig || !privyMode}
               />
+              {!privyMode ? (
+                <Text style={styles.hint}>
+                  Privy not configured. Use Mera passkey above, or set Privy IDs and restart Metro.
+                </Text>
+              ) : null}
               {showApple ? (
                 <>
                   <View style={styles.orRow}>
@@ -254,7 +257,7 @@ export default function LoginScreen() {
               <Text style={styles.hint}>
                 {privyMode
                   ? "Email OTP or Apple · creates your embedded Monad wallet."
-                  : "Demo login for local testing only."}
+                  : "Real login only — Mera passkey or Privy."}
               </Text>
             </>
           )}

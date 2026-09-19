@@ -12,9 +12,7 @@
         "EXPO_PUBLIC_MONAD_RPC_URL": "https://testnet-rpc.monad.xyz",
         "EXPO_PUBLIC_MERA_RP_ID": "accounts.hunch.app",
         "EXPO_PUBLIC_PRIVY_APP_ID": "cmu5d79n703nn0bla6xx0220n",
-        "EXPO_PUBLIC_PRIVY_CLIENT_ID": "client-WY6dnsoC1aSvve8RBfKswQCXK7mMboA9A9DE549UPFsRD",
-        "EXPO_PUBLIC_DESIGN_MODE": "0",
-        "EXPO_PUBLIC_USE_DEMO_AUTH": "0"
+        "EXPO_PUBLIC_PRIVY_CLIENT_ID": "client-WY6dnsoC1aSvve8RBfKswQCXK7mMboA9A9DE549UPFsRD"
       },
       "ios": {
         "simulator": false,
@@ -38,9 +36,7 @@
         "EXPO_PUBLIC_MONAD_RPC_URL": "https://testnet-rpc.monad.xyz",
         "EXPO_PUBLIC_MERA_RP_ID": "accounts.hunch.app",
         "EXPO_PUBLIC_PRIVY_APP_ID": "cmu5d79n703nn0bla6xx0220n",
-        "EXPO_PUBLIC_PRIVY_CLIENT_ID": "client-WY6dnsoC1aSvve8RBfKswQCXK7mMboA9A9DE549UPFsRD",
-        "EXPO_PUBLIC_DESIGN_MODE": "0",
-        "EXPO_PUBLIC_USE_DEMO_AUTH": "0"
+        "EXPO_PUBLIC_PRIVY_CLIENT_ID": "client-WY6dnsoC1aSvve8RBfKswQCXK7mMboA9A9DE549UPFsRD"
       },
       "ios": {
         "resourceClass": "m-medium"

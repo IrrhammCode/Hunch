@@ -97,19 +97,15 @@ export async function walletSnapshot(address: string, lookback = 8) {
   return body;
 }
 
-/** Legacy alias used by demo hot-wallet path. */
-export async function demoWalletSnapshot(lookback = 8) {
-  return walletSnapshot(getWallet().address, lookback);
-}
-
-export function invalidateDemoWalletCache() {
+/** Clear wallet snapshot cache after chain writes. */
+export function clearWalletCache() {
   meCache = null;
 }
 
-/** Faucet policy — cap mint + MON so mid-demo spam cannot drain the hot wallet. */
+/** Faucet policy — cap AUSD + MON so mid-demo spam cannot drain the hot wallet. */
 export const FAUCET = {
   maxAUSD: Number(process.env.FAUCET_MAX_AUSD || "1000"),
-  /** Skip mint if already at/above this AUSD. */
+  /** Skip faucet if already at/above this AUSD. */
   fundedAUSDThreshold: Number(process.env.FAUCET_SKIP_AUSD || "250"),
   /** Only send MON if balance below this. */
   monTopup: process.env.FAUCET_MON || "0.05",
@@ -118,8 +114,9 @@ export const FAUCET = {
 };
 
 /**
- * Mint MockAUSD + top up MON for a Privy embedded wallet (testnet only).
- * Rate limiting is enforced at the HTTP layer; this function enforces caps + idempotency.
+ * Real testnet faucet: Agora AUSD via official faucet contract, then MON gas.
+ * Optional fallback: transfer AUSD from the hot wallet if it holds the same token.
+ * Official AUSD has no mint() — no MockAUSD path.
  */
 export async function faucetWallet(address: string, amountAUSD = "1000") {
   if (!ethers.isAddress(address)) throw new Error("bad address");
@@ -137,7 +134,6 @@ export async function faucetWallet(address: string, amountAUSD = "1000") {
     provider.getBalance(address),
   ]);
   const ausdHuman = Number(ethers.formatUnits(ausdBal, 6));
-  const monHuman = Number(ethers.formatEther(monBal));
 
   const needMint = ausdHuman < FAUCET.fundedAUSDThreshold;
   const monSkip = ethers.parseEther(FAUCET.monSkipAbove);
@@ -158,14 +154,12 @@ export async function faucetWallet(address: string, amountAUSD = "1000") {
   if (needMint) {
     const qty = ethers.parseUnits(String(capped), 6);
     try {
-      // First try Agora official testnet faucet
       const { agoraFaucetContract } = await import("../shared/chain");
       const faucet = agoraFaucetContract(wallet, dep);
       const tx = await faucet.requestFunds(address);
       await waitForReceipt(provider, tx.hash);
       mintTx = tx.hash;
     } catch (e) {
-      // If Agora faucet has rate limit or fails, try hot-wallet transfer or mint
       try {
         const hotBal = await ausd.balanceOf(wallet.address);
         if (hotBal >= qty) {
@@ -173,12 +167,10 @@ export async function faucetWallet(address: string, amountAUSD = "1000") {
           await waitForReceipt(provider, sendAUSD.hash);
           mintTx = sendAUSD.hash;
         } else {
-          const tx = await ausd.mint(address, qty);
-          await waitForReceipt(provider, tx.hash);
-          mintTx = tx.hash;
+          console.warn("[faucet] Agora faucet failed and hot wallet has no AUSD to transfer");
         }
       } catch (inner) {
-        console.warn("[faucet] AUSD mint/transfer warning:", (inner as any)?.message || inner);
+        console.warn("[faucet] AUSD transfer warning:", (inner as any)?.message || inner);
       }
     }
   }
@@ -191,7 +183,7 @@ export async function faucetWallet(address: string, amountAUSD = "1000") {
     monTx = send.hash;
   }
 
-  invalidateDemoWalletCache();
+  clearWalletCache();
   const snap = await walletSnapshot(address);
   return {
     address,
@@ -202,40 +194,4 @@ export async function faucetWallet(address: string, amountAUSD = "1000") {
     alreadyFunded: false,
     mintedAUSD: needMint ? String(capped) : "0",
   };
-}
-
-export async function demoRedeem(roundId: number) {
-  const wallet = getWallet();
-  const provider = getProvider();
-  const factory = factoryContract(wallet);
-  const count = Number(await factory.roundCount());
-  if (roundId < 1 || roundId > count) throw new Error("bad roundId");
-
-  const market = (await factory.rounds(roundId)) as string;
-  const m = marketContract(market, wallet);
-  if (Number(await m.status()) !== 1) throw new Error("round not resolved");
-
-  const yes = await m.yesBalances(wallet.address);
-  const no = await m.noBalances(wallet.address);
-  const yesWins = Boolean(await m.yesWins());
-  const shares = yesWins ? yes : no;
-  if (shares === 0n) throw new Error("nothing to redeem");
-
-  const before = await ausdContract(provider).balanceOf(wallet.address);
-  const tx = await m.redeem();
-  await waitForReceipt(provider, tx.hash);
-  const after = await ausdContract(provider).balanceOf(wallet.address);
-  invalidateDemoWalletCache();
-
-  return {
-    roundId: String(roundId),
-    market,
-    tx: tx.hash,
-    payout: ethers.formatUnits(after - before, 6),
-    sideWon: yesWins ? "UP" : "DOWN",
-  };
-}
-
-export async function demoFaucetAUSD(amount = "1000") {
-  return faucetWallet(getWallet().address, amount);
 }

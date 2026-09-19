@@ -14,7 +14,6 @@ import {
 import { currentRound, readStore, syncIndex, type RoundRow } from "../indexer/index";
 import { buildCommitCalldata, buildExecuteCalldata, buildRedeemCalldata } from "../userop/encode";
 import { quoteBuy } from "./quote";
-import { demoTrade } from "./demoTrade";
 import { executeCommittedIntent } from "./relayedTrade";
 import { clientIp, pruneRateLimits, rateLimit } from "./rateLimit";
 import { isRateLimitError, withRpcRetry } from "../shared/rpcRetry";
@@ -24,11 +23,8 @@ import { CHAINS } from "../shared/multichain";
 import { sponsorsApp } from "./sponsors";
 import { perkStatus } from "../shared/sponsors";
 import {
-  demoFaucetAUSD,
-  demoRedeem,
-  demoWalletSnapshot,
   faucetWallet,
-  invalidateDemoWalletCache,
+  clearWalletCache,
   walletSnapshot,
   FAUCET,
 } from "./wallet";
@@ -48,8 +44,8 @@ loadEnv();
 const app = new Hono();
 app.use("*", cors());
 
-/** In-flight guard — one demo trade at a time (shared hot wallet). */
-let demoBusy = false;
+/** In-flight guard — one relay execute at a time. */
+let executeBusy = false;
 
 /** Cache so phone poll + keeper don't melt public RPC (15 req/s cap). */
 let roundCache: { key: string; at: number; body: unknown } | null = null;
@@ -375,7 +371,7 @@ app.get("/v1/wallet/:address", async (c) => {
   }
 });
 
-/** Testnet faucet: mint MockAUSD + top up MON for Privy wallet (capped + rate-limited) */
+/** Testnet faucet: Agora AUSD + MON for the signed wallet (capped + rate-limited) */
 app.post("/v1/wallet/faucet", async (c) => {
   try {
     const body = await c.req.json<{ address?: string; amountAUSD?: string }>();
@@ -425,7 +421,7 @@ app.post("/v1/wallet/faucet", async (c) => {
  * Rate-limited per trader + IP; validates market when supplied.
  */
 app.post("/v1/trade/execute", async (c) => {
-  if (demoBusy) return c.json({ error: "trade in progress — retry in a few seconds" }, 429);
+  if (executeBusy) return c.json({ error: "trade in progress — retry in a few seconds" }, 429);
   let locked = false;
   try {
     const body = await c.req.json<{ trader: string; intentId?: string; market?: string }>();
@@ -476,79 +472,19 @@ app.post("/v1/trade/execute", async (c) => {
       );
     }
 
-    demoBusy = true;
+    executeBusy = true;
     locked = true;
     const result = await executeCommittedIntent({
       trader: body.trader,
       intentId: body.intentId,
       market: body.market,
     });
-    invalidateDemoWalletCache();
+    clearWalletCache();
     return c.json(result);
   } catch (e: any) {
     return c.json({ error: e.shortMessage || e.message || String(e) }, 500);
   } finally {
-    if (locked) demoBusy = false;
-  }
-});
-
-/** Demo wallet: AUSD + MON + open/resolved positions (shared hot wallet) */
-app.get("/v1/demo/me", async (c) => {
-  try {
-    return c.json(await demoWalletSnapshot());
-  } catch (e: any) {
-    return c.json({ error: e.shortMessage || e.message || String(e) }, 500);
-  }
-});
-
-app.post("/v1/demo/faucet", async (c) => {
-  try {
-    const body = await c.req.json<{ amountAUSD?: string }>().catch(() => ({} as { amountAUSD?: string }));
-    pruneRateLimits(FAUCET.cooldownMs);
-    const ipLimit = rateLimit(
-      `demo-faucet:ip:${clientIp((n) => c.req.header(n))}`,
-      4,
-      FAUCET.cooldownMs,
-    );
-    if (!ipLimit.ok) {
-      return c.json(
-        { error: "faucet cooldown — try again later", retryAfterSec: ipLimit.retryAfterSec },
-        429,
-      );
-    }
-    return c.json(await demoFaucetAUSD(body.amountAUSD || "1000"));
-  } catch (e: any) {
-    return c.json({ error: e.shortMessage || e.message || String(e) }, 500);
-  }
-});
-
-app.post("/v1/demo/redeem", async (c) => {
-  try {
-    const body = await c.req.json<{ roundId: string | number }>();
-    const id = Number(body.roundId);
-    if (!Number.isFinite(id)) return c.json({ error: "roundId required" }, 400);
-    return c.json(await demoRedeem(id));
-  } catch (e: any) {
-    return c.json({ error: e.shortMessage || e.message || String(e) }, 500);
-  }
-});
-
-app.post("/v1/demo/trade", async (c) => {
-  const body = await c.req.json<{ side: "UP" | "DOWN" | "YES" | "NO"; amountAUSD?: string; symbol?: string }>();
-  const sideRaw = (body.side || "").toUpperCase();
-  const side: "YES" | "NO" =
-    sideRaw === "UP" || sideRaw === "YES" ? "YES" : sideRaw === "DOWN" || sideRaw === "NO" ? "NO" : null!;
-  if (!side) return c.json({ error: "side must be UP/DOWN or YES/NO" }, 400);
-  if (demoBusy) return c.json({ error: "trade in progress — retry in a few seconds" }, 429);
-  demoBusy = true;
-  try {
-    const result = await demoTrade(side, body.amountAUSD || "10", body.symbol);
-    invalidateDemoWalletCache();
-    return c.json(result);
-  } catch (e: any) {
-    return c.json({ error: e.shortMessage || e.message || String(e) }, 500);
-  } finally {
-    demoBusy = false;
+    if (locked) executeBusy = false;
   }
 });
 

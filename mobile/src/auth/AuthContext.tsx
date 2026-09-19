@@ -4,8 +4,6 @@ import {
   useLoginWithOAuth,
   usePrivy,
 } from "@privy-io/expo";
-import * as SecureStore from "expo-secure-store";
-import { Platform } from "react-native";
 import React, {
   createContext,
   useCallback,
@@ -18,7 +16,6 @@ import {
   HAS_PRIVY,
   PRIVY_APP_ID,
   PRIVY_CLIENT_ID,
-  USE_DEMO_AUTH,
 } from "../config/chain";
 import {
   clearMeraSession,
@@ -28,47 +25,6 @@ import {
   unlockMeraFromStored,
   type MeraRuntime,
 } from "./mera";
-
-const STORAGE_KEY = "hunch.session.v1";
-
-const memory = new Map<string, string>();
-
-async function storageGet(key: string): Promise<string | null> {
-  try {
-    if (Platform.OS === "web") {
-      return typeof localStorage !== "undefined" ? localStorage.getItem(key) : memory.get(key) ?? null;
-    }
-    return (await SecureStore.getItemAsync(key)) ?? memory.get(key) ?? null;
-  } catch {
-    return memory.get(key) ?? null;
-  }
-}
-
-async function storageSet(key: string, value: string): Promise<void> {
-  memory.set(key, value);
-  try {
-    if (Platform.OS === "web") {
-      localStorage?.setItem(key, value);
-      return;
-    }
-    await SecureStore.setItemAsync(key, value);
-  } catch {
-    /* keep memory */
-  }
-}
-
-async function storageRemove(key: string): Promise<void> {
-  memory.delete(key);
-  try {
-    if (Platform.OS === "web") {
-      localStorage?.removeItem(key);
-      return;
-    }
-    await SecureStore.deleteItemAsync(key);
-  } catch {
-    /* keep memory */
-  }
-}
 
 export type SessionUser = {
   id: string;
@@ -82,14 +38,14 @@ export type SessionUser = {
   mera?: boolean;
 };
 
-export type AuthMethod = "privy" | "mera" | "demo" | null;
+export type AuthMethod = "privy" | "mera" | null;
 
 type AuthContextValue = {
   user: SessionUser | null;
   ready: boolean;
-  /** True when Privy SDK is configured and demo auth is off. */
+  /** Always real: Mera passkey or Privy. */
   privyMode: boolean;
-  /** Missing Privy App ID / Client ID — show setup screen. */
+  /** Missing auth config — show setup screen. */
   missingPrivyConfig: boolean;
   /** Native passkey module available (iOS/Android dev client). */
   meraAvailable: boolean;
@@ -103,7 +59,7 @@ type AuthContextValue = {
   /** Mera passkey — Agora bounty path. */
   loginWithMera: (mode?: "create" | "signin" | "auto") => Promise<void>;
   otpStatus: string;
-  /** Demo-only local login (feature flag). */
+  /** Removed — throws. Use Mera or Privy. */
   loginWithEmail: (email: string) => Promise<void>;
   signupWithEmail: (email: string, displayName?: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -113,22 +69,11 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-function fakeAddressFromEmail(email: string) {
-  let h = 0;
-  for (let i = 0; i < email.length; i++) h = (h * 31 + email.charCodeAt(i)) >>> 0;
-  return `0x${h.toString(16).padStart(8, "0")}${"a1b2c3d4e5f67890abcdef".slice(0, 32)}`;
-}
-
 function emailFromPrivyUser(user: any): string {
   const linked = user?.linkedAccounts;
   if (Array.isArray(linked)) {
-    const emailAcct = linked.find(
-      (a: any) => a?.type === "email" || a?.email,
-    );
+    const emailAcct = linked.find((a: any) => a?.type === "email" || a?.email);
     if (emailAcct?.email) return emailAcct.email as string;
-    if (emailAcct?.address && typeof emailAcct.address === "string" && emailAcct.address.includes("@")) {
-      return emailAcct.address as string;
-    }
   }
   return user?.email?.address || user?.email || "privy@user";
 }
@@ -156,7 +101,7 @@ function meraUserFromRuntime(runtime: MeraRuntime): SessionUser {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   if (!HAS_PRIVY) {
-    return <MeraOrDemoAuthProvider missingConfig={!USE_DEMO_AUTH}>{children}</MeraOrDemoAuthProvider>;
+    return <MeraOnlyAuthProvider missingConfig={!meraNativeReady()}>{children}</MeraOnlyAuthProvider>;
   }
   return <PrivyAuthProvider>{children}</PrivyAuthProvider>;
 }
@@ -332,7 +277,7 @@ function PrivyAuthProvider({ children }: { children: React.ReactNode }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-function MeraOrDemoAuthProvider({
+function MeraOnlyAuthProvider({
   children,
   missingConfig,
 }: {
@@ -343,12 +288,6 @@ function MeraOrDemoAuthProvider({
   const [ready, setReady] = useState(false);
   const [meraRuntime, setMeraRuntime] = useState<MeraRuntime | null>(null);
 
-  const persist = useCallback(async (next: SessionUser | null) => {
-    setUser(next);
-    if (next && !next.mera) await storageSet(STORAGE_KEY, JSON.stringify(next));
-    else if (!next) await storageRemove(STORAGE_KEY);
-  }, []);
-
   useEffect(() => {
     (async () => {
       try {
@@ -356,9 +295,6 @@ function MeraOrDemoAuthProvider({
         if (rt) {
           setMeraRuntime(rt);
           setUser(meraUserFromRuntime(rt));
-        } else {
-          const raw = await storageGet(STORAGE_KEY);
-          if (raw) setUser(JSON.parse(raw) as SessionUser);
         }
       } catch {
         /* ignore */
@@ -368,70 +304,30 @@ function MeraOrDemoAuthProvider({
     })();
   }, []);
 
-  const loginWithEmail = useCallback(
-    async (email: string) => {
-      const cleaned = email.trim().toLowerCase();
-      if (!cleaned.includes("@")) throw new Error("Enter a valid email");
-      await clearMeraSession();
-      setMeraRuntime(null);
-      await persist({
-        id: `local:${cleaned}`,
-        email: cleaned,
-        displayName: cleaned.split("@")[0]!,
-        address: fakeAddressFromEmail(cleaned),
-        privy: false,
-      });
-    },
-    [persist],
-  );
-
-  const signupWithEmail = useCallback(
-    async (email: string, displayName?: string) => {
-      const cleaned = email.trim().toLowerCase();
-      if (!cleaned.includes("@")) throw new Error("Enter a valid email");
-      await clearMeraSession();
-      setMeraRuntime(null);
-      await persist({
-        id: `local:${cleaned}`,
-        email: cleaned,
-        displayName: (displayName || cleaned.split("@")[0]!).trim(),
-        address: fakeAddressFromEmail(cleaned),
-        privy: false,
-      });
-    },
-    [persist],
-  );
-
   const loginWithMera = useCallback(
     async (mode: "create" | "signin" | "auto" = "auto") => {
       const rt = await ensureMeraLogin(mode);
       setMeraRuntime(rt);
-      await persist(meraUserFromRuntime(rt));
+      setUser(meraUserFromRuntime(rt));
       setReady(true);
     },
-    [persist],
+    [],
   );
 
   const logout = useCallback(async () => {
     await clearMeraSession();
     setMeraRuntime(null);
-    await persist(null);
-  }, [persist]);
+    setUser(null);
+  }, []);
 
-  const authMethod: AuthMethod = user?.mera
-    ? "mera"
-    : user
-      ? USE_DEMO_AUTH
-        ? "demo"
-        : "mera"
-      : null;
+  const authMethod: AuthMethod = user?.mera ? "mera" : null;
 
   const value = useMemo(
     () => ({
       user,
       ready,
       privyMode: false,
-      missingPrivyConfig: Boolean(missingConfig) && !meraNativeReady(),
+      missingPrivyConfig: Boolean(missingConfig),
       meraAvailable: meraNativeReady(),
       authMethod,
       sendOtp: async () => {
@@ -445,15 +341,19 @@ function MeraOrDemoAuthProvider({
       },
       loginWithMera,
       otpStatus: "initial",
-      loginWithEmail,
-      signupWithEmail,
+      loginWithEmail: async () => {
+        throw new Error("Demo auth removed — use Mera passkey or Privy");
+      },
+      signupWithEmail: async () => {
+        throw new Error("Demo auth removed — use Mera passkey or Privy");
+      },
       logout,
       getEthereumProvider: async () => {
         if (meraRuntime) return meraRuntime.provider;
         throw new Error("No wallet — sign in with Mera passkey first");
       },
     }),
-    [user, ready, missingConfig, authMethod, loginWithMera, loginWithEmail, signupWithEmail, logout, meraRuntime],
+    [user, ready, missingConfig, authMethod, loginWithMera, logout, meraRuntime],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

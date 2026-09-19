@@ -100,7 +100,7 @@ export type PrivyTradeResult = ExecuteTradeResult & {
 
 /**
  * Real trade path (Privy + ecosystem):
- * 1. Faucet MockAUSD + MON when the embedded wallet is thin
+ * 1. Faucet Agora AUSD + MON when the wallet is thin
  * 2. Privy wallet signs approve + commitBuy on Monad testnet
  * 3. API hot-wallet waits delay-blocks, pulls Pyth, executeBuy (anyone can execute)
  */
