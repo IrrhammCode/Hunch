@@ -54,19 +54,6 @@ export type WalletSnapshot = {
   explorer: string;
 };
 
-export type DemoTradeResult = {
-  mode: string;
-  trader: string;
-  roundId: string;
-  market: string;
-  side: string;
-  amountAUSD: string;
-  yes: string;
-  no: string;
-  executeTx: string;
-  spot: { yes: string; no: string };
-};
-
 export type CommitCalldata = {
   chainId: number;
   market: string;
@@ -210,11 +197,6 @@ export function fetchSponsorPerks() {
   }>("/v1/sponsors/status");
 }
 
-/** Shared demo hot-wallet snapshot (local testing only). */
-export function fetchDemoMe() {
-  return get<WalletSnapshot>("/v1/demo/me");
-}
-
 /** Balances + positions for any wallet (Privy embedded address). */
 export function fetchWallet(address: string) {
   return get<WalletSnapshot>(`/v1/wallet/${address}`);
@@ -253,19 +235,6 @@ export function fetchQuote(side: "YES" | "NO", amountAUSD: string, market?: stri
   }>("/v1/quote", { side, amountAUSD, market });
 }
 
-/** Demo path — server hot wallet executes trade. Not used by UI (Privy real path). */
-export function demoTrade(side: "UP" | "DOWN", amountAUSD = "10", symbol?: string) {
-  return post<DemoTradeResult>("/v1/demo/trade", { side, amountAUSD, symbol });
-}
-
-export function demoRedeem(roundId: string) {
-  return post<{ payout: string; tx: string; sideWon: string }>("/v1/demo/redeem", { roundId });
-}
-
-/** Server demo faucet — UI uses Privy /v1/wallet/faucet only. */
-export function demoFaucet(amountAUSD = "1000") {
-  return post<{ ausd: string; tx: string }>("/v1/demo/faucet", { amountAUSD });
-}
 
 export type PerplMarket = {
   id: number;

@@ -78,8 +78,8 @@ export default function OptionsExchangeScreen() {
       toast.show("Market closed", { body: "Keeper is listing the next series." });
       return;
     }
-    if (privyMode && !user?.address) {
-      toast.error("Wallet not ready", "Finish Privy login first.");
+    if (!privyMode || !user?.address) {
+      toast.error("Auth required", "Sign in with Privy to place a real trade.");
       return;
     }
     setBusy(side);
@@ -97,23 +97,17 @@ export default function OptionsExchangeScreen() {
 
       let hash = "";
       let roundId = active.roundId || "—";
-      if (privyMode && user?.address) {
-        const provider = await getEthereumProvider();
-        const result = await placePrivyTrade({
-          provider,
-          address: user.address,
-          side,
-          amountAUSD: amount,
-          symbol: active.symbol,
-          market: active.market || undefined,
-        });
-        hash = result.executeTx;
-        roundId = result.roundId || roundId;
-      } else {
-        const result = await demoTrade(side, amount, active.symbol);
-        hash = result.executeTx;
-        roundId = result.roundId;
-      }
+      const provider = await getEthereumProvider();
+      const result = await placePrivyTrade({
+        provider,
+        address: user.address,
+        side,
+        amountAUSD: amount,
+        symbol: active.symbol,
+        market: active.market || undefined,
+      });
+      hash = result.executeTx;
+      roundId = result.roundId || roundId;
 
       setLastFill({ side, symbol: active.symbol, tx: hash, roundId });
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

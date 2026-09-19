@@ -6,7 +6,7 @@ import React, {
   useMemo,
   useState,
 } from "react";
-import { fetchDemoMe, fetchWallet, type WalletSnapshot } from "../api/client";
+import { fetchWallet, type WalletSnapshot } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 
 type WalletContextValue = {
@@ -28,10 +28,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const refresh = useCallback(async () => {
     try {
       setError(null);
-      if (privyMode && address) {
+      if (address) {
         setMe(await fetchWallet(address));
-      } else if (!privyMode) {
-        setMe(await fetchDemoMe());
       } else {
         setMe(null);
       }

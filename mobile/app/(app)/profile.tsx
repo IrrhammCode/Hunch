@@ -4,6 +4,7 @@ import * as Haptics from "expo-haptics";
 import { Pressable, ScrollView, StyleSheet, Text, View, ActivityIndicator } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/src/auth/AuthContext";
+import { fetchZerionPortfolio } from "@/src/api/client";
 import { Screen } from "@/src/components/Screen"
 import { Icon } from "@/src/components/Icon";
 import { useToast } from "@/src/components/Toast";
