@@ -262,6 +262,7 @@ export function demoRedeem(roundId: string) {
   return post<{ payout: string; tx: string; sideWon: string }>("/v1/demo/redeem", { roundId });
 }
 
+/** Server demo faucet — UI uses Privy /v1/wallet/faucet only. */
 export function demoFaucet(amountAUSD = "1000") {
   return post<{ ausd: string; tx: string }>("/v1/demo/faucet", { amountAUSD });
 }
