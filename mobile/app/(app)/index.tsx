@@ -16,7 +16,6 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
-  demoTrade,
   fetchCurrentRound,
   fetchQuote,
   fetchRound,
@@ -221,31 +220,27 @@ export default function HunchScreen() {
         let no: string;
         let hash: string;
 
-        if (privyMode && user?.address) {
-          const provider = await getEthereumProvider();
-          const result = await placePrivyTrade({
-            provider,
-            address: user.address,
-            side,
-            amountAUSD: amount,
-            symbol: getSelectedMarket().symbol,
-            market: getSelectedMarket().market || undefined,
-          });
-          roundId = result.roundId;
-          yes = result.yes;
-          no = result.no;
-          hash = result.executeTx;
-          setLastResult(
-            `${getSelectedMarket().symbol} ${side} · R${roundId}${result.funded ? " · funded" : ""}`,
-          );
-        } else {
-          const result = await demoTrade(side, amount, getSelectedMarket().symbol);
-          roundId = result.roundId;
-          yes = result.yes;
-          no = result.no;
-          hash = result.executeTx;
-          setLastResult(`${getSelectedMarket().symbol} ${side} · R${roundId}`);
+        const privy = user?.address && privyMode;
+        if (!privy) {
+          toast.error("Privy required", "Sign in with email OTP to trade onchain.");
+          return;
         }
+        const provider = await getEthereumProvider();
+        const result = await placePrivyTrade({
+          provider,
+          address: user!.address!,
+          side,
+          amountAUSD: amount,
+          symbol: getSelectedMarket().symbol,
+          market: getSelectedMarket().market || undefined,
+        });
+        roundId = result.roundId;
+        yes = result.yes;
+        no = result.no;
+        hash = result.executeTx;
+        setLastResult(
+          `${getSelectedMarket().symbol} ${side} · R${roundId}${result.funded ? " · funded" : ""}`,
+        );
 
         await addHunch({
           roundId,

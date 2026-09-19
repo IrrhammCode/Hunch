@@ -59,19 +59,25 @@ export function PerpTradingTicket() {
   }, [currentPrice, leverage, side]);
 
   const handleTrade = async () => {
-    if (!activeMarket) return;
+    if (!activeMarket) {
+      toast.error("No market", "Perpl markets must load from the API first.");
+      return;
+    }
+    if (!user?.address) {
+      toast.error("Privy required", "Sign in to place a Perpl order.");
+      return;
+    }
     if (marginNum < 5) {
       toast.error("Margin too small", "Minimum margin is 5 AUSD.");
       return;
     }
 
-    const userAddress = user?.address || me?.address || "";
-
+    const userAddress = user.address;
     setSubmitting(true);
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     try {
-      await placePerplOrder({
+      const res = await placePerplOrder({
         trader: userAddress,
         symbol: activeMarket.symbol,
         side,

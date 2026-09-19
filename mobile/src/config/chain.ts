@@ -54,11 +54,13 @@ export function looksLikeBundleId(value: string) {
 export const PRIVY_CLIENT_ID_OK =
   Boolean(PRIVY_CLIENT_ID) && !looksLikeBundleId(PRIVY_CLIENT_ID);
 
-/** Real Privy only — no mock/design mode in production paths. */
-export const USE_DEMO_AUTH =
-  process.env.EXPO_PUBLIC_USE_DEMO_AUTH === "1" || !PRIVY_APP_ID;
+/** Explicit demo login only — not used when Privy IDs are missing. */
+export const USE_DEMO_AUTH = process.env.EXPO_PUBLIC_USE_DEMO_AUTH === "1";
 
 export const HAS_PRIVY = Boolean(PRIVY_APP_ID) && PRIVY_CLIENT_ID_OK;
+
+/** Production path: real Privy wallet trades. */
+export const REAL_TRADING = HAS_PRIVY && !USE_DEMO_AUTH;
 
 export const CHAIN_ID = monadTestnet.id;
 

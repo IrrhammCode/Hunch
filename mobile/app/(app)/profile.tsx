@@ -78,18 +78,16 @@ export default function ProfileScreen() {
   const onFaucet = async () => {
     setBusy(true);
     try {
-      if (privyMode && user?.address) {
-        const r = await fundPrivyWallet(user.address);
-        await refresh();
-        toast.success(
-          "Funded 1,000 AUSD",
-          `AUSD ${Number(r.ausd).toFixed(2)} · MON ${Number(r.mon).toFixed(3)}`,
-        );
-      } else {
-        const r = await demoFaucet("1000");
-        await refresh();
-        toast.success("Faucet Success", `+1000 AUSD · balance ${Number(r.ausd).toFixed(2)}`);
+      if (!user?.address) {
+        toast.error("Wallet not ready", "Sign in with Privy first.");
+        return;
       }
+      const r = await fundPrivyWallet(user.address);
+      await refresh();
+      toast.success(
+        "Funded AUSD",
+        `AUSD ${Number(r.ausd).toFixed(2)} · MON ${Number(r.mon).toFixed(3)}`,
+      );
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (e) {
       toast.error("Faucet failed", e instanceof Error ? e.message : String(e));
@@ -145,7 +143,7 @@ export default function ProfileScreen() {
             <View style={styles.onlineStatusCol}>
               <View style={styles.onlinePill}>
                 <View style={styles.greenDot} />
-                <Text style={styles.onlinePillText}>{privyMode ? "PRIVY" : "DEMO"}</Text>
+                <Text style={styles.onlinePillText}>{privyMode ? "PRIVY" : "SETUP"}</Text>
               </View>
             </View>
           </View>

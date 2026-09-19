@@ -253,7 +253,7 @@ export function fetchQuote(side: "YES" | "NO", amountAUSD: string, market?: stri
   }>("/v1/quote", { side, amountAUSD, market });
 }
 
-/** Demo path — server hot wallet executes trade. */
+/** Demo path — server hot wallet executes trade. Not used by UI (Privy real path). */
 export function demoTrade(side: "UP" | "DOWN", amountAUSD = "10", symbol?: string) {
   return post<DemoTradeResult>("/v1/demo/trade", { side, amountAUSD, symbol });
 }

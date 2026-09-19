@@ -127,8 +127,9 @@ function addressFromPrivyWallets(wallets: any[]): string | null {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  if (USE_DEMO_AUTH || !HAS_PRIVY) {
-    return <DemoAuthProvider missingConfig={!HAS_PRIVY}>{children}</DemoAuthProvider>;
+  // Real Privy whenever IDs are valid; demo shell only if EXPO_PUBLIC_USE_DEMO_AUTH=1
+  if (!HAS_PRIVY) {
+    return <DemoAuthProvider missingConfig={!USE_DEMO_AUTH}>{children}</DemoAuthProvider>;
   }
   return <PrivyAuthProvider>{children}</PrivyAuthProvider>;
 }

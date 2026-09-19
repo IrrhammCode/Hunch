@@ -113,6 +113,9 @@ export async function placePrivyTrade(params: {
   market?: string;
 }): Promise<PrivyTradeResult> {
   const { provider, address, side, amountAUSD, symbol, market } = params;
+  if (!address || !/^0x[a-fA-F0-9]{40}$/.test(address)) {
+    throw new Error("Privy wallet required — email OTP first.");
+  }
   await ensureChain(provider);
 
   let funded = false;

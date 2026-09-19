@@ -54,7 +54,7 @@ Edit `mobile/.env` (never commit it):
 | `EXPO_PUBLIC_API_URL` | yes | Phone → API. LAN `http://<PC_IP>:8787` or public tunnel |
 | `EXPO_PUBLIC_PRIVY_APP_ID` | for real OTP | From Privy dashboard |
 | `EXPO_PUBLIC_PRIVY_CLIENT_ID` | for real OTP | Mobile App Client ID |
-| `EXPO_PUBLIC_USE_DEMO_AUTH` | no | `1` = local demo login only |
+| `EXPO_PUBLIC_USE_DEMO_AUTH` | optional | `1` = local UI shell without Privy — **not for judges** |
 | `EXPO_PUBLIC_MONAD_RPC_URL` | no | Default `https://testnet-rpc.monad.xyz` |
 
 Find your PC LAN IP:
@@ -128,7 +128,7 @@ Use this checklist after a clean install:
 
 If YOU shows the Privy setup box instead of login, env vars did not load — fix `.env` and restart Metro.
 
-**Demo auth fallback:** set `EXPO_PUBLIC_USE_DEMO_AUTH=1` and restart. Login becomes local demo; trades use the server hot wallet.
+**Demo auth fallback (local only):** set `EXPO_PUBLIC_USE_DEMO_AUTH=1` **only if** Privy IDs are empty for UI work. With Privy IDs set, the app always uses **real Privy** + **real** `placePrivyTrade` / Perpl API — no server hot-wallet demo path in the mobile UI.
 
 ---
 

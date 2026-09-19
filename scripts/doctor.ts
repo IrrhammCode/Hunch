@@ -178,8 +178,10 @@ async function main() {
     fail(
       "EXPO_PUBLIC_USE_DEMO_AUTH is set — judge mode expects real Privy. Unset and restart Metro.",
     );
+  } else if (!present(mEnv.EXPO_PUBLIC_PRIVY_APP_ID) && !present(mEnv.EXPO_PUBLIC_PRIVY_CLIENT_ID)) {
+    warn("Privy keys empty — app will show setup, not mock data");
   } else {
-    ok("EXPO_PUBLIC_USE_DEMO_AUTH unset (judge mode)");
+    ok("EXPO_PUBLIC_USE_DEMO_AUTH unset (real Privy path)");
   }
 
   // eas.json preview placeholder

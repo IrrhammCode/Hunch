@@ -45,16 +45,13 @@ export default function PositionsScreen() {
     try {
       let txHash = "";
       let payoutLine = "";
-      if (privyMode && user?.address) {
-        const provider = await getEthereumProvider();
-        const r = await redeemPrivyPosition({ provider, address: user.address, market });
-        txHash = r.tx;
-        payoutLine = "Payout sent to your wallet";
-      } else {
-        const r = await demoRedeem(roundId);
-        txHash = r.tx;
-        payoutLine = `+${r.payout} AUSD · ${r.sideWon} won`;
+      if (!user?.address || !privyMode) {
+        throw new Error("Sign in with Privy to claim onchain.");
       }
+      const provider = await getEthereumProvider();
+      const r = await redeemPrivyPosition({ provider, address: user.address, market });
+      txHash = r.tx;
+      payoutLine = "Payout sent to your wallet";
       await refreshWallet();
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       toast.show("Claimed", {

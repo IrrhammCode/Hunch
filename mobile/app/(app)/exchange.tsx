@@ -4,7 +4,6 @@ import * as Haptics from "expo-haptics";
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
-  demoTrade,
   fetchMarketBoard,
   type MarketBoardRow,
 } from "@/src/api/client";
