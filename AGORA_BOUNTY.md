@@ -63,13 +63,13 @@ Guide: https://docs.agora.finance/instant-settlement/guides/getting-testnet-toke
 
 Mainnet AUSD (not required for demo): `0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a`
 
-### Mera — Monad passkey auth
+### Mera — Monad passkey auth (implemented)
 
 - Official guide uses **`monadTestnet` (10143)** in viem examples
 - React Native: https://docs.monad.xyz/guides/mera/react-native.md
-- Web: https://docs.monad.xyz/guides/mera.md
-- Package: `@category-labs/mera` + viem + bip32/bip39
-- Needs HTTPS/localhost + WebAuthn PRF (iCloud Keychain etc.)
+- Code: `mobile/src/auth/mera.ts` + login UI “Continue with Passkey (Mera)”
+- Packages: `@category-labs/mera@0.2.0`, `react-native-passkey@3.6.1`, viem, `@scure/bip32`, `@scure/bip39`
+- rpId default `accounts.hunch.app` — host AASA/assetlinks (`MERA_SETUP.md`, `site/.well-known/`)
 - Accounts are **EOAs** — gas = MON on Monad testnet
 
 ---
