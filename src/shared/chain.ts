@@ -3,6 +3,7 @@ import path from "path";
 import { Contract, JsonRpcProvider, Wallet, ethers } from "ethers";
 import { MONAD_TESTNET } from "../../config/addresses";
 import { enabledMarkets, type MarketMeta } from "./markets";
+import { maskRpcUrl, resolveMonadRpcUrl, type MonadRpcRole } from "./rpc";
 
 export type Deployment = {
   network: string;
@@ -12,7 +13,7 @@ export type Deployment = {
   btcUsdFeedId: string;
   markets?: { symbol: string; pair: string; feedId: string }[];
   collateral: { address: string; decimals: number; symbol: string; faucet?: string; note?: string };
-  perpl?: { exchange: string; apiUrl: string; wsUrl: string; chainId: number };
+  perpl?: { exchange: string; apiUrl: string; wsUrl: string; chainId: number; collateral?: string };
   vault?: string;
 };
 
@@ -45,24 +46,34 @@ export function activeMarkets(dep?: Deployment): MarketMeta[] {
   return enabledMarkets();
 }
 
-let cachedProvider: JsonRpcProvider | null = null;
+const providerCache = new Map<string, JsonRpcProvider>();
 
-export function getProvider() {
+/**
+ * Monad provider — prefers Quicknode via role-specific env then MONAD_RPC_URL.
+ * Roles: api (default), keeper (txs), indexer, hardhat.
+ */
+export function getProvider(role: MonadRpcRole = "default") {
   loadEnv();
-  if (cachedProvider) return cachedProvider;
-  cachedProvider = new JsonRpcProvider(
-    process.env.MONAD_RPC_URL || MONAD_TESTNET.rpcUrl,
-    MONAD_TESTNET.chainId,
-    { staticNetwork: true },
-  );
-  return cachedProvider;
+  const url = resolveMonadRpcUrl(role);
+  const hit = providerCache.get(url);
+  if (hit) return hit;
+  const p = new JsonRpcProvider(url, MONAD_TESTNET.chainId, {
+    staticNetwork: true,
+  });
+  providerCache.set(url, p);
+  return p;
 }
 
 export function getWallet() {
   loadEnv();
   const key = process.env.PRIVATE_KEY;
   if (!key) throw new Error("PRIVATE_KEY required");
-  return new Wallet(key.startsWith("0x") ? key : `0x${key}`, getProvider());
+  // Writes go through keeper-role RPC (isolates Quicknode credits if KEEPER_RPC_URL set)
+  return new Wallet(key.startsWith("0x") ? key : `0x${key}`, getProvider("keeper"));
+}
+
+export function logProviderSource(role: MonadRpcRole = "default") {
+  return `${role} rpc ${maskRpcUrl(resolveMonadRpcUrl(role))}`;
 }
 
 export function loadAbi(name: string): any[] {

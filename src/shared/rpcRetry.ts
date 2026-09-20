@@ -1,6 +1,6 @@
 /**
- * Soft retry for Monad public RPC rate limits (requests limited to 15/sec).
- * Used by keeper/API around flaky eth_call bursts.
+ * Soft retry for Monad RPC rate limits (public + Quicknode Build).
+ * QN codes: -32007 per-sec · -32008 per-min · -32011 method · HTTP 429 plan RPS
  */
 export function isRateLimitError(e: unknown): boolean {
   const msg = [
@@ -13,7 +13,9 @@ export function isRateLimitError(e: unknown): boolean {
   ]
     .filter(Boolean)
     .join(" ");
-  return /rate limit|too many requests|limited to \d+\/sec|-32090|-32011/i.test(msg);
+  return /rate limit|too many requests|limited to \d+\/sec|plan allows|per-second|per-minute|-32005|-32007|-32008|-32011|-32090|status.?429|\b429\b/i.test(
+    msg,
+  );
 }
 
 export async function sleep(ms: number) {
@@ -24,8 +26,8 @@ export async function withRpcRetry<T>(
   fn: () => Promise<T>,
   opts: { attempts?: number; baseDelayMs?: number; label?: string } = {},
 ): Promise<T> {
-  const attempts = opts.attempts ?? 4;
-  const base = opts.baseDelayMs ?? 400;
+  const attempts = opts.attempts ?? 5;
+  const base = opts.baseDelayMs ?? 350;
   let last: unknown;
   for (let i = 0; i < attempts; i++) {
     try {
@@ -33,7 +35,7 @@ export async function withRpcRetry<T>(
     } catch (e) {
       last = e;
       if (i === attempts - 1 || !isRateLimitError(e)) throw e;
-      const wait = base * Math.pow(2, i) + Math.floor(Math.random() * 150);
+      const wait = base * Math.pow(2, i) + Math.floor(Math.random() * 200);
       console.warn(
         `[rpc] rate limited${opts.label ? ` (${opts.label})` : ""} — retry ${i + 1}/${attempts - 1} in ${wait}ms`,
       );

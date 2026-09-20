@@ -124,7 +124,7 @@ export async function getUserPerplAccount(address: string) {
           openedAt: Number(row?.at ?? Date.now()),
           status: row?.st === 4 || row?.r ? "CLOSED" : "OPEN",
           execution: "perpl-ws" as const,
-          accountId,
+          accountId: accountId ?? undefined,
         };
       });
     } catch (e: any) {
@@ -157,7 +157,10 @@ export async function getUserPerplAccount(address: string) {
   const provider = getProvider();
   let onchainAUSD = "0";
   try {
-    const token = dep.perpl?.collateral || PERPL_TESTNET.collateralToken;
+    const token =
+      (dep.perpl as any)?.collateral ||
+      PERPL_TESTNET.collateralToken ||
+      dep.collateral.address;
     const erc20 = new ethers.Contract(token, ["function balanceOf(address) view returns (uint256)"], provider);
     onchainAUSD = ethers.formatUnits(await erc20.balanceOf(address), 6);
   } catch {

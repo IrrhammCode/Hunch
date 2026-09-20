@@ -1,12 +1,13 @@
 /**
- * Tenderly + Zerion debug/portfolio routes (builder perks).
+ * Tenderly + Zerion routes — real APIs only. No mint/mock simulation.
+ * Missing Tenderly keys → 503 with clear error (keys still being claimed).
  */
 import { Hono } from "hono";
 import { ethers } from "ethers";
 import { perkStatus, tenderlyConfigured } from "../shared/sponsors";
 import { simulateOnTenderly, parseSimStatus } from "../shared/tenderly";
 import { fetchZerionPortfolio, fetchZerionPositions } from "./zerion";
-import { ausdContract, getProvider, getWallet, loadDeployment } from "../shared/chain";
+import { getProvider, getWallet, loadDeployment } from "../shared/chain";
 
 export const sponsorsApp = new Hono();
 
@@ -16,20 +17,41 @@ sponsorsApp.get("/v1/sponsors/status", (c) => c.json(perkStatus()));
 sponsorsApp.get("/v1/zerion/portfolio/:address", async (c) => {
   const address = c.req.param("address");
   if (!ethers.isAddress(address)) return c.json({ error: "bad address" }, 400);
-  return c.json(await fetchZerionPortfolio(address));
+  try {
+    return c.json(await fetchZerionPortfolio(address));
+  } catch (e: any) {
+    return c.json({ error: e?.message || String(e), configured: false }, 503);
+  }
 });
 
 sponsorsApp.get("/v1/zerion/positions/:address", async (c) => {
   const address = c.req.param("address");
   if (!ethers.isAddress(address)) return c.json({ error: "bad address" }, 400);
-  return c.json(await fetchZerionPositions(address));
+  try {
+    return c.json(await fetchZerionPositions(address));
+  } catch (e: any) {
+    return c.json({ error: e?.message || String(e), configured: false }, 503);
+  }
 });
 
 /**
- * Simulate a contract call on Tenderly before sending onchain.
+ * Real Tenderly simulate (no mock fallback).
  * Body: { to, data, from?, value?, networkId? }
+ * kind "agora-faucet" simulates official faucet requestFunds (not MockAUSD mint).
  */
 sponsorsApp.post("/v1/tenderly/simulate", async (c) => {
+  if (!tenderlyConfigured()) {
+    return c.json(
+      {
+        configured: false,
+        ok: false,
+        error:
+          "Tenderly keys not ready. Set real TENDERLY_ACCOUNT / TENDERLY_PROJECT / TENDERLY_ACCESS_KEY in root .env (placeholders rejected).",
+      },
+      503,
+    );
+  }
+
   const body = await c.req.json<{
     to?: string;
     data?: string;
@@ -37,7 +59,7 @@ sponsorsApp.post("/v1/tenderly/simulate", async (c) => {
     from?: string;
     value?: string;
     networkId?: number;
-    kind?: "raw" | "ausd-approve" | "note";
+    kind?: "raw" | "agora-faucet";
   }>();
   const dep = loadDeployment();
   const provider = getProvider();
@@ -45,19 +67,23 @@ sponsorsApp.post("/v1/tenderly/simulate", async (c) => {
 
   let to = body.to || dep.collateral.address;
   let data = body.data || body.input || "0x";
-  let from = body.from || wallet.address;
+  const from = body.from || wallet.address;
 
   if (!ethers.isAddress(to) || !ethers.isAddress(from)) {
     return c.json({ error: "bad from/to" }, 400);
   }
 
-  // Convenience: simulate AUSD faucet mint to a target
-  if (body.kind === "ausd-approve" && body.to) {
-    to = dep.collateral.address;
-    data = ausdContract(provider).interface.encodeFunctionData("mint", [
-      body.to,
-      ethers.parseUnits("100", 6),
+  // Official Agora faucet — requestFunds(address), never MockAUSD.mint
+  if (body.kind === "agora-faucet") {
+    const recipient = body.to || from;
+    if (!ethers.isAddress(recipient)) return c.json({ error: "bad recipient" }, 400);
+    const faucetAddr =
+      (dep.collateral as any).faucet || "0xd236c18D274E54FAccC3dd9DDA4b27965a73ee6C";
+    const iface = new ethers.Interface([
+      "function requestFunds(address recipient) external returns (bool)",
     ]);
+    to = faucetAddr;
+    data = iface.encodeFunctionData("requestFunds", [recipient]);
   }
 
   const sim = await simulateOnTenderly({
@@ -76,7 +102,6 @@ sponsorsApp.post("/v1/tenderly/simulate", async (c) => {
     tenderlyUrl: sim.tenderlyUrl,
     error: sim.error,
     status: sim.status,
-    // keep payload small — full body available in Tenderly UI
     simulationId: sim.body?.simulation?.id || sim.body?.simulation?.simulation_id || null,
   });
 });

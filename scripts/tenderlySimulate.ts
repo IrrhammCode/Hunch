@@ -1,19 +1,20 @@
 /**
- * Simulate HunchMarket interactions on Tenderly before live testnet txs.
+ * Simulate real Hunch/Perpl interactions on Tenderly before live testnet txs.
+ * No MockAUSD.mint — Agora faucet requestFunds only.
  *
  * Usage:
  *   npx ts-node scripts/tenderlySimulate.ts
+ *   npx ts-node scripts/tenderlySimulate.ts agora-faucet [0xAddr]
  *   npx ts-node scripts/tenderlySimulate.ts commit
- *   npx ts-node scripts/tenderlySimulate.ts approve 0xYourWallet
  *
- * Env: TENDERLY_ACCOUNT, TENDERLY_PROJECT, TENDERLY_ACCESS_KEY
- *      MONAD_RPC_URL (prefer Quicknode)
+ * Env: TENDERLY_* (real keys only), MONAD_RPC_URL (Quicknode)
  */
 import { ethers } from "ethers";
 import { loadEnv, loadDeployment, getProvider, getWallet, marketContract, ausdContract } from "../src/shared/chain";
 import { simulateOnTenderly } from "../src/shared/tenderly";
-import { perkStatus } from "../src/shared/sponsors";
+import { perkStatus, tenderlyConfigured } from "../src/shared/sponsors";
 import { feedIdFor } from "../src/shared/markets";
+import { factoryContract } from "../src/shared/chain";
 
 loadEnv();
 
@@ -25,28 +26,35 @@ async function main() {
   const provider = getProvider();
 
   console.log("[tenderly]", perkStatus());
+  if (!tenderlyConfigured() && mode !== "help") {
+    console.error("Tenderly keys not ready — waiting on perk. No mock fallback.");
+    process.exit(1);
+  }
+
   if (mode === "help") {
     console.log(`
 Commands:
-  approve [addr]   Simulate MockAUSD mint 100 AUSD to addr (default deployer)
-  commit           Simulate approve + note commitBuy target on current market
-  execute          Simulate executeBuy on latest open intent (calldata dry-run)
+  agora-faucet [addr]  Simulate Agora faucet requestFunds (not MockAUSD mint)
+  commit               Simulate AUSD.approve + commitBuy on current BTC market
+  execute              Simulate executeBuy on latest open intent
 
-Requires Tenderly env keys. Does NOT send live txs.
+Real Tenderly API only. Does NOT send live txs.
 `);
     return;
   }
 
-  if (mode === "approve" || mode === "faucet") {
+  if (mode === "agora-faucet" || mode === "faucet" || mode === "approve") {
     const target = ethers.isAddress(arg || "") ? arg : wallet.address;
-    const data = ausdContract(provider).interface.encodeFunctionData("mint", [
-      target,
-      ethers.parseUnits("100", 6),
+    const faucetAddr =
+      (dep.collateral as any).faucet || "0xd236c18D274E54FAccC3dd9DDA4b27965a73ee6C";
+    const iface = new ethers.Interface([
+      "function requestFunds(address recipient) external returns (bool)",
     ]);
+    const data = iface.encodeFunctionData("requestFunds", [target]);
     const sim = await simulateOnTenderly({
       networkId: dep.chainId,
       from: wallet.address,
-      to: dep.collateral.address,
+      to: faucetAddr,
       data,
       save: true,
     });
@@ -55,11 +63,6 @@ Requires Tenderly env keys. Does NOT send live txs.
   }
 
   if (mode === "commit") {
-    const factoryAbi = [
-      "function latestRoundByFeed(bytes32) view returns (uint256)",
-      "function rounds(uint256) view returns (address)",
-    ];
-    const { factoryContract } = await import("../src/shared/chain");
     const factory = factoryContract(provider, dep);
     const feed = feedIdFor("BTC");
     const idBn = (await factory.latestRoundByFeed(feed)) as bigint;

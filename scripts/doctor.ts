@@ -121,7 +121,12 @@ async function main() {
   else warn("Monad RPC is public default — claim Quicknode perk to avoid rate limits");
 
   if (present(rootEnv.TENDERLY_ACCESS_KEY) && present(rootEnv.TENDERLY_ACCOUNT)) {
-    ok(`Tenderly keys ${maskHint(rootEnv.TENDERLY_ACCESS_KEY)}`);
+    if (/^your-|^xxx|^todo/i.test(rootEnv.TENDERLY_ACCOUNT || "") ||
+        /^your-|^xxx|^todo/i.test(rootEnv.TENDERLY_ACCESS_KEY || "")) {
+      warn("Tenderly still placeholder — waiting on perk claim (no mock fallback)");
+    } else {
+      ok(`Tenderly keys ${maskHint(rootEnv.TENDERLY_ACCESS_KEY)}`);
+    }
   } else {
     warn("Tenderly not set — npm run sim:tx unavailable (claim Pro perk)");
   }

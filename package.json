@@ -23,6 +23,7 @@
     "backend": "ts-node src/keeper/index.ts",
     "smoke:demo": "ts-node scripts/smokeDemo.ts",
     "doctor": "ts-node scripts/doctor.ts",
+    "rpc:check": "ts-node scripts/rpcCheck.ts",
     "sim:tx": "ts-node scripts/tenderlySimulate.ts",
     "clean": "hardhat clean"
   },
@@ -33,6 +34,7 @@
     "@types/chai": "^4.3.20",
     "@types/mocha": "^10.0.10",
     "@types/node": "^22.10.2",
+    "@types/ws": "^8.18.1",
     "chai": "^4.5.0",
     "ethers": "^6.13.4",
     "hardhat": "^2.22.17",
