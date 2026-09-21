@@ -5,6 +5,34 @@ import { colors } from "../theme";
 
 export type IconName = keyof typeof Ionicons.glyphMap;
 
+/** Safe names — fallback if a glyph is missing in the installed icon font. */
+const FALLBACK: IconName = "ellipse";
+
+function safeName(name: string): IconName {
+  try {
+    const map = (Ionicons as any).glyphMap || {};
+    if (map[name]) return name as IconName;
+    // common aliases
+    const alt: Record<string, IconName> = {
+      refresh: "refresh",
+      "stats-chart": "stats-chart",
+      "trending-up": "trending-up",
+      "time-outline": "time-outline",
+      "qr-code-outline": "qr-code-outline",
+      "sparkles-outline": "sparkles-outline",
+      "water-outline": "water-outline",
+      "shield-checkmark-outline": "shield-checkmark-outline",
+      "arrow-back": "arrow-back",
+      "settings-outline": "settings-outline",
+      "person-circle": "person-circle",
+      "copy-outline": "copy-outline",
+    };
+    return alt[name] || FALLBACK;
+  } catch {
+    return FALLBACK;
+  }
+}
+
 /** Real Ionicons — never emoji in product UI. */
 export function Icon({
   name,
@@ -12,12 +40,14 @@ export function Icon({
   color = colors.ink,
   style,
 }: {
-  name: IconName;
+  name: IconName | string;
   size?: number;
   color?: string;
   style?: StyleProp<TextStyle>;
 }) {
-  return <Ionicons name={name} size={size} color={color} style={style as any} />;
+  return (
+    <Ionicons name={safeName(String(name))} size={size} color={color} style={style as any} />
+  );
 }
 
 /** Asset glyph for market logos (₿ ETH S) — typographic, not emoji rockets. */

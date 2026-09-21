@@ -1,15 +1,5 @@
 import { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import Svg, {
-  Circle,
-  Defs,
-  Line,
-  LinearGradient,
-  Path,
-  Stop,
-  Text as SvgText,
-  Rect,
-} from "react-native-svg";
 import { colors, type } from "@/src/theme";
 
 export type ChartPoint = {
@@ -20,8 +10,6 @@ export type ChartPoint = {
   c: number;
   v?: number;
 };
-
-const PAD = { top: 14, right: 52, bottom: 28, left: 10 };
 
 function fmtPrice(n: number) {
   if (!Number.isFinite(n)) return "—";
@@ -36,17 +24,30 @@ function fmtTime(t: number) {
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
-function synthesize(symbolHint: string, n = 60): ChartPoint[] {
-  const base = symbolHint === "ETH" ? 2655 : symbolHint === "SOL" ? 148 : symbolHint === "MON" ? 0.42 : 81240;
+function synthesize(symbol: string, n = 64): ChartPoint[] {
+  const base =
+    symbol === "ETH" ? 2655 : symbol === "SOL" ? 148 : symbol === "MON" ? 0.42 : 81240;
   const t0 = Math.floor(Date.now() / 1000) - n * 60;
-  let p = base * 0.98;
+  let p = base * 0.978;
   return Array.from({ length: n }, (_, i) => {
-    const target = base + Math.sin(i / 6) * base * 0.004;
-    p += (target - p) * 0.2;
-    return { t: t0 + i * 60, o: p, h: p * 1.001, l: p * 0.999, c: p, v: 40 + (i % 9) * 4 };
+    const wave = Math.sin(i / 5.5) * base * 0.004 + Math.cos(i / 11) * base * 0.002;
+    const target = base + wave + ((i / n) * 0.018 - 0.006) * base;
+    p += (target - p) * 0.18;
+    return {
+      t: t0 + i * 60,
+      o: p,
+      h: Math.max(p, base) * 1.0008,
+      l: Math.min(p, base) * 0.9992,
+      c: p,
+      v: 40 + (i % 11) * 3,
+    };
   });
 }
 
+/**
+ * Pure View chart — no react-native-svg (avoids unimplemented element on old dev clients).
+ * Grid + line dots + area bars + last-price rail + H/L + volume strip.
+ */
 export function PriceChart({
   points,
   width = 340,
@@ -60,241 +61,155 @@ export function PriceChart({
   showVolume?: boolean;
   symbol?: string;
 }) {
-  const volH = showVolume ? 36 : 0;
-  const plotH = height - PAD.top - PAD.bottom - volH;
-  const plotW = width - PAD.left - PAD.right;
-
   const data = useMemo(() => {
     if (points && points.length >= 2) return points;
     return synthesize(symbol, 64);
   }, [points, symbol]);
 
   const geom = useMemo(() => {
-    const points = data;
-    if (!points || points.length < 2) return null;
-    const closes = points.map((p) => p.c);
-    const highs = points.map((p) => p.h ?? p.c);
-    const lows = points.map((p) => p.l ?? p.c);
+    const closes = data.map((p) => p.c);
+    const highs = data.map((p) => p.h ?? p.c);
+    const lows = data.map((p) => p.l ?? p.c);
     let minP = Math.min(...lows);
     let maxP = Math.max(...highs);
     if (maxP - minP < 1e-8) {
-      const pad = Math.abs(maxP) * 0.001 || 1;
+      const pad = Math.abs(maxP) * 0.002 || 1;
       minP -= pad;
       maxP += pad;
     }
     const range = maxP - minP;
-    const yFor = (p: number) => PAD.top + (1 - (p - minP) / range) * plotH;
-    const xFor = (i: number) => PAD.left + (i / (points.length - 1)) * plotW;
-
-    const coords = points.map((p, i) => ({ x: xFor(i), y: yFor(p.c), p }));
-    const line = coords
-      .map((c, i) => `${i === 0 ? "M" : "L"}${c.x.toFixed(2)},${c.y.toFixed(2)}`)
-      .join(" ");
-    const area = `${line} L${coords[coords.length - 1]!.x.toFixed(2)},${(PAD.top + plotH).toFixed(2)} L${coords[0]!.x.toFixed(2)},${(PAD.top + plotH).toFixed(2)} Z`;
-
-    const up = closes[closes.length - 1]! >= closes[0]!;
     const last = closes[closes.length - 1]!;
-    const lastY = yFor(last);
+    const up = last >= closes[0]!;
     const high = Math.max(...highs);
     const low = Math.min(...lows);
-    const highIdx = highs.indexOf(high);
-    const lowIdx = lows.indexOf(low);
-
-    const maxVol = Math.max(...points.map((p) => p.v || 0), 1);
-    const volBase = PAD.top + plotH + 10;
-    const vols = points.map((p, i) => {
-      const h = ((p.v || 0) / maxVol) * (volH - 8);
-      return { x: xFor(i), y: volBase + (volH - 8 - h), h: Math.max(h, 0.5) };
-    });
-
-    // 4 horizontal grid levels
-    const gridYs = [0.2, 0.4, 0.6, 0.8].map((f) => ({
-      y: PAD.top + plotH * f,
-      price: maxP - range * f,
-    }));
-
+    const yFor = (p: number) => 1 - (p - minP) / range;
+    const maxVol = Math.max(...data.map((p) => p.v || 0), 1);
     return {
-      line,
-      area,
-      up,
-      last,
-      lastY,
-      high,
-      low,
-      highPt: coords[highIdx],
-      lowPt: coords[lowIdx],
-      vols,
-      gridYs,
       minP,
       maxP,
-      firstT: points[0]!.t,
-      lastT: points[points.length - 1]!.t,
-      midT: points[Math.floor(points.length / 2)]!.t,
+      last,
+      up,
+      high,
+      low,
+      yFor,
+      maxVol,
+      firstT: data[0]!.t,
+      midT: data[Math.floor(data.length / 2)]!.t,
+      lastT: data[data.length - 1]!.t,
+      sample: data.filter((_, i) => i % Math.max(1, Math.floor(data.length / 32)) === 0),
     };
-  }, [data, plotH, plotW, volH]);
+  }, [data]);
 
-  const stroke = geom?.up ? colors.up : colors.down;
-  const fillId = geom?.up ? "gUp" : "gDown";
+  const stroke = geom.up ? colors.up : colors.down;
+  const gridYs = [0.25, 0.5, 0.75];
 
   return (
     <View style={[styles.wrap, { width, height }]}>
-      {geom ? (
-        <Svg width={width} height={height}>
-          <Defs>
-            <LinearGradient id="gUp" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0" stopColor={colors.up} stopOpacity="0.42" />
-              <Stop offset="0.55" stopColor={colors.up} stopOpacity="0.1" />
-              <Stop offset="1" stopColor={colors.up} stopOpacity="0" />
-            </LinearGradient>
-            <LinearGradient id="gDown" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0" stopColor={colors.down} stopOpacity="0.42" />
-              <Stop offset="0.55" stopColor={colors.down} stopOpacity="0.1" />
-              <Stop offset="1" stopColor={colors.down} stopOpacity="0" />
-            </LinearGradient>
-          </Defs>
+      {/* Y labels rail */}
+      <View style={styles.yRail}>
+        {[1, 0.75, 0.5, 0.25, 0].map((f) => (
+          <Text key={f} style={styles.yLabel}>
+            {fmtPrice(geom.minP + (geom.maxP - geom.minP) * f)}
+          </Text>
+        ))}
+      </View>
 
-          {/* grid + y labels */}
-          {geom.gridYs.map((g) => (
-            <Line
-              key={g.y}
-              x1={PAD.left}
-              y1={g.y}
-              x2={PAD.left + plotW}
-              y2={g.y}
-              stroke="rgba(242,241,236,0.06)"
-              strokeWidth={1}
+      <View style={styles.plot}>
+        {gridYs.map((f) => (
+          <View key={f} style={[styles.grid, { top: `${f * 100}%` }]} />
+        ))}
+
+        {/* Area columns */}
+        <View style={styles.areaRow}>
+          {geom.sample.map((p, i) => {
+            const h = Math.max(4, geom.yFor(p.c) * 100);
+            return (
+              <View key={`a${i}`} style={styles.areaCol}>
+                <View
+                  style={{
+                    width: "100%",
+                    height: `${h}%`,
+                    backgroundColor: stroke,
+                    opacity: 0.12,
+                    borderTopWidth: 2,
+                    borderTopColor: stroke,
+                  }}
+                />
+              </View>
+            );
+          })}
+        </View>
+
+        {/* Point dots for line feel */}
+        <View style={styles.dotLayer} pointerEvents="none">
+          {geom.sample.map((p, i) => (
+            <View
+              key={`d${i}`}
+              style={[
+                styles.dot,
+                {
+                  left: `${(i / Math.max(1, geom.sample.length - 1)) * 96}%`,
+                  bottom: `${geom.yFor(p.c) * 88}%`,
+                  backgroundColor: stroke,
+                },
+              ]}
             />
           ))}
-          {geom.gridYs.map((g) => (
-            <SvgText
-              key={`l-${g.y}`}
-              x={width - PAD.right + 6}
-              y={g.y + 3}
-              fill={colors.muted}
-              fontSize={9}
-              fontFamily="Menlo"
-            >
-              {fmtPrice(g.price)}
-            </SvgText>
-          ))}
-
-          {/* area + line */}
-          <Path d={geom.area} fill={`url(#${fillId})`} />
-          <Path
-            d={geom.line}
-            stroke={stroke}
-            strokeWidth={2.25}
-            fill="none"
-            strokeLinejoin="round"
-            strokeLinecap="round"
-          />
-
-          {/* high / low markers */}
-          {geom.highPt ? (
-            <>
-              <Circle cx={geom.highPt.x} cy={geom.highPt.y} r={3} fill={colors.up} />
-              <SvgText
-                x={Math.min(geom.highPt.x + 6, width - PAD.right - 28)}
-                y={geom.highPt.y - 6}
-                fill={colors.up}
-                fontSize={9}
-                fontFamily="Menlo"
-              >
-                H {fmtPrice(geom.high)}
-              </SvgText>
-            </>
-          ) : null}
-          {geom.lowPt ? (
-            <>
-              <Circle cx={geom.lowPt.x} cy={geom.lowPt.y} r={3} fill={colors.down} />
-              <SvgText
-                x={Math.min(geom.lowPt.x + 6, width - PAD.right - 28)}
-                y={geom.lowPt.y + 12}
-                fill={colors.down}
-                fontSize={9}
-                fontFamily="Menlo"
-              >
-                L {fmtPrice(geom.low)}
-              </SvgText>
-            </>
-          ) : null}
-
-          {/* last price dashed + tag */}
-          <Line
-            x1={PAD.left}
-            y1={geom.lastY}
-            x2={PAD.left + plotW}
-            y2={geom.lastY}
-            stroke={stroke}
-            strokeWidth={1}
-            strokeDasharray="4 3"
-            opacity={0.85}
-          />
-          <Rect
-            x={width - PAD.right + 2}
-            y={geom.lastY - 9}
-            width={PAD.right - 4}
-            height={18}
-            rx={3}
-            fill={stroke}
-          />
-          <SvgText
-            x={width - PAD.right + 6}
-            y={geom.lastY + 3.5}
-            fill="#0A0B0D"
-            fontSize={9}
-            fontFamily="Menlo"
-            fontWeight="700"
-          >
-            {fmtPrice(geom.last)}
-          </SvgText>
-
-          {/* volume */}
-          {showVolume
-            ? geom.vols.map((v, i) => (
-                <Rect
-                  key={`v${i}`}
-                  x={v.x - 1.2}
-                  y={v.y}
-                  width={2.4}
-                  height={v.h}
-                  fill={geom.up ? colors.up : colors.down}
-                  opacity={0.28}
-                />
-              ))
-            : null}
-
-          {/* x axis */}
-          <SvgText x={PAD.left} y={height - 8} fill={colors.muted} fontSize={9} fontFamily="Menlo">
-            {fmtTime(geom.firstT)}
-          </SvgText>
-          <SvgText
-            x={PAD.left + plotW / 2 - 16}
-            y={height - 8}
-            fill={colors.muted}
-            fontSize={9}
-            fontFamily="Menlo"
-          >
-            {fmtTime(geom.midT)}
-          </SvgText>
-          <SvgText
-            x={PAD.left + plotW - 34}
-            y={height - 8}
-            fill={colors.muted}
-            fontSize={9}
-            fontFamily="Menlo"
-          >
-            {fmtTime(geom.lastT)}
-          </SvgText>
-        </Svg>
-      ) : (
-        <View style={styles.empty}>
-          <Text style={styles.emptyTitle}>Chart warming up</Text>
-          <Text style={styles.emptyBody}>
-            Waiting for price history. Latest quote still trades live.
-          </Text>
         </View>
-      )}
+
+        {/* Last price rail */}
+        <View
+          style={[
+            styles.lastRail,
+            { bottom: `${geom.yFor(geom.last) * 88}%`, borderColor: stroke },
+          ]}
+        />
+        <View
+          style={[
+            styles.lastTag,
+            { bottom: `${geom.yFor(geom.last) * 88}%`, backgroundColor: stroke },
+          ]}
+        >
+          <Text style={styles.lastTagText}>{fmtPrice(geom.last)}</Text>
+        </View>
+
+        {/* H / L */}
+        <View style={[styles.hlTag, { top: 4 }]}>
+          <Text style={[styles.hlText, { color: colors.up }]}>H {fmtPrice(geom.high)}</Text>
+        </View>
+        <View style={[styles.hlTag, { bottom: 36 }]}>
+          <Text style={[styles.hlText, { color: colors.down }]}>L {fmtPrice(geom.low)}</Text>
+        </View>
+      </View>
+
+      {/* Volume strip */}
+      {showVolume ? (
+        <View style={styles.volRow}>
+          {geom.sample.map((p, i) => {
+            const h = ((p.v || 0) / geom.maxVol) * 22;
+            return (
+              <View key={`v${i}`} style={styles.volCol}>
+                <View
+                  style={{
+                    width: 3,
+                    height: Math.max(2, h),
+                    backgroundColor: stroke,
+                    opacity: 0.35,
+                    borderRadius: 1,
+                  }}
+                />
+              </View>
+            );
+          })}
+        </View>
+      ) : null}
+
+      {/* X labels */}
+      <View style={styles.xRow}>
+        <Text style={styles.xLabel}>{fmtTime(geom.firstT)}</Text>
+        <Text style={styles.xLabel}>{fmtTime(geom.midT)}</Text>
+        <Text style={styles.xLabel}>{fmtTime(geom.lastT)}</Text>
+      </View>
     </View>
   );
 }
@@ -306,23 +221,92 @@ const styles = StyleSheet.create({
     backgroundColor: "#0E1014",
     borderWidth: 1,
     borderColor: "rgba(242,241,236,0.08)",
+    paddingVertical: 8,
   },
-  empty: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 20,
-    gap: 6,
+  yRail: {
+    position: "absolute",
+    right: 6,
+    top: 8,
+    bottom: 52,
+    justifyContent: "space-between",
+    zIndex: 5,
   },
-  emptyTitle: {
-    color: colors.ink,
-    fontFamily: type.bold,
-    fontSize: 14,
-  },
-  emptyBody: {
+  yLabel: {
     color: colors.muted,
-    fontFamily: type.body,
-    fontSize: 12,
-    textAlign: "center",
+    fontFamily: type.data,
+    fontSize: 8,
+    textAlign: "right",
   },
+  plot: {
+    flex: 1,
+    marginHorizontal: 8,
+    marginRight: 48,
+    marginBottom: 4,
+  },
+  grid: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: "rgba(242,241,236,0.06)",
+  },
+  areaRow: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 1,
+  },
+  areaCol: { flex: 1, height: "100%", justifyContent: "flex-end" },
+  dotLayer: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  dot: {
+    position: "absolute",
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+  },
+  lastRail: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    borderTopWidth: 1,
+    borderStyle: "dashed",
+  },
+  lastTag: {
+    position: "absolute",
+    right: -40,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    borderRadius: 3,
+  },
+  lastTagText: {
+    color: "#0A0B0D",
+    fontFamily: type.data,
+    fontSize: 8,
+    fontWeight: "700",
+  },
+  hlTag: { position: "absolute", left: 4 },
+  hlText: { fontFamily: type.data, fontSize: 9 },
+  volRow: {
+    height: 24,
+    marginHorizontal: 8,
+    marginRight: 48,
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 1,
+  },
+  volCol: { flex: 1, alignItems: "center", justifyContent: "flex-end" },
+  xRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginHorizontal: 8,
+    marginRight: 48,
+    marginTop: 4,
+  },
+  xLabel: { color: colors.muted, fontFamily: type.data, fontSize: 8 },
 });

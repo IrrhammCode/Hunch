@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/src/auth/AuthContext";
 import { Screen } from "@/src/components/Screen"
 import { MockBanner } from "@/src/components/MockBanner";
+import { EmptyState } from "@/src/components/ui";
 import { Icon } from "@/src/components/Icon";
 import { useToast } from "@/src/components/Toast";
 import { explorerTx } from "@/src/config/chain";
@@ -254,12 +255,11 @@ export default function PositionsScreen() {
           {tab === "perps" && (
             <View style={styles.posList}>
               {displayPerps.length === 0 ? (
-                <View style={styles.posCard}>
-                  <Text style={styles.posSymbol}>No open Perpl positions</Text>
-                  <Text style={styles.posStatLabel}>
-                    Place a trade on TRADE tab after linking a Perpl account.
-                  </Text>
-                </View>
+                <EmptyState
+                  icon="trending-up"
+                  title="No open Perpl positions"
+                  body="Open TRADE → pick BTC/ETH → LONG or SHORT to open a mock/live perp."
+                />
               ) : null}
               {displayPerps.map((pos) => {
                 const isClosing = closingId === pos.id;
@@ -322,12 +322,11 @@ export default function PositionsScreen() {
           {tab === "hunch" && (
             <View style={styles.posList}>
               {hunchPositions.length === 0 ? (
-                <View style={styles.posCard}>
-                  <Text style={styles.posSymbol}>No hunch positions</Text>
-                  <Text style={styles.posStatLabel}>
-                    Swipe UP/DOWN on HUNCH tab to open a 60s market.
-                  </Text>
-                </View>
+                <EmptyState
+                  icon="time-outline"
+                  title="No hunch positions"
+                  body="Swipe UP/DOWN on TRADE tab to open a 60s market."
+                />
               ) : null}
               {hunchPositions.map((h) => (
                 <View key={h.roundId} style={styles.posCard}>

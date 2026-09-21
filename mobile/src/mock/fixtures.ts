@@ -237,7 +237,7 @@ export function mockPerplAccount(address: string) {
 }
 
 export function mockCurrentRound(symbol = "BTC") {
-  const s = symbol.toUpperCase();
+  const s = (symbol || "BTC").toUpperCase();
   const strike = MOCK_PRICES[s] ?? 100;
   return {
     round: {
@@ -245,12 +245,12 @@ export function mockCurrentRound(symbol = "BTC") {
       market: `0xMockMarket${s}1842`,
       strike: String(Math.round(strike * 1e8)),
       expo: 8,
-      startTime: now() - 20,
-      expiry: now() + 40,
+      startTime: now() - 15,
+      expiry: now() + 45,
       status: "open" as const,
     },
     spot: { yes: "0.56", no: "0.44" },
-    timeRemaining: 40,
+    timeRemaining: 45,
   };
 }
 

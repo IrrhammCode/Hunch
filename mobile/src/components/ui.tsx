@@ -132,14 +132,14 @@ export function EmptyState({
   title: string;
   body: string;
   glyph?: string;
-  icon?: "trending-up" | "time-outline" | "wallet-outline" | "flash";
+  icon?: "trending-up" | "time-outline" | "wallet-outline" | "flash" | string;
 }) {
   return (
     <View style={styles.empty}>
       {glyph ? (
         <Text style={styles.emptyGlyph}>{glyph}</Text>
       ) : (
-        <Icon name={icon} size={28} color={colors.brand} />
+        <Icon name={icon as any} size={28} color={colors.brand} />
       )}
       <Text style={styles.emptyTitle}>{title}</Text>
       <Text style={styles.emptyBody}>{body}</Text>
@@ -242,6 +242,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.line,
     gap: 8,
+    alignItems: "center",
   },
   emptyGlyph: {
     color: colors.brand,
