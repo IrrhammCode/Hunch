@@ -21,6 +21,8 @@
     "indexer": "ts-node src/indexer/index.ts",
     "api": "ts-node src/api/index.ts",
     "backend": "ts-node src/keeper/index.ts",
+    "dev": "cmd /c scripts\\dev.cmd",
+    "dev:mobile": "cmd /c scripts\\dev-mobile.cmd",
     "smoke:demo": "ts-node scripts/smokeDemo.ts",
     "doctor": "ts-node scripts/doctor.ts",
     "rpc:check": "ts-node scripts/rpcCheck.ts",

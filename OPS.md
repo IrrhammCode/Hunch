@@ -8,12 +8,25 @@ Setup: [PRIVY_SETUP.md](./PRIVY_SETUP.md) · [EAS_SETUP.md](./EAS_SETUP.md) · *
 
 ---
 
+## Day-of start (one command)
+
+```powershell
+cd C:\Users\Irham\Documents\code\metropolis
+scripts\win-npm.cmd run dev          # opens API + Keeper windows
+scripts\win-npm.cmd run dev:mobile   # Expo Metro (3rd terminal)
+```
+
+Windows npm quirk: always use `scripts\win-npm.cmd` at repo root (System32 `npm` stub).  
+Split alternative: `scripts\term-api.cmd` · `scripts\term-keeper.cmd` · `cd mobile && npm run dev`
+
+---
+
 ## Setup order (do once, then daily)
 
 1. **Perks** — [PERKS.md](./PERKS.md) → Quicknode RPC + Tenderly + Zerion keys in root `.env`
 2. **Privy** — [PRIVY_SETUP.md](./PRIVY_SETUP.md) → App ID + Client ID in `mobile/.env`
 3. **EAS / device** — [EAS_SETUP.md](./EAS_SETUP.md) → install dev client on iPhone
-4. **Backend** — root `.env` · `npm run api` + `npm run keeper`
+4. **Backend** — root `.env` · `npm run dev` (API + Keeper) or `npm run api` + `npm run keeper`
 5. **Preflight** — `npm run doctor` (must not fail on Privy / PRIVATE_KEY)
 6. **Smoke** — `npm run smoke:demo`
 7. **Judge path** — [mobile/DEMO.md](./mobile/DEMO.md)
