@@ -3,7 +3,7 @@
  * Clearly labeled mock; never used when EXPO_PUBLIC_USE_MOCK!=1.
  */
 
-export const MOCK_ADDRESS = "0xHunchMock000000000000000000000000DEAD" as const;
+export const MOCK_ADDRESS = "0x8f2a4E9a1b3C5d7E9f0A1b2C3d4E5f67890abcde";
 export const MOCK_ADDRESS_CHECKSUM = "0x8f2a4E9a1b3C5d7E9f0A1b2C3d4E5f67890abcde";
 
 const now = () => Math.floor(Date.now() / 1000);
@@ -18,31 +18,42 @@ export const MOCK_PRICES: Record<string, number> = {
   PUMP: 0.0042,
 };
 
+/** Deterministic series so charts look stable between remounts. */
 function walkSeries(symbol: string, bars: number, resolutionMin: number) {
-  const base = MOCK_PRICES[symbol] ?? 100;
+  const s = symbol.toUpperCase();
+  const base = MOCK_PRICES[s] ?? 100;
+  const n = Math.max(24, Math.min(bars || 90, 120));
   const pts: { t: number; o: number; h: number; l: number; c: number; v: number }[] = [];
-  let p = base * (1 - 0.012);
-  const t0 = now() - bars * resolutionMin * 60;
-  for (let i = 0; i < bars; i++) {
-    const drift = (Math.sin(i / 7) + Math.cos(i / 3)) * base * 0.0015;
-    const noise = (Math.random() - 0.48) * base * 0.002;
+  let p = base * 0.978;
+  const t0 = now() - n * resolutionMin * 60;
+  for (let i = 0; i < n; i++) {
+    const wave = Math.sin(i / 5.5 + s.length) * base * 0.004 + Math.cos(i / 11) * base * 0.0025;
+    const trend = ((i / n) * 0.022 - 0.008) * base;
+    const target = base + wave + trend * 0.15;
     const o = p;
-    p = Math.max(base * 0.92, p + drift + noise);
-    // gentle pull toward mock last
-    p += (base - p) * 0.04;
+    p = p + (target - p) * 0.18 + Math.sin(i * 1.7 + s.charCodeAt(0)) * base * 0.0008;
     const c = p;
-    const h = Math.max(o, c) * (1 + Math.random() * 0.0012);
-    const l = Math.min(o, c) * (1 - Math.random() * 0.0012);
+    const h = Math.max(o, c) * 1.0012;
+    const l = Math.min(o, c) * 0.9988;
     pts.push({
-      t: t0 + i * resolutionMin * 60,
+      t: t0 + i * Math.max(1, resolutionMin) * 60,
       o,
       h,
       l,
       c,
-      v: 40 + Math.abs(c - o) * 800 + Math.random() * 30,
+      v: 55 + ((Math.abs(c - o) / base) * 8000) + (i % 7) * 3,
     });
   }
+  // pin last close near mock last
+  const last = pts[pts.length - 1]!;
+  last.c = base;
+  last.h = Math.max(last.h, base);
+  last.l = Math.min(last.l, base);
   return pts;
+}
+
+export function mockSeries(symbol: string, bars = 48) {
+  return walkSeries(symbol, bars, 1);
 }
 
 export function mockPriceLatest(symbol: string) {
@@ -62,9 +73,9 @@ export function mockPriceHistory(symbol: string, resolution = 1, bars = 90) {
   const series = walkSeries(s, bars, resolution);
   return {
     symbol: s,
-    resolution,
+    resolution: resolution || 1,
     bars: series,
-    last: series[series.length - 1]?.c ?? MOCK_PRICES[s],
+    last: series[series.length - 1]?.c ?? MOCK_PRICES[s] ?? 100,
     source: "mock-design",
   };
 }

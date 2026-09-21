@@ -185,10 +185,10 @@ async function main() {
   }
 
   const mock = mEnv.EXPO_PUBLIC_USE_MOCK?.trim();
-  if (present(mock) && mock === "1") {
-    warn("EXPO_PUBLIC_USE_MOCK=1 — FULL MOCK design mode (no live chain/API trades)");
+  if (!present(mock) || mock !== "0") {
+    warn("Mobile MOCK design mode ON (EXPO_PUBLIC_USE_MOCK unset or != 0) — charts/fills are fixtures");
   } else {
-    ok("EXPO_PUBLIC_USE_MOCK off — real path");
+    ok("EXPO_PUBLIC_USE_MOCK=0 — real path");
   }
 
   const demo = mEnv.EXPO_PUBLIC_USE_DEMO_AUTH?.trim();

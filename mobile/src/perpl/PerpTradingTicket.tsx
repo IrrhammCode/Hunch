@@ -7,32 +7,23 @@ import { useToast } from "@/src/components/Toast";
 import { usePerplMarkets, placePerplOrder, PerplMarket } from "./perplClient";
 import { Icon } from "@/src/components/Icon";
 import { colors, radius, space, type, monoStyle } from "@/src/theme";
+import { PriceChart } from "@/src/components/PriceChart";
+import { mockPriceHistory } from "@/src/mock/fixtures";
 
 const LEVERAGE_OPTIONS = [2, 5, 10, 20] as const;
 const MARGIN_CHIPS = ["25", "50", "100", "500"] as const;
 
 function MiniWaveChart({ symbol }: { symbol?: string }) {
-  // Placeholder frame — live chart lives on Market Detail after selecting a symbol
+  const sym = symbol || "BTC";
   return (
     <View style={styles.chartContainer}>
-      <View style={styles.waveGraphic}>
-        <View style={[styles.waveDot, { bottom: 12, left: 10 }]} />
-        <View style={[styles.waveDot, { bottom: 24, left: 50 }]} />
-        <View style={[styles.waveDot, { bottom: 18, left: 90 }]} />
-        <View style={[styles.waveDot, { bottom: 40, left: 140 }]} />
-        <View style={[styles.waveDot, { bottom: 32, left: 190 }]} />
-        <View style={[styles.waveDot, { bottom: 58, left: 240 }]} />
-        <View style={[styles.waveDot, { bottom: 50, left: 280 }]} />
-        <View style={[styles.peakDot, { bottom: 70, right: 14 }]} />
-        <View style={styles.waveFillOverlay} />
-        {symbol ? (
-          <View style={{ position: "absolute", left: 10, top: 8 }}>
-            <Text style={{ color: colors.muted, fontFamily: type.data, fontSize: 10 }}>
-              {symbol} chart → open MARKETS row
-            </Text>
-          </View>
-        ) : null}
-      </View>
+      <PriceChart
+        points={mockPriceHistory(sym, 1, 40).bars as any}
+        width={280}
+        height={110}
+        symbol={sym}
+        showVolume={false}
+      />
     </View>
   );
 }
@@ -181,7 +172,7 @@ export function PerpTradingTicket() {
         </View>
 
         {/* Wave area graphic */}
-        <MiniWaveChart />
+        <MiniWaveChart symbol={activeMarket?.symbol || selectedSymbol} />
 
         {/* 3 Stats Columns */}
         <View style={styles.statsRow}>

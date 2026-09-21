@@ -29,6 +29,8 @@ import { AmountChip, PrimaryButton } from "@/src/components/ui";
 import { getSelectedMarket, setSelectedMarket } from "@/src/market/selection";
 import { useWallet } from "@/src/wallet/WalletContext";
 import { placePrivyTrade } from "@/src/wallet/privyTrade";
+import { USE_MOCK } from "@/src/config/chain";
+import { mockMarketBoard, mockPerplMarkets, mockPriceHistory, mockPriceLatest } from "@/src/mock/fixtures";
 import { colors, monoStyle, radius, space, type } from "@/src/theme";
 
 const { width: W } = Dimensions.get("window");
@@ -94,6 +96,24 @@ export default function MarketDetailScreen() {
 
   const loadMeta = useCallback(async () => {
     try {
+      if (USE_MOCK) {
+        const board = mockMarketBoard() as any;
+        const perps = mockPerplMarkets();
+        const latest = mockPriceLatest(symbol);
+        setPrice(latest.price);
+        const row =
+          board.markets.find((m: any) => m.symbol === symbol) ||
+          board.markets.find((m: any) => m.status === "open") ||
+          board.markets[0] ||
+          null;
+        setBlitz(row);
+        const p = perps.markets.find((m) => m.symbol.toUpperCase() === symbol) || null;
+        setPerp(p);
+        if (p?.markPrice) setPrice(p.markPrice);
+        setErr(null);
+        setLoading(false);
+        return;
+      }
       const [board, perps, latest] = await Promise.allSettled([
         fetchMarketBoard("monad"),
         fetchPerplMarkets(),
@@ -135,6 +155,13 @@ export default function MarketDetailScreen() {
   const loadChart = useCallback(async () => {
     setChartLoading(true);
     try {
+      if (USE_MOCK) {
+        const hist = mockPriceHistory(symbol, tfCfg.resolution, tfCfg.bars);
+        setBars(hist.bars as ChartPoint[]);
+        setPrice(hist.last ?? null);
+        setChartLoading(false);
+        return;
+      }
       const hist = await fetchPriceHistory(symbol, tfCfg.resolution, tfCfg.bars);
       const pts: ChartPoint[] = (hist.bars || []).map((b) => ({
         t: b.t,
@@ -147,11 +174,24 @@ export default function MarketDetailScreen() {
       setBars(pts);
       if (hist.last != null) setPrice(hist.last);
     } catch {
-      /* keep previous bars */
+      if (USE_MOCK) {
+        const hist = mockPriceHistory(symbol, 1, 64);
+        setBars(hist.bars as ChartPoint[]);
+        setPrice(hist.last ?? null);
+      }
     } finally {
       setChartLoading(false);
     }
   }, [symbol, tfCfg.resolution, tfCfg.bars]);
+
+  // Seed instantly so chart never waits on network
+  useEffect(() => {
+    const seed = mockPriceHistory(symbol, 1, 72);
+    setBars(seed.bars as ChartPoint[]);
+    setPrice(seed.last ?? null);
+    const p = mockPerplMarkets().markets.find((m) => m.symbol.toUpperCase() === symbol);
+    if (p) setPerp(p);
+  }, [symbol]);
 
   useEffect(() => {
     loadMeta();
@@ -359,16 +399,17 @@ export default function MarketDetailScreen() {
             </Pressable>
           </View>
 
-          {/* Chart */}
+          {/* Chart — always mounted with seeded series */}
           <View>
-            {chartLoading && bars.length < 2 ? (
-              <View style={[styles.chartShell, { width: CHART_W, height: CHART_H }]}>
-                <ActivityIndicator color={colors.brand} />
-                <Text style={styles.chartLoading}>Loading {symbol} · {tf}</Text>
-              </View>
-            ) : (
-              <PriceChart points={bars} width={CHART_W} height={CHART_H} />
-            )}
+            <PriceChart
+              points={bars}
+              width={CHART_W}
+              height={CHART_H}
+              symbol={symbol}
+            />
+            {chartLoading ? (
+              <Text style={styles.chartLoading}>Updating {symbol} · {tf}…</Text>
+            ) : null}
             {err ? <Text style={styles.err}>{err}</Text> : null}
           </View>
 
@@ -581,7 +622,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
   },
-  chartLoading: { color: colors.muted, fontFamily: type.body, fontSize: 12 },
+  chartLoading: { color: colors.muted, fontFamily: type.body, fontSize: 11, marginTop: 6, textAlign: "center" },
   err: { color: colors.danger, fontFamily: type.body, fontSize: 12, marginTop: 6 },
   statsCard: {
     flexDirection: "row",

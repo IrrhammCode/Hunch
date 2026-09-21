@@ -2,12 +2,14 @@ import { Text, View, StyleSheet } from "react-native";
 import { USE_MOCK } from "@/src/config/chain";
 import { colors, type } from "@/src/theme";
 
-/** Persistent banner when EXPO_PUBLIC_USE_MOCK=1 — design fixtures only. */
+/** Persistent banner when mock design mode is on. */
 export function MockBanner() {
   if (!USE_MOCK) return null;
   return (
     <View style={styles.bar}>
-      <Text style={styles.text}>MOCK DESIGN MODE — fixtures only · set EXPO_PUBLIC_USE_MOCK=0 for live</Text>
+      <Text style={styles.text}>
+        MOCK DESIGN MODE · charts & fills are fixtures · EXPO_PUBLIC_USE_MOCK=0 for live
+      </Text>
     </View>
   );
 }

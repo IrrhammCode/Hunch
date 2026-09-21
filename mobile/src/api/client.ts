@@ -15,6 +15,9 @@ import {
   MOCK_ADDRESS_CHECKSUM,
 } from "@/src/mock/fixtures";
 
+// Hard-default: mock when flag is anything but explicit "0"
+const MOCK = USE_MOCK || process.env.EXPO_PUBLIC_USE_MOCK !== "0";
+
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8787";
 
 async function get<T>(path: string): Promise<T> {
@@ -106,7 +109,7 @@ export type FaucetResult = {
 };
 
 export function fetchCurrentRound(symbol?: string) {
-  if (USE_MOCK) {
+  if (MOCK) {
     return Promise.resolve(mockCurrentRound(symbol) as CurrentRoundResponse);
   }
   const q = symbol ? `?symbol=${encodeURIComponent(symbol)}` : "";

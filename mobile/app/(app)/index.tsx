@@ -34,6 +34,8 @@ import { addHunch, listHunches, settleRound } from "@/src/hunchBook";
 import { useWallet } from "@/src/wallet/WalletContext";
 import { placePrivyTrade } from "@/src/wallet/privyTrade";
 import { PerpTradingTicket } from "@/src/perpl/PerpTradingTicket";
+import { PriceChart } from "@/src/components/PriceChart";
+import { mockPriceHistory, mockSeries } from "@/src/mock/fixtures";
 import { colors, radius, space, type } from "@/src/theme";
 
 const AMOUNTS = ["5", "10", "25"] as const;
@@ -381,6 +383,16 @@ export default function HunchScreen() {
           </View>
         </View>
         <MockBanner />
+
+        {/* Compact live chart for selected market */}
+        <View style={{ marginTop: 8, marginBottom: 4 }}>
+          <PriceChart
+            points={mockPriceHistory(getSelectedMarket().symbol || "BTC", 1, 48).bars as any}
+            width={SCREEN_W - 28}
+            height={148}
+            symbol={getSelectedMarket().symbol || "BTC"}
+          />
+        </View>
 
         {/* Trade Mode Segmenter */}
         <View style={styles.modeSegment}>

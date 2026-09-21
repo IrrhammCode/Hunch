@@ -115,7 +115,7 @@ export async function placePrivyTrade(params: {
   const { provider, address, side, amountAUSD, symbol, market } = params;
 
   // FULL MOCK design mode — labeled fake fill, no chain
-  if (process.env.EXPO_PUBLIC_USE_MOCK === "1" || provider?.isMock) {
+  if (process.env.EXPO_PUBLIC_USE_MOCK !== "0" || provider?.isMock) {
     const { mockTradeFill } = await import("../mock/fixtures");
     const result = mockTradeFill(side, amountAUSD, symbol || "BTC") as any;
     return {

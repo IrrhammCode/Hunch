@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useFocusEffect, router } from "expo-router";
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View, ActivityIndicator } from "react-native";
+import { Dimensions, Pressable, ScrollView, StyleSheet, Text, TextInput, View, ActivityIndicator } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import {
@@ -12,13 +12,16 @@ import {
 } from "@/src/api/client";
 import { Screen } from "@/src/components/Screen";
 import { MockBanner } from "@/src/components/MockBanner";
+import { PriceChart } from "@/src/components/PriceChart";
 import { AssetGlyph, Icon } from "@/src/components/Icon";
 import { getSelectedMarket, setSelectedMarket } from "@/src/market/selection";
+import { mockMarketBoard, mockPerplMarkets, mockSeries } from "@/src/mock/fixtures";
 import { colors, monoStyle, radius, space, type } from "@/src/theme";
 
 type FilterTab = "all" | "blitz" | "perps";
+const { width: W } = Dimensions.get("window");
 
-function MiniSparkline({ positive }: { positive: boolean }) {
+function MiniSparkline({ positive, symbol }: { positive: boolean; symbol?: string }) {
   const color = positive ? colors.up : colors.down;
   const heights = positive ? [8, 12, 9, 14, 11, 16, 18] : [16, 12, 14, 9, 11, 7, 5];
   return (
@@ -48,6 +51,14 @@ export default function MarketsScreen() {
   const load = useCallback(async () => {
     try {
       setLoading(true);
+      const { USE_MOCK } = await import("@/src/config/chain");
+      if (USE_MOCK) {
+        setBoard(mockMarketBoard() as any);
+        setPerplMarkets(mockPerplMarkets().markets as any);
+        setErr(null);
+        setLoading(false);
+        return;
+      }
       const [b, p] = await Promise.allSettled([
         fetchMarketBoard("monad"),
         fetchPerplMarkets(),
@@ -250,6 +261,19 @@ export default function MarketsScreen() {
             </View>
           )}
 
+          {/* Featured mini chart — always visible in mock/design */}
+          {(filter === "all" || filter === "perps") && (
+            <View style={styles.featuredChart}>
+              <View style={styles.featuredHead}>
+                <Text style={styles.featuredTitle}>BTC · LIVE CHART</Text>
+                <Text style={monoStyle(11, colors.muted)}>
+                  ${mockSeries("BTC", 1).slice(-1)[0]?.c?.toLocaleString(undefined, { maximumFractionDigits: 0 }) ?? "—"}
+                </Text>
+              </View>
+              <PriceChart points={mockSeries("BTC", 48)} width={W - 28} height={160} symbol="BTC" />
+            </View>
+          )}
+
           {/* TABLE HEADERS */}
           <View style={styles.tableHeaderRow}>
             <Text style={[styles.tableColHeader, { flex: 2 }]}>MARKET</Text>
@@ -412,6 +436,25 @@ const styles = StyleSheet.create({
     fontFamily: type.bold,
     fontSize: 10,
     letterSpacing: 0.5,
+  },
+  featuredChart: {
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radius.lg,
+    padding: space.sm,
+    backgroundColor: colors.bgCard,
+    gap: 8,
+  },
+  featuredHead: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  featuredTitle: {
+    color: colors.brand,
+    fontFamily: type.data,
+    fontSize: 11,
+    letterSpacing: 1,
   },
   pipe: {
     color: "#333742",
