@@ -184,6 +184,13 @@ async function main() {
     warn("EXPO_PUBLIC_MERA_RP_ID unset — defaulting to accounts.hunch.app (see MERA_SETUP.md)");
   }
 
+  const mock = mEnv.EXPO_PUBLIC_USE_MOCK?.trim();
+  if (present(mock) && mock === "1") {
+    warn("EXPO_PUBLIC_USE_MOCK=1 — FULL MOCK design mode (no live chain/API trades)");
+  } else {
+    ok("EXPO_PUBLIC_USE_MOCK off — real path");
+  }
+
   const demo = mEnv.EXPO_PUBLIC_USE_DEMO_AUTH?.trim();
   if (present(demo) && demo !== "0") {
     fail("EXPO_PUBLIC_USE_DEMO_AUTH is set — demo auth is removed. Unset and restart Metro.");

@@ -12,6 +12,7 @@ import {
 import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/src/auth/AuthContext";
+import { MockBanner } from "@/src/components/MockBanner";
 import { BrandMark } from "@/src/components/BrandMark";
 import { Screen } from "@/src/components/Screen";
 import { Field, PrimaryButton } from "@/src/components/ui";
@@ -131,6 +132,7 @@ export default function LoginScreen() {
         </Animated.View>
 
         <View style={styles.form}>
+          <MockBanner />
           {missingPrivyConfig ? (
             <View style={styles.setupBox}>
               <Text style={styles.setupTitle}>Privy not configured</Text>

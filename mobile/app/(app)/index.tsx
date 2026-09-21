@@ -24,6 +24,7 @@ import {
 import { useAuth } from "@/src/auth/AuthContext";
 import { BrandMark } from "@/src/components/BrandMark";
 import { Screen } from "@/src/components/Screen";
+import { MockBanner } from "@/src/components/MockBanner";
 import { Icon } from "@/src/components/Icon";
 import { useToast } from "@/src/components/Toast";
 import { AmountChip, BalanceChip, PrimaryButton } from "@/src/components/ui";
@@ -379,6 +380,7 @@ export default function HunchScreen() {
             <Text style={styles.plusIcon}>+</Text>
           </View>
         </View>
+        <MockBanner />
 
         {/* Trade Mode Segmenter */}
         <View style={styles.modeSegment}>

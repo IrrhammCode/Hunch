@@ -5,6 +5,7 @@ import { Linking, Pressable, ScrollView, StyleSheet, Text, View, ActivityIndicat
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/src/auth/AuthContext";
 import { Screen } from "@/src/components/Screen"
+import { MockBanner } from "@/src/components/MockBanner";
 import { Icon } from "@/src/components/Icon";
 import { useToast } from "@/src/components/Toast";
 import { explorerTx } from "@/src/config/chain";
@@ -116,6 +117,7 @@ export default function PositionsScreen() {
             <Text style={styles.pillVal}>${totalCollateral}</Text>
           </View>
         </View>
+        <MockBanner />
 
         <ScrollView
           style={{ flex: 1, width: "100%", alignSelf: "stretch" }}

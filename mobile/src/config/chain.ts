@@ -56,8 +56,15 @@ export const PRIVY_CLIENT_ID_OK =
 
 export const HAS_PRIVY = Boolean(PRIVY_APP_ID) && PRIVY_CLIENT_ID_OK;
 
-/** Real trades only — Mera passkey or Privy wallet. */
-export const REAL_TRADING = true;
+/**
+ * FULL MOCK MODE — design/demo until Tenderly + live keys are ready.
+ * EXPO_PUBLIC_USE_MOCK=1 → offline fixtures, mock wallet, fake fills (clearly labeled).
+ * EXPO_PUBLIC_USE_MOCK=0 → real API / Mera / Privy / Perpl.
+ */
+export const USE_MOCK = process.env.EXPO_PUBLIC_USE_MOCK === "1";
+
+/** Real trades only when mock is off. */
+export const REAL_TRADING = !USE_MOCK;
 
 export const CHAIN_ID = monadTestnet.id;
 

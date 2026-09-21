@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/src/auth/AuthContext";
 import { fetchZerionPortfolio } from "@/src/api/client";
 import { Screen } from "@/src/components/Screen"
+import { MockBanner } from "@/src/components/MockBanner";
 import { Icon } from "@/src/components/Icon";
 import { useToast } from "@/src/components/Toast";
 import { copyToClipboard } from "@/src/utils/clipboard";
@@ -105,6 +106,7 @@ export default function ProfileScreen() {
             <Text style={styles.networkText}>MONAD TESTNET</Text>
           </View>
         </View>
+        <MockBanner />
 
         {/* Title Header */}
         <View style={styles.header}>

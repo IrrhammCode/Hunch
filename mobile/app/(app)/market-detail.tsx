@@ -21,6 +21,7 @@ import {
 } from "@/src/api/client";
 import { useAuth } from "@/src/auth/AuthContext";
 import { Screen } from "@/src/components/Screen";
+import { MockBanner } from "@/src/components/MockBanner";
 import { Icon } from "@/src/components/Icon";
 import { useToast } from "@/src/components/Toast";
 import { PriceChart, type ChartPoint } from "@/src/components/PriceChart";
@@ -268,6 +269,7 @@ export default function MarketDetailScreen() {
   return (
     <Screen>
       <View style={[styles.wrap, { paddingTop: insets.top + 6 }]}>
+        <MockBanner />
         {/* Instrument strip */}
         <View style={styles.header}>
           <Pressable onPress={() => router.back()} hitSlop={12} style={styles.back}>

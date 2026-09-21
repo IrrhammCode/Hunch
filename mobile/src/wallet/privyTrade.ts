@@ -113,6 +113,20 @@ export async function placePrivyTrade(params: {
   market?: string;
 }): Promise<PrivyTradeResult> {
   const { provider, address, side, amountAUSD, symbol, market } = params;
+
+  // FULL MOCK design mode — labeled fake fill, no chain
+  if (process.env.EXPO_PUBLIC_USE_MOCK === "1" || provider?.isMock) {
+    const { mockTradeFill } = await import("../mock/fixtures");
+    const result = mockTradeFill(side, amountAUSD, symbol || "BTC") as any;
+    return {
+      ...result,
+      trader: address || result.trader,
+      intentId: "mock-1",
+      funded: true,
+      commitTx: result.executeTx,
+    };
+  }
+
   if (!address || !/^0x[a-fA-F0-9]{40}$/.test(address)) {
     throw new Error("Wallet required — Mera passkey or Privy login first.");
   }

@@ -1,3 +1,20 @@
+import { USE_MOCK } from "@/src/config/chain";
+import {
+  mockCurrentRound,
+  mockFaucet,
+  mockMarketBoard,
+  mockPerplAccount,
+  mockPerplMarkets,
+  mockPriceHistory,
+  mockPriceLatest,
+  mockSponsors,
+  mockTradeFill,
+  mockWallet,
+  mockZerion,
+  mockHash,
+  MOCK_ADDRESS_CHECKSUM,
+} from "@/src/mock/fixtures";
+
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8787";
 
 async function get<T>(path: string): Promise<T> {
@@ -89,11 +106,19 @@ export type FaucetResult = {
 };
 
 export function fetchCurrentRound(symbol?: string) {
+  if (USE_MOCK) {
+    return Promise.resolve(mockCurrentRound(symbol) as CurrentRoundResponse);
+  }
   const q = symbol ? `?symbol=${encodeURIComponent(symbol)}` : "";
   return get<CurrentRoundResponse>(`/v1/round/current${q}`);
 }
 
 export function fetchRound(id: string) {
+  if (USE_MOCK) {
+    return Promise.resolve({
+      round: { roundId: id, status: "open" as const, yesWins: undefined },
+    });
+  }
   return get<{
     round: {
       roundId: string;
@@ -104,6 +129,19 @@ export function fetchRound(id: string) {
 }
 
 export function fetchConfig() {
+  if (USE_MOCK) {
+    return Promise.resolve({
+      chainId: 10143,
+      duration: 60,
+      vault: "0xe064D0B2edE1891ebD0F815eDADd45541c62C927",
+      markets: [
+        { symbol: "BTC", pair: "BTC-USD" },
+        { symbol: "ETH", pair: "ETH-USD" },
+        { symbol: "SOL", pair: "SOL-USD" },
+      ],
+      chains: [{ key: "monad", name: "Monad Testnet", chainId: 10143, settlementHub: true }],
+    });
+  }
   return get<{
     chainId: number;
     duration: number;
@@ -146,6 +184,7 @@ export type MarketBoard = {
 };
 
 export function fetchMarketBoard(chain?: string) {
+  if (USE_MOCK) return Promise.resolve(mockMarketBoard() as unknown as MarketBoard);
   const q = chain ? `?chain=${encodeURIComponent(chain)}` : "";
   return get<MarketBoard>(`/v1/markets${q}`);
 }
@@ -169,10 +208,12 @@ export type PriceLatest = {
 };
 
 export function fetchPriceLatest(symbol: string) {
+  if (USE_MOCK) return Promise.resolve(mockPriceLatest(symbol) as PriceLatest);
   return get<PriceLatest>(`/v1/price/${symbol}`);
 }
 
 export function fetchPriceHistory(symbol: string, resolution = 1, bars = 90) {
+  if (USE_MOCK) return Promise.resolve(mockPriceHistory(symbol, resolution, bars) as PriceHistory);
   return get<PriceHistory>(`/v1/price/${symbol}/history?resolution=${resolution}&bars=${bars}`);
 }
 
@@ -196,6 +237,27 @@ export type CrossChainBook = {
 };
 
 export function fetchCrossChainBook(address: string) {
+  if (USE_MOCK) {
+    const w = mockWallet(address);
+    return Promise.resolve({
+      address,
+      model: "mock design",
+      chains: [
+        {
+          chain: "monad",
+          chainName: "Monad Testnet",
+          chainId: 10143,
+          available: true,
+          settlementHub: true,
+          address,
+          ausd: w.ausd,
+          mon: w.mon,
+          positions: w.positions,
+          explorer: w.explorer,
+        },
+      ],
+    });
+  }
   return get<CrossChainBook>(`/v1/book/${address}`);
 }
 
@@ -211,10 +273,12 @@ export type ZerionPortfolio = {
 };
 
 export function fetchZerionPortfolio(address: string) {
+  if (USE_MOCK) return Promise.resolve(mockZerion(address) as ZerionPortfolio);
   return get<ZerionPortfolio>(`/v1/zerion/portfolio/${address}`);
 }
 
 export function fetchSponsorPerks() {
+  if (USE_MOCK) return Promise.resolve(mockSponsors());
   return get<{
     quicknode: string;
     monadRpcHint: string;
@@ -223,12 +287,15 @@ export function fetchSponsorPerks() {
   }>("/v1/sponsors/status");
 }
 
-/** Balances + positions for any wallet (Privy embedded address). */
 export function fetchWallet(address: string) {
+  if (USE_MOCK) return Promise.resolve(mockWallet(address) as WalletSnapshot);
   return get<WalletSnapshot>(`/v1/wallet/${address}`);
 }
 
 export function walletFaucet(address: string, amountAUSD = "1000") {
+  if (USE_MOCK) {
+    return Promise.resolve(mockFaucet(address || MOCK_ADDRESS_CHECKSUM) as FaucetResult);
+  }
   return post<FaucetResult>("/v1/wallet/faucet", { address, amountAUSD });
 }
 
@@ -237,21 +304,55 @@ export function fetchCommitCalldata(
   amountAUSD: string,
   symbol?: string,
 ) {
+  if (USE_MOCK) {
+    return Promise.resolve({
+      chainId: 10143,
+      market: `0xMockMarket${symbol || "BTC"}`,
+      collateral: "0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC",
+      approve: { to: "0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC", data: "0x", value: "0" },
+      commit: { to: "0xMock", data: "0x", value: "0", description: "mock commit" },
+    });
+  }
   const normalized = side === "UP" ? "YES" : side === "DOWN" ? "NO" : side;
   return post<CommitCalldata>("/v1/tx/commit", { side: normalized, amountAUSD, symbol });
 }
 
 export function executeTrade(trader: string, intentId?: string, market?: string) {
+  if (USE_MOCK) {
+    return Promise.resolve({
+      ...mockTradeFill("UP", "10", "BTC"),
+      intentId: intentId || "1",
+      market: market || "0xMock",
+    } as ExecuteTradeResult);
+  }
   return post<ExecuteTradeResult>("/v1/trade/execute", { trader, intentId, market });
 }
 
 export function fetchRedeemCalldata(market?: string) {
+  if (USE_MOCK) {
+    return Promise.resolve({
+      to: market || "0xMock",
+      data: "0x",
+      value: "0",
+      description: "mock redeem",
+    });
+  }
   return post<{ to: string; data: string; value: string; description: string }>("/v1/tx/redeem", {
     market,
   });
 }
 
 export function fetchQuote(side: "YES" | "NO", amountAUSD: string, market?: string) {
+  if (USE_MOCK) {
+    const amt = Number(amountAUSD) || 0;
+    return Promise.resolve({
+      side,
+      amountIn: amountAUSD,
+      feeAUSD: (amt * 0.01).toFixed(2),
+      sharesOut: (amt * 1.85).toFixed(2),
+      note: "mock CPMM quote",
+    });
+  }
   return post<{
     side: string;
     amountIn: string;
@@ -260,7 +361,6 @@ export function fetchQuote(side: "YES" | "NO", amountAUSD: string, market?: stri
     note?: string;
   }>("/v1/quote", { side, amountAUSD, market });
 }
-
 
 export type PerplMarket = {
   id: number;
@@ -308,13 +408,19 @@ export type PerplAccount = {
   unrealizedPnLAUSD: number;
   openPositionsCount: number;
   positions: PerplPosition[];
+  accountId?: number;
+  authConfigured?: boolean;
+  execution?: string;
+  onchainCollateralAUSD?: string;
 };
 
 export async function fetchPerplMarkets(): Promise<{ markets: PerplMarket[]; context: any }> {
+  if (USE_MOCK) return mockPerplMarkets() as any;
   return get<{ markets: PerplMarket[]; context: any }>(`/v1/perpl/markets`);
 }
 
 export async function fetchPerplAccount(address: string): Promise<PerplAccount> {
+  if (USE_MOCK) return mockPerplAccount(address) as any;
   return get<PerplAccount>(`/v1/perpl/account/${address}`);
 }
 
@@ -326,6 +432,33 @@ export function placePerplOrder(params: {
   leverage: number;
   accountId?: number;
 }) {
+  if (USE_MOCK) {
+    const mk = mockPerplMarkets().markets.find(
+      (m) => m.symbol === params.symbol,
+    ) || mockPerplMarkets().markets[0]!;
+    const position: PerplPosition = {
+      id: `mock_${Date.now()}`,
+      trader: params.trader,
+      symbol: params.symbol,
+      side: params.side,
+      size: params.marginAUSD * params.leverage / mk.markPrice,
+      sizeAUSD: params.marginAUSD * params.leverage,
+      entryPrice: mk.markPrice,
+      markPrice: mk.markPrice,
+      leverage: params.leverage,
+      marginAUSD: params.marginAUSD,
+      liquidationPrice: mk.markPrice * (params.side === "LONG" ? 0.9 : 1.1),
+      unrealizedPnLAUSD: 0,
+      openedAt: Date.now(),
+      status: "OPEN",
+    };
+    return Promise.resolve({
+      success: true,
+      execution: "mock-design",
+      position,
+      market: mk,
+    });
+  }
   return post<{
     success: boolean;
     execution?: string;
@@ -335,6 +468,7 @@ export function placePerplOrder(params: {
 }
 
 export function linkPerplAccount(address: string, accountId: number) {
+  if (USE_MOCK) return Promise.resolve({ address: address.toLowerCase(), accountId });
   return post<{ address: string; accountId: number }>("/v1/perpl/account-link", {
     address,
     accountId,
@@ -342,6 +476,26 @@ export function linkPerplAccount(address: string, accountId: number) {
 }
 
 export function closePerplPosition(positionId: string, trader: string) {
+  if (USE_MOCK) {
+    return Promise.resolve({
+      success: true,
+      position: {
+        id: positionId,
+        trader,
+        symbol: "BTC",
+        side: "LONG" as const,
+        size: 0,
+        sizeAUSD: 0,
+        entryPrice: 0,
+        leverage: 1,
+        marginAUSD: 0,
+        liquidationPrice: 0,
+        openedAt: Date.now(),
+        status: "CLOSED" as const,
+      },
+      realizedPnL: 4.2,
+    });
+  }
   return post<{ success: boolean; position: PerplPosition; realizedPnL: number }>("/v1/perpl/order/close", {
     positionId,
     trader,
@@ -349,8 +503,22 @@ export function closePerplPosition(positionId: string, trader: string) {
 }
 
 export function fetchPerplDepositCalldata(amountAUSD: number, address: string) {
+  if (USE_MOCK) {
+    return Promise.resolve({
+      chainId: 10143,
+      exchange: "0x1964C32f0bE608E7D29302AFF5E61268E72080cc",
+      token: "0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC",
+      amountAUSD,
+      minAccountOpenAUSD: 100,
+      approve: { to: "0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC", data: "0x", value: "0" },
+      deposit: { to: "0x1964C32f0bE608E7D29302AFF5E61268E72080cc", data: "0x", value: "0" },
+    });
+  }
   return post<any>("/v1/perpl/tx/deposit", { amountAUSD, address });
 }
 
-export { API_URL };
+export function mockTradeResult(side: string, amountAUSD: string, symbol: string) {
+  return mockTradeFill(side, amountAUSD, symbol);
+}
 
+export { API_URL, USE_MOCK, mockHash };

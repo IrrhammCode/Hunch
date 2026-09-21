@@ -8,6 +8,7 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
+        "EXPO_PUBLIC_USE_MOCK": "1",
         "EXPO_PUBLIC_API_URL": "http://192.168.100.3:8787",
         "EXPO_PUBLIC_MONAD_RPC_URL": "https://burned-dark-dew.monad-testnet.quiknode.pro/7395b16eed6376221df2d512d023088235eef259/",
         "EXPO_PUBLIC_MERA_RP_ID": "accounts.hunch.app",

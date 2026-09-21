@@ -11,6 +11,7 @@ import {
   type PerplMarket,
 } from "@/src/api/client";
 import { Screen } from "@/src/components/Screen";
+import { MockBanner } from "@/src/components/MockBanner";
 import { AssetGlyph, Icon } from "@/src/components/Icon";
 import { getSelectedMarket, setSelectedMarket } from "@/src/market/selection";
 import { colors, monoStyle, radius, space, type } from "@/src/theme";
@@ -148,6 +149,7 @@ export default function MarketsScreen() {
             <Text style={styles.networkText}>MONAD TESTNET</Text>
           </View>
         </View>
+        <MockBanner />
 
         {/* Header */}
         <View style={styles.header}>

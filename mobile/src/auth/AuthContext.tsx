@@ -16,6 +16,7 @@ import {
   HAS_PRIVY,
   PRIVY_APP_ID,
   PRIVY_CLIENT_ID,
+  USE_MOCK,
 } from "../config/chain";
 import {
   clearMeraSession,
@@ -25,6 +26,8 @@ import {
   unlockMeraFromStored,
   type MeraRuntime,
 } from "./mera";
+import { createMockProvider } from "../mock/provider";
+import { MOCK_ADDRESS_CHECKSUM } from "../mock/fixtures";
 
 export type SessionUser = {
   id: string;
@@ -38,18 +41,20 @@ export type SessionUser = {
   mera?: boolean;
 };
 
-export type AuthMethod = "privy" | "mera" | null;
+export type AuthMethod = "privy" | "mera" | "mock" | null;
 
 type AuthContextValue = {
   user: SessionUser | null;
   ready: boolean;
-  /** Always real: Mera passkey or Privy. */
+  /** Real Privy when configured; false in mock design mode. */
   privyMode: boolean;
   /** Missing auth config — show setup screen. */
   missingPrivyConfig: boolean;
   /** Native passkey module available (iOS/Android dev client). */
   meraAvailable: boolean;
   authMethod: AuthMethod;
+  /** Full mock design mode (EXPO_PUBLIC_USE_MOCK=1). */
+  mockMode: boolean;
   /** Send email OTP (Privy). */
   sendOtp: (email: string) => Promise<void>;
   /** Submit email OTP (Privy). */
@@ -100,10 +105,96 @@ function meraUserFromRuntime(runtime: MeraRuntime): SessionUser {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  if (USE_MOCK) {
+    return <MockAuthProvider>{children}</MockAuthProvider>;
+  }
   if (!HAS_PRIVY) {
     return <MeraOnlyAuthProvider missingConfig={!meraNativeReady()}>{children}</MeraOnlyAuthProvider>;
   }
   return <PrivyAuthProvider>{children}</PrivyAuthProvider>;
+}
+
+/** FULL MOCK — design/demo until Tenderly + live stack. */
+function MockAuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<SessionUser | null>({
+    id: "mock:hunch",
+    email: "design@hunch.mock",
+    displayName: "Design Trader",
+    address: MOCK_ADDRESS_CHECKSUM,
+    privy: false,
+    mera: false,
+  });
+  const [ready] = useState(true);
+  const provider = useMemo(() => createMockProvider(), []);
+
+  const value = useMemo(
+    () => ({
+      user,
+      ready,
+      privyMode: false,
+      missingPrivyConfig: false,
+      meraAvailable: false,
+      authMethod: "mock" as AuthMethod,
+      mockMode: true,
+      sendOtp: async () => {
+        /* mock */
+      },
+      loginWithOtp: async () => {
+        setUser({
+          id: "mock:hunch",
+          email: "design@hunch.mock",
+          displayName: "Design Trader",
+          address: MOCK_ADDRESS_CHECKSUM,
+          privy: false,
+        });
+      },
+      loginWithApple: async () => {
+        setUser({
+          id: "mock:hunch",
+          email: "design@hunch.mock",
+          displayName: "Design Trader",
+          address: MOCK_ADDRESS_CHECKSUM,
+          privy: false,
+        });
+      },
+      loginWithMera: async () => {
+        setUser({
+          id: "mock:mera",
+          email: "passkey@hunch.mock",
+          displayName: "Design Passkey",
+          address: MOCK_ADDRESS_CHECKSUM,
+          privy: false,
+          mera: true,
+        });
+      },
+      otpStatus: "initial",
+      loginWithEmail: async () => {
+        setUser({
+          id: "mock:email",
+          email: "design@hunch.mock",
+          displayName: "Design Trader",
+          address: MOCK_ADDRESS_CHECKSUM,
+          privy: false,
+        });
+      },
+      signupWithEmail: async () => {
+        setUser({
+          id: "mock:email",
+          email: "design@hunch.mock",
+          displayName: "Design Trader",
+          address: MOCK_ADDRESS_CHECKSUM,
+          privy: false,
+        });
+      },
+      logout: async () => {
+        setUser(null);
+      },
+      getEthereumProvider: async () => provider,
+    }),
+    [user, ready, provider],
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 function PrivyAuthProvider({ children }: { children: React.ReactNode }) {
@@ -237,6 +328,7 @@ function PrivyAuthProvider({ children }: { children: React.ReactNode }) {
       missingPrivyConfig: false,
       meraAvailable: meraNativeReady(),
       authMethod,
+      mockMode: false,
       sendOtp,
       loginWithOtp,
       loginWithApple,
@@ -330,6 +422,7 @@ function MeraOnlyAuthProvider({
       missingPrivyConfig: Boolean(missingConfig),
       meraAvailable: meraNativeReady(),
       authMethod,
+      mockMode: false,
       sendOtp: async () => {
         throw new Error("Privy not configured — use Mera passkey");
       },

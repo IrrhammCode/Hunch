@@ -6,9 +6,18 @@ Swipe UP or DOWN on 60-second onchain markets on Monad.
 
 ## Real auth only
 
-Mera passkey (Agora) or Privy OTP. **No demo/mock login.** No `/v1/demo/*` endpoints.
+**Current default: FULL MOCK design mode** (`EXPO_PUBLIC_USE_MOCK=1`) until Tenderly + live keys are ready.
 
-| Env | Required | Notes |
+| Env | Value | Meaning |
+|---|---|---|
+| `EXPO_PUBLIC_USE_MOCK` | `1` | Fixtures · mock wallet · fake fills · **MOCK banner** in UI |
+| `EXPO_PUBLIC_USE_MOCK` | `0` | Real API / Mera / Privy / Perpl / Quicknode |
+
+Restart Metro after changing `.env`.
+
+When mock=0, real auth is Mera passkey or Privy OTP. **No `/v1/demo/*` endpoints.**
+
+| Env | Required (real path) | Notes |
 |---|---|---|
 | `EXPO_PUBLIC_API_URL` | yes | LAN IP or ngrok — not localhost |
 | `EXPO_PUBLIC_MERA_RP_ID` | yes | default `accounts.hunch.app` · see `MERA_SETUP.md` |
@@ -16,7 +25,6 @@ Mera passkey (Agora) or Privy OTP. **No demo/mock login.** No `/v1/demo/*` endpo
 | `EXPO_PUBLIC_PRIVY_CLIENT_ID` | Track 01 path | `client-…`, not bundle id |
 | `EXPO_PUBLIC_MONAD_RPC_URL` | optional | Quicknode if claimed |
 
-`EXPO_PUBLIC_USE_DEMO_AUTH` / design-mode flags are **removed**.
 
 Privy + Mera require a **custom development client** (or TestFlight/ad-hoc). **Expo Go will not work** for passkeys or Privy.
 
