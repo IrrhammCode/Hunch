@@ -71,30 +71,48 @@ export default function MarketsScreen() {
     }, [load]),
   );
 
-  const openPerpTrade = (m: PerplMarket) => {
+  const openMarketDetail = (opts: {
+    symbol: string;
+    kind: "perp" | "blitz";
+    pair?: string;
+    label?: string;
+    market?: string | null;
+    roundId?: string | null;
+  }) => {
     setSelectedMarket({
-      symbol: m.symbol,
-      pair: `${m.symbol}-USD`,
-      label: m.name,
+      symbol: opts.symbol,
+      pair: opts.pair || `${opts.symbol}-USD`,
+      label: opts.label || opts.symbol,
+      market: opts.market,
+      roundId: opts.roundId,
       chain: "monad",
       chainId: 10143,
     });
     Haptics.selectionAsync();
-    router.push("/(app)");
+    router.push({
+      pathname: "/(app)/market-detail",
+      params: { symbol: opts.symbol, kind: opts.kind },
+    });
+  };
+
+  const openPerpTrade = (m: PerplMarket) => {
+    openMarketDetail({
+      symbol: m.symbol,
+      kind: "perp",
+      pair: `${m.symbol}-USD`,
+      label: m.name,
+    });
   };
 
   const openHunchTrade = (row: MarketBoardRow) => {
-    setSelectedMarket({
+    openMarketDetail({
       symbol: row.symbol,
+      kind: "blitz",
       pair: row.pair,
       label: row.label || row.pair,
       market: row.market,
       roundId: row.roundId,
-      chain: row.chain,
-      chainId: row.chainId,
     });
-    Haptics.selectionAsync();
-    router.push("/(app)");
   };
 
   // Real Perpl / API markets only — empty until backend responds
@@ -297,41 +315,52 @@ export default function MarketsScreen() {
               );
             })}
 
-            {/* ETH 60S BLITZ ROW */}
-            {(filter === "all" || filter === "blitz") && (
-              <Pressable
-                onPress={() => {
-                  if (hunchMarkets[0]) openHunchTrade(hunchMarkets[0]);
-                  else router.push("/(app)");
-                }}
-                style={styles.marketRow}
-              >
-                <View style={styles.rowLeft}>
-                  <View style={[styles.tokenIcon, { backgroundColor: "#627EEA" }]}>
-                    <Text style={styles.tokenGlyph}>Ξ</Text>
-                  </View>
-                  <View>
-                    <View style={styles.pairWithBadge}>
-                      <Text style={styles.pairTitle}>ETH</Text>
-                      <Text style={styles.pairSlash}>/AUSD</Text>
-                      <View style={[styles.levBadge, { backgroundColor: "rgba(214,255,63,0.18)" }]}>
-                        <Text style={[styles.levBadgeText, { color: colors.brand }]}>60S</Text>
+            {/* All 60s blitz markets from API board (BTC/ETH/SOL…) */}
+            {(filter === "all" || filter === "blitz") &&
+              hunchMarkets.map((row) => {
+                const iconBg =
+                  row.symbol === "BTC" ? "#F7931A" : row.symbol === "ETH" ? "#627EEA" : row.symbol === "SOL" ? "#14F195" : "#836EF9";
+                const glyph = row.symbol === "BTC" ? "₿" : row.symbol === "ETH" ? "Ξ" : row.symbol === "SOL" ? "◎" : row.symbol.charAt(0);
+                const yesC = row.spot ? Number(row.spot.yes) * 100 : null;
+                return (
+                  <Pressable
+                    key={`blitz-${row.chain}-${row.symbol}`}
+                    onPress={() => openHunchTrade(row)}
+                    style={styles.marketRow}
+                  >
+                    <View style={styles.rowLeft}>
+                      <View style={[styles.tokenIcon, { backgroundColor: iconBg }]}>
+                        <Text style={styles.tokenGlyph}>{glyph}</Text>
+                      </View>
+                      <View>
+                        <View style={styles.pairWithBadge}>
+                          <Text style={styles.pairTitle}>{row.symbol}</Text>
+                          <Text style={styles.pairSlash}>/AUSD</Text>
+                          <View style={[styles.levBadge, { backgroundColor: "rgba(214,255,63,0.18)" }]}>
+                            <Text style={[styles.levBadgeText, { color: colors.brand }]}>60S</Text>
+                          </View>
+                        </View>
+                        <Text style={styles.volSub} numberOfLines={1}>
+                          {row.status === "open"
+                            ? `${Math.ceil(row.timeRemaining || 0)}s left · UP/DOWN`
+                            : row.reason || row.status}
+                        </Text>
                       </View>
                     </View>
-                    <Text style={styles.volSub} numberOfLines={1}>60s UP/DOWN · live</Text>
-                  </View>
-                </View>
-
-                <View style={styles.rowMid}>
-                  <MiniSparkline positive={false} />
-                </View>
-
-                <View style={styles.rowRight}>
-                  <Text style={styles.priceNum} numberOfLines={1}>$3,420.10</Text>
-                  <Text style={[styles.deltaNum, styles.negColor]}>-1.42%</Text>
-                </View>
-              </Pressable>
-            )}
+                    <View style={styles.rowMid}>
+                      <MiniSparkline positive={yesC == null || yesC >= 50} />
+                    </View>
+                    <View style={styles.rowRight}>
+                      <Text style={styles.priceNum}>
+                        {yesC != null ? `${yesC.toFixed(0)}¢` : row.status.toUpperCase()}
+                      </Text>
+                      <Text style={[styles.deltaNum, row.status === "open" ? styles.posColor : styles.negColor]}>
+                        {row.status === "open" ? "LIVE" : row.status}
+                      </Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
           </View>
 
           {/* FOOTER: Pyth Oracle Engine status */}

@@ -150,6 +150,32 @@ export function fetchMarketBoard(chain?: string) {
   return get<MarketBoard>(`/v1/markets${q}`);
 }
 
+export type PriceHistory = {
+  symbol: string;
+  resolution: number;
+  bars: { t: number; o: number; h: number; l: number; c: number; v: number }[];
+  last?: number;
+  source?: string;
+  error?: string;
+};
+
+export type PriceLatest = {
+  symbol: string;
+  price: number;
+  conf?: number;
+  publishTime?: number;
+  feedId?: string;
+  error?: string;
+};
+
+export function fetchPriceLatest(symbol: string) {
+  return get<PriceLatest>(`/v1/price/${symbol}`);
+}
+
+export function fetchPriceHistory(symbol: string, resolution = 1, bars = 90) {
+  return get<PriceHistory>(`/v1/price/${symbol}/history?resolution=${resolution}&bars=${bars}`);
+}
+
 export type CrossChainBook = {
   address: string;
   model: string;

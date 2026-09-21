@@ -11,7 +11,8 @@ import { colors, radius, space, type, monoStyle } from "@/src/theme";
 const LEVERAGE_OPTIONS = [2, 5, 10, 20] as const;
 const MARGIN_CHIPS = ["25", "50", "100", "500"] as const;
 
-function MiniWaveChart() {
+function MiniWaveChart({ symbol }: { symbol?: string }) {
+  // Placeholder frame — live chart lives on Market Detail after selecting a symbol
   return (
     <View style={styles.chartContainer}>
       <View style={styles.waveGraphic}>
@@ -24,6 +25,13 @@ function MiniWaveChart() {
         <View style={[styles.waveDot, { bottom: 50, left: 280 }]} />
         <View style={[styles.peakDot, { bottom: 70, right: 14 }]} />
         <View style={styles.waveFillOverlay} />
+        {symbol ? (
+          <View style={{ position: "absolute", left: 10, top: 8 }}>
+            <Text style={{ color: colors.muted, fontFamily: type.data, fontSize: 10 }}>
+              {symbol} chart → open MARKETS row
+            </Text>
+          </View>
+        ) : null}
       </View>
     </View>
   );

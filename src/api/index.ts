@@ -583,6 +583,30 @@ app.get("/v1/factory", async (c) => {
 // Metropolis perks: Quicknode / Tenderly / Zerion
 app.route("/", sponsorsApp);
 
+/** Live prices + chart history (Pyth Hermes) */
+import { catalogMarkets, fetchLatestPrice, fetchPriceHistory } from "./price";
+
+app.get("/v1/price/catalog", (c) => c.json({ markets: catalogMarkets() }));
+
+app.get("/v1/price/:symbol", async (c) => {
+  try {
+    return c.json(await fetchLatestPrice(c.req.param("symbol")));
+  } catch (e: any) {
+    return c.json({ error: e?.message || String(e) }, 502);
+  }
+});
+
+app.get("/v1/price/:symbol/history", async (c) => {
+  try {
+    const q = c.req.query();
+    const resolution = Number(q.resolution || 1);
+    const bars = Number(q.bars || 90);
+    return c.json(await fetchPriceHistory(c.req.param("symbol"), resolution, bars));
+  } catch (e: any) {
+    return c.json({ error: e?.message || String(e) }, 502);
+  }
+});
+
 const port = Number(process.env.API_PORT || 8787);
 const hostname = process.env.API_HOST || "0.0.0.0";
 console.log(`[api] http://localhost:${port} (bound ${hostname})`);
