@@ -19,15 +19,18 @@ type FilterTab = "all" | "blitz" | "perps";
 
 function MiniSparkline({ positive }: { positive: boolean }) {
   const color = positive ? colors.up : colors.down;
+  const heights = positive ? [8, 12, 9, 14, 11, 16, 18] : [16, 12, 14, 9, 11, 7, 5];
   return (
     <View style={styles.sparkContainer}>
-      <View style={[styles.sparkBar, { height: positive ? 6 : 14, backgroundColor: color }]} />
-      <View style={[styles.sparkBar, { height: positive ? 9 : 11, backgroundColor: color }]} />
-      <View style={[styles.sparkBar, { height: positive ? 7 : 13, backgroundColor: color }]} />
-      <View style={[styles.sparkBar, { height: positive ? 12 : 8, backgroundColor: color }]} />
-      <View style={[styles.sparkBar, { height: positive ? 11 : 9, backgroundColor: color }]} />
-      <View style={[styles.sparkBar, { height: positive ? 16 : 5, backgroundColor: color }]} />
-      <View style={[styles.sparkBar, { height: positive ? 18 : 3, backgroundColor: color }]} />
+      {heights.map((h, i) => (
+        <View
+          key={i}
+          style={[
+            styles.sparkBar,
+            { height: h, backgroundColor: color, opacity: 0.45 + i * 0.08 },
+          ]}
+        />
+      ))}
     </View>
   );
 }

@@ -97,14 +97,22 @@ async function fetchCoingeckoHistory(symbol: string, bars = 90) {
   if (!prices.length) return null;
   const step = Math.max(1, Math.floor(prices.length / bars));
   const sampled = prices.filter((_, i) => i % step === 0).slice(-bars);
-  return sampled.map(([ms, p]) => ({
-    t: Math.floor(ms / 1000),
-    o: p,
-    h: p,
-    l: p,
-    c: p,
-    v: 0,
-  }));
+  // Build pseudo-OHLC from consecutive closes so the chart has wicks/volume feel
+  return sampled.map(([ms, p], i) => {
+    const prev = sampled[i - 1]?.[1] ?? p;
+    const o = prev;
+    const c = p;
+    const h = Math.max(o, c) * (1 + Math.random() * 0.0004);
+    const l = Math.min(o, c) * (1 - Math.random() * 0.0004);
+    return {
+      t: Math.floor(ms / 1000),
+      o,
+      h,
+      l,
+      c,
+      v: Math.abs(c - o) * 1000 + 1,
+    };
+  });
 }
 
 /** OHLC from Pyth Hermes TradingView shim; CoinGecko fallback for chart curve. */
