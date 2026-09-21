@@ -106,7 +106,7 @@ export async function placePerplOrderWs(input: PerplWsOrderInput): Promise<{
       } catch {
         /* noop */
       }
-      reject(new Error("Perpl WS timeout"));
+      reject(new Error("Perpl WS timeout — no order ack (check API-key wallet vs createAccount wallet)"));
     }, 20000);
 
     let sn = 1;
@@ -141,12 +141,27 @@ export async function placePerplOrderWs(input: PerplWsOrderInput): Promise<{
       } catch {
         return;
       }
+      if (msg?.mt !== 100) {
+        console.log("[perpl-ws] recv", JSON.stringify(msg).slice(0, 240));
+      }
 
       if (msg?.mt === 19) {
-        const accs = msg?.d?.accs || msg?.d?.accounts || [];
-        const first = Array.isArray(accs) && accs[0];
+        // Live Perpl frame: accounts under top-level `as` (or legacy d.accs)
+        const accs: any[] =
+          msg?.as ||
+          msg?.d?.accs ||
+          msg?.d?.accounts ||
+          msg?.accounts ||
+          [];
+        const first = Array.isArray(accs) ? accs[0] : null;
+        const wsAddr = typeof msg?.addr === "string" ? msg.addr.toLowerCase() : "";
         if (first?.lfr != null) rq = Number(first.lfr) + 1;
-        const accountId = input.accountId || (first?.id != null ? Number(first.id) : 0);
+        const discoveredId =
+          first?.id != null ? Number(first.id) : first?.acc != null ? Number(first.acc) : 0;
+        const accountId = input.accountId || discoveredId;
+        console.log(
+          `[perpl-ws] mt19 addr=${wsAddr} discoveredId=${discoveredId} usingAccountId=${accountId} accs=${accs.length}`,
+        );
         if (!accountId) {
           clearTimeout(timeout);
           try {
@@ -156,7 +171,7 @@ export async function placePerplOrderWs(input: PerplWsOrderInput): Promise<{
           }
           reject(
             new Error(
-              "No Perpl on-chain account. Call createAccount on Exchange with AUSD (min ~100) first.",
+              `No Perpl account for API-key wallet ${wsAddr || "?"}. Enroll PERPL key on the same wallet that called createAccount, or POST /v1/perpl/account-link.`,
             ),
           );
           return;
@@ -177,29 +192,51 @@ export async function placePerplOrderWs(input: PerplWsOrderInput): Promise<{
           s: sizeScaled,
           fl: input.limitPriceScaled ? 0 : 4,
           lv: Math.round(input.leverage * 100),
-          lb: input.lastExecutionBlock || 0,
+          lb: input.lastExecutionBlock || Number(msg?.at?.b ?? msg?.sn ?? 0),
         };
+        console.log("[perpl-ws] send order", JSON.stringify(order));
         ws.send(JSON.stringify(order));
       }
 
-      if (msg?.mt === 3 && msg?.sid === 100) {
+      if (msg?.mt === 3) {
         clearTimeout(timeout);
-        const code = msg?.status?.code;
+        const code = msg?.status?.code ?? msg?.code;
+        const sid = msg?.sid;
         try {
           ws.close();
         } catch {
           /* noop */
         }
-        if (code === 0) {
-          resolve({ accepted: true, code, raw: msg });
-        } else {
-          resolve({
-            accepted: false,
-            code,
-            error: msg?.status?.error || `Perpl gateway code ${code}`,
-            raw: msg,
-          });
+        // Accept any gateway ack after order send (sid may not always be 100)
+        if (code === 0 || code === undefined || sid === 100) {
+          if (code === 0 || sid === 100) {
+            resolve({ accepted: true, code: code ?? 0, raw: msg });
+            return;
+          }
         }
+        resolve({
+          accepted: false,
+          code: code ?? -1,
+          error: msg?.status?.error || msg?.error || `Perpl gateway code ${code}`,
+          raw: msg,
+        });
+      }
+
+      // Explicit reject frames
+      if (msg?.mt === 4 || msg?.error || (msg?.mt === 3 && msg?.status?.code && msg.status.code !== 0)) {
+        if (msg?.mt === 3) return; // handled above
+        clearTimeout(timeout);
+        try {
+          ws.close();
+        } catch {
+          /* noop */
+        }
+        resolve({
+          accepted: false,
+          code: msg?.status?.code ?? msg?.code ?? -1,
+          error: msg?.error || msg?.status?.error || "Perpl rejected frame",
+          raw: msg,
+        });
       }
     };
 

@@ -20,16 +20,16 @@ Mobile prediction markets still feel like desktop dashboards with a candlestick 
 
 ## Solution
 
-Hunch is a one-gesture mobile arena:
+Hunch is a one-gesture mobile arena + perps terminal:
 
-1. **Login** with Privy email OTP → embedded wallet on Monad.
-2. **Fund** testnet AUSD + MON via a capped faucet.
-3. **Swipe UP or DOWN** (or tap) on the live 60s BTC/USD round.
-4. Phone signs `approve` + `commitBuy` from the **user’s** embedded wallet.
-5. Keeper/API waits delay-blocks, pulls **Pyth**, relays `executeBuy` (shares credit the trader).
-6. After resolve, user signs `redeem` in **BOOK** and taps **View on MonadVision**.
+1. **Login** with **Mera passkey** (Agora) or Privy email OTP → wallet on Monad testnet.
+2. **Fund** official **Agora AUSD** + MON via faucet (`requestFunds`).
+3. **Swipe UP/DOWN** on live 60s markets **or** place **Perpl** perps (BTC/ETH/SOL/MON).
+4. Wallet signs on-chain txs (approve/commit or Perpl deposit/order path).
+5. Keeper pulls **Pyth**, relays `executeBuy`; Perpl orders go through signed trade API.
+6. Claim/redeem on BOOK; proof on MonadVision.
 
-No hot-wallet impersonation on the happy path — the Privy wallet is the trader of record.
+No mock balances, no demo login — real API + real chain only.
 
 ---
 
@@ -49,10 +49,15 @@ Monad testnet (chainId **10143**) is the settlement layer for every round.
 
 | Sponsor | What we use |
 |---|---|
-| **Agora** | Official Agora AUSD Testnet (`0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC`) used as primary margin and settlement collateral across both Perpetuals and Hunches, with official Agora Faucet integration (`0xd236c18D274E54FAccC3dd9DDA4b27965a73ee6C`). |
-| **Perpl** | Monad-native decentralized perpetual futures exchange (`0x1964C32f0bE608E7D29302AFF5E61268E72080cc`). Live orderbook, funding rates, and leverage trading for BTC, ETH, SOL, MON. |
-| **Privy** | Email OTP login + Ethereum embedded wallet created on login. Wallet address is the onchain trader across all instruments. |
-| **Pyth** | Sub-second price feeds on Monad for strike determination and 60-second settlement. |
+| **Agora** | Official Agora AUSD Testnet (`0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC`) as collateral + Agora Faucet (`0xd236c18D274E54FAccC3dd9DDA4b27965a73ee6C`) + **Mera passkey** auth (bounty path). |
+| **Perpl** | Exchange `0x1964C32f0bE608E7D29302AFF5E61268E72080cc` — live testnet markets via API; trade-scope keys + on-chain `createAccount`. |
+| **Quicknode** | Dedicated Monad testnet RPC (`*.monad-testnet.quiknode.pro`) for API, keeper, Hardhat, and phone wallet. |
+| **Privy** | Email OTP + embedded wallet as alternate login / Track 01 path. |
+| **Pyth** | Hermes + on-chain feeds for 60s settlement (BTC/ETH/SOL). |
+| **Zerion** | Multi-chain portfolio proxy on YOU tab (server-side key). |
+| **Mera** | Passkey → BIP-44 EOA on Monad testnet (`mobile/src/auth/mera.ts`). |
+
+**Honest demo stack:** Monad testnet **10143** · Agora AUSD testnet · Perpl testnet · Quicknode Build RPC. Production path = mainnet AUSD + Perpl mainnet + same auth patterns.
 
 ---
 

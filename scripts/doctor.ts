@@ -197,8 +197,8 @@ async function main() {
       fs.readFileSync(path.join(root, "mobile", "eas.json"), "utf8"),
     ) as { build?: Record<string, { env?: Record<string, string> }> };
     const prev = eas.build?.preview?.env?.EXPO_PUBLIC_API_URL;
-    if (prev && /YOUR_API_HOST/i.test(prev)) {
-      warn("eas.json preview EXPO_PUBLIC_API_URL still YOUR_API_HOST — replace before eas:preview");
+    if (prev && /YOUR_API_HOST|YOUR_NGROK/i.test(prev)) {
+      warn("eas.json preview EXPO_PUBLIC_API_URL still placeholder — replace before eas:preview");
     } else if (prev) {
       ok("eas.json preview EXPO_PUBLIC_API_URL set");
     }

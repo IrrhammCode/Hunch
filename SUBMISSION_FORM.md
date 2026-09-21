@@ -46,13 +46,38 @@ https://github.com/IrrhammCode/Hunch
 
 TODO — paste public URL after host is live.
 
-- Local / LAN: dev client + `http://<LAN_IP>:8787` (see [OPS.md](./OPS.md))
-- Public: ngrok/VPS tunnel — see [mobile/README.md](./mobile/README.md)
-- Static landing (GitHub Pages): deploy `/site` — then paste Pages URL here
+- Local / LAN (current): `http://192.168.100.3:8787` + Expo dev client (API verified `/health` + Perpl markets)
+- Public: set ngrok/VPS URL in `mobile/.env` + `mobile/eas.json` preview → paste here
+- Landing: deploy `/site` + `site/.well-known/` (Mera AASA/assetlinks templates)
 
 ## Video URL
 
-TODO — paste YouTube / Loom / Drive link after recording ([DEMO_VIDEO_SCRIPT.md](./DEMO_VIDEO_SCRIPT.md)).
+TODO — record after Mera login + AUSD + one Perpl trade ([DEMO_VIDEO_SCRIPT.md](./DEMO_VIDEO_SCRIPT.md)).
+
+## Stack verified (live)
+
+| Piece | Status |
+|---|---|
+| Quicknode Monad testnet RPC | configured (api/keeper/indexer/hardhat) |
+| Agora AUSD collateral | `0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC` |
+| Perpl markets API | live (7 perps) |
+| Perpl trade keys | configured in root `.env` |
+| Zerion portfolio proxy | configured |
+| Tenderly simulate | pending perk keys (real API only, no mock) |
+| Mobile typecheck | clean |
+| Product mocks | removed (`/v1/demo` gone, real auth only) |
+
+## Team notes
+
+Solo builder: **Irham** · https://github.com/IrrhammCode
+
+## Placeholders still required before submit
+
+- [ ] Video URL
+- [ ] Public demo URL (ngrok/Pages) — replace `YOUR_NGROK_OR_VPS_HOST` in `mobile/eas.json`
+- [ ] Tenderly keys if claiming that perk in write-up
+- [ ] Mera association files hosted (Team ID + Android SHA256)
+- [ ] Perpl `createAccount` + account-link if not yet on-chain for demo wallet
 
 ## Sponsor bounties targeted
 
@@ -76,22 +101,24 @@ Source: `deployments/monad-testnet.json` · Chain ID 10143.
 
 ## What was built during the Metropolis window
 
-- Monad testnet contracts (Factory, Market with CPMM + delayed fills, Vault, MockAUSD) + unit/e2e tests
-- Keeper (open → resolve via Pyth → residual) and Hono API (rounds, quotes, calldata, faucet, relayed execute)
-- Expo iOS app: HUNCH swipe loop, BOOK claim + MonadVision proof, YOU wallet/faucet
-- Real Privy email OTP + embedded wallet trade path (approve/commit signed on phone; execute relayed)
-- Demo safety: faucet caps + rate limits; execute validation + rate limits
-- Branded splash/icons, boot screen, toasts, EAS profiles, judge runbooks + submission docs
+- Monad testnet contracts (Factory, HunchMarket CPMM + delayed fills, Vault) + unit/e2e tests
+- **Official Agora AUSD** as collateral + faucet path; **Perpl** perps proxy + trade keys
+- **Mera passkey** auth (Agora bounty) + Privy OTP secondary path
+- **Quicknode** dedicated RPC for API/keeper/Hardhat/phone
+- Keeper (Pyth open/resolve) + Hono API (markets, calldata, faucet, execute, Perpl, Zerion)
+- Expo app: Markets / Trade / Exchange / Portfolio / YOU — real trades only (no mock UI)
+- Branded assets, EAS profiles, judge runbooks (`SUBMIT.md`, `DEMO.md`, `AGORA_BOUNTY.md`, `MERA_SETUP.md`)
 
 ## Team notes
-
-TODO — team name / members / contact if the form requires it.
 
 Solo builder: **Irham** · https://github.com/IrrhammCode
 
 ## Placeholders still required before submit
 
 - [ ] Video URL
-- [ ] TestFlight / EAS demo URL (or tunnel + landing Pages URL)
-- [ ] Public API host if not using LAN-only demo
-- [ ] Team fields if required
+- [ ] Public demo URL (ngrok/Pages)
+- [ ] Tenderly keys if claiming that perk
+- [ ] Mera AASA/assetlinks hosted
+- [ ] Perpl createAccount + account-link for demo wallet
+- [ ] Hot wallet MON top-up if keeper gas drops below threshold
+

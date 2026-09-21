@@ -24,6 +24,8 @@
     "smoke:demo": "ts-node scripts/smokeDemo.ts",
     "doctor": "ts-node scripts/doctor.ts",
     "rpc:check": "ts-node scripts/rpcCheck.ts",
+    "perpl:account": "ts-node scripts/perplAccount.ts",
+    "perpl:order": "ts-node scripts/perplOrder.ts",
     "sim:tx": "ts-node scripts/tenderlySimulate.ts",
     "clean": "hardhat clean"
   },
