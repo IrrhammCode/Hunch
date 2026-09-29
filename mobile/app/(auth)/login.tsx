@@ -48,68 +48,79 @@ export default function LoginScreen() {
         style={[
           styles.wrap,
           {
-            paddingTop: insets.top + 20,
-            paddingBottom: Math.max(insets.bottom, 10) + 6,
+            paddingTop: insets.top + 16,
+            paddingBottom: Math.max(insets.bottom, 12) + 8,
           },
         ]}
       >
-        <Animated.View entering={FadeInUp.duration(320)} style={styles.hero}>
-          <BrandMark size="md" />
-          <Text style={styles.headline}>Trade on Monad</Text>
-          <Text style={styles.subhead}>
-            60s UP/DOWN + Perpl perps. Passkey wallet only — no seed phrase.
-          </Text>
-        </Animated.View>
+        <View style={styles.center}>
+          <Animated.View entering={FadeInUp.duration(320)} style={styles.hero}>
+            <BrandMark size="md" />
+            <Text style={styles.headline}>Trade on Monad</Text>
+            <Text style={styles.subhead}>
+              60s UP/DOWN + Perpl perps.{"\n"}Passkey wallet only — no seed phrase.
+            </Text>
+          </Animated.View>
 
-        <MockBanner />
+          <View style={styles.banner}>
+            <MockBanner />
+          </View>
 
-        {missingAuthConfig && !meraAvailable ? (
-          <View style={styles.notice}>
-            <Icon name="phone-portrait-outline" size={16} color={colors.danger} />
-            <Text style={styles.noticeBody}>
-              Use the native dev client / TestFlight (not Expo Go). See MERA_SETUP.md.
+          {missingAuthConfig && !meraAvailable ? (
+            <View style={styles.notice}>
+              <Icon name="phone-portrait-outline" size={16} color={colors.danger} />
+              <Text style={styles.noticeBody}>
+                Native build required (dev client / TestFlight). See MERA_SETUP.md.
+              </Text>
+            </View>
+          ) : null}
+
+          <View style={styles.actions}>
+            <PrimaryButton
+              label={busy ? "Waiting for Face ID..." : "Create an account"}
+              onPress={() => router.push("/(auth)/signup")}
+              disabled={busy}
+            />
+            <Text style={styles.ctaFoot}>
+              New passkey wallet · Agora AUSD + Perpl ready
             </Text>
           </View>
-        ) : null}
 
-        {/* PRIMARY = Create account */}
-        <View style={styles.ctaCard}>
-          <PrimaryButton
-            label={busy ? "Waiting for Face ID..." : "Create an account"}
-            onPress={() => router.push("/(auth)/signup")}
-            disabled={busy}
-          />
-          <Text style={styles.ctaFoot}>
-            New passkey wallet in one Face ID · Agora AUSD + Perpl ready
-          </Text>
+          <View style={styles.divider}>
+            <View style={styles.line} />
+            <Text style={styles.dividerText}>OR</Text>
+            <View style={styles.line} />
+          </View>
+
+          <View style={styles.secondaryWrap}>
+            <Text style={styles.loginLabel}>Already have a passkey?</Text>
+            <Pressable
+              onPress={() => run(loginWithFaceId, "Face ID / passkey failed")}
+              hitSlop={12}
+              disabled={busy || !meraAvailable}
+              style={styles.loginBtn}
+            >
+              <Icon name="finger-print" size={16} color={colors.brand} />
+              <Text style={styles.loginBtnText}>
+                {busy ? "..." : "Sign in with Face ID"}
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => run(() => loginWithMera("signin"), "Could not use passkey")}
+              hitSlop={10}
+              disabled={busy || !meraAvailable}
+            >
+              <Text style={styles.tertiary}>Use existing passkey instead</Text>
+            </Pressable>
+          </View>
+
+          {error ? (
+            <View style={styles.errorBox}>
+              <Icon name="alert-circle-outline" size={15} color={colors.danger} />
+              <Text style={styles.error}>{error}</Text>
+            </View>
+          ) : null}
         </View>
-
-        {/* SECONDARY = Login */}
-        <View style={styles.loginRow}>
-          <Text style={styles.loginLabel}>Already have a passkey?</Text>
-          <Pressable
-            onPress={() => run(loginWithFaceId, "Face ID / passkey failed")}
-            hitSlop={10}
-            disabled={busy || !meraAvailable}
-            style={styles.loginBtn}
-          >
-            <Text style={styles.loginBtnText}>
-              {busy ? "..." : "Sign in with Face ID"}
-            </Text>
-          </Pressable>
-        </View>
-
-        <Pressable
-          onPress={() => run(() => loginWithMera("signin"), "Could not use passkey")}
-          hitSlop={8}
-          disabled={busy || !meraAvailable}
-        >
-          <Text style={styles.tertiary}>Use existing passkey</Text>
-        </Pressable>
-
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-
-        <View style={{ flex: 1 }} />
 
         <View style={styles.footerBar}>
           <Text style={styles.footerMeta}>MONAD TESTNET · 10143</Text>
@@ -124,22 +135,34 @@ const styles = StyleSheet.create({
   wrap: {
     flex: 1,
     paddingHorizontal: space.lg,
+    justifyContent: "space-between",
   },
-  hero: { gap: 8, marginBottom: 4 },
+  center: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "stretch",
+    gap: 18,
+  },
+  hero: {
+    alignItems: "center",
+    gap: 10,
+  },
   headline: {
     color: colors.ink,
     fontFamily: "BebasNeue_400Regular",
-    fontSize: 36,
-    letterSpacing: 1,
-    lineHeight: 40,
+    fontSize: 38,
+    letterSpacing: 1.2,
+    lineHeight: 42,
+    textAlign: "center",
   },
   subhead: {
     color: colors.muted,
     fontFamily: type.body,
     fontSize: 14,
-    lineHeight: 20,
-    maxWidth: 280,
+    lineHeight: 21,
+    textAlign: "center",
   },
+  banner: { marginTop: 2 },
   notice: {
     flexDirection: "row",
     gap: 8,
@@ -148,17 +171,17 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,107,74,0.4)",
     backgroundColor: colors.dangerDim,
     borderRadius: radius.sm,
-    padding: 10,
+    padding: 12,
   },
   noticeBody: {
     color: colors.muted,
     fontFamily: type.body,
     fontSize: 12,
     flex: 1,
-    lineHeight: 16,
+    lineHeight: 17,
   },
-  ctaCard: {
-    gap: 8,
+  actions: {
+    gap: 10,
   },
   ctaFoot: {
     color: colors.muted,
@@ -166,12 +189,25 @@ const styles = StyleSheet.create({
     fontSize: 11,
     textAlign: "center",
   },
-  loginRow: {
+  divider: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    marginTop: 2,
+    gap: 12,
+  },
+  line: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.line,
+  },
+  dividerText: {
+    color: colors.muted,
+    fontFamily: type.data,
+    fontSize: 10,
+    letterSpacing: 1.2,
+  },
+  secondaryWrap: {
+    alignItems: "center",
+    gap: 10,
   },
   loginLabel: {
     color: colors.muted,
@@ -179,9 +215,14 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   loginBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: radius.sm,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    minWidth: 220,
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+    borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.lineStrong,
     backgroundColor: colors.bgElevated,
@@ -189,29 +230,34 @@ const styles = StyleSheet.create({
   loginBtnText: {
     color: colors.ink,
     fontFamily: type.bold,
-    fontSize: 13,
+    fontSize: 14,
   },
   tertiary: {
     color: colors.brand,
     fontFamily: type.medium,
     fontSize: 12,
-    textAlign: "center",
     marginTop: 2,
+  },
+  errorBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: colors.dangerDim,
+    borderRadius: radius.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
   error: {
     color: colors.danger,
     fontFamily: type.medium,
     fontSize: 12,
-    textAlign: "center",
-    marginTop: 8,
+    flex: 1,
   },
   footerBar: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.line,
-    paddingTop: 10,
+    paddingTop: 12,
   },
   footerMeta: {
     color: colors.muted,

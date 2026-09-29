@@ -202,8 +202,11 @@ export function PerpTradingTicket() {
         </View>
 
         <View style={styles.priceBlock}>
-          <Text style={styles.bigPrice} numberOfLines={1}>
-            ${currentMark.markPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          <Text style={styles.bigPrice} numberOfLines={1} adjustsFontSizeToFit>
+            {"$" + currentMark.markPrice.toLocaleString(undefined, {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}
           </Text>
           <View style={styles.priceMetaRow}>
             <Text
@@ -215,7 +218,10 @@ export function PerpTradingTicket() {
               {currentMark.change24hPct >= 0 ? "+" : ""}
               {currentMark.change24hPct.toFixed(2)}%
             </Text>
-            <Text style={styles.pythFeedText}>Perpl · Monad</Text>
+            <View style={styles.metaDot} />
+            <Text style={styles.pythFeedText}>Perpl</Text>
+            <View style={styles.metaDot} />
+            <Text style={styles.pythFeedText}>Monad</Text>
           </View>
         </View>
 
@@ -498,21 +504,27 @@ const styles = StyleSheet.create({
     fontSize: 9,
   },
   priceBlock: {
-    gap: 4,
-    marginTop: 6,
+    gap: 6,
+    marginTop: 10,
   },
   priceMetaRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 6,
     marginTop: 2,
+  },
+  metaDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: colors.line,
   },
   bigPrice: {
     color: colors.ink,
     fontFamily: type.data,
-    fontSize: 26,
+    fontSize: 30,
     fontWeight: "700",
-    flexShrink: 1,
+    letterSpacing: -0.5,
   },
   bigDelta: {
     color: colors.up,
