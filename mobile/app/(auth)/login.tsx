@@ -1,4 +1,4 @@
-import { Link, Redirect, router } from "expo-router";
+import { Redirect, router } from "expo-router";
 import { useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -8,7 +8,7 @@ import {
   Text,
   View,
 } from "react-native";
-import Animated, { FadeInUp } from "react-native-reanimated";
+import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/src/auth/AuthContext";
 import { MockBanner } from "@/src/components/MockBanner";
@@ -20,44 +20,22 @@ import { MERA_RP_ID } from "@/src/auth/mera";
 import { colors, radius, space, type } from "@/src/theme";
 
 export default function LoginScreen() {
-  const {
-    user,
-    meraAvailable,
-    missingAuthConfig,
-    loginWithMera,
-    loginWithFaceId,
-  } = useAuth();
+  const { user, meraAvailable, missingAuthConfig, loginWithMera, loginWithFaceId } =
+    useAuth();
   const insets = useSafeAreaInsets();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   if (user) return <Redirect href="/(app)" />;
 
-  const onMera = async (mode: "create" | "signin" | "auto") => {
+  const run = async (fn: () => Promise<void>, failMsg: string) => {
     setBusy(true);
     setError(null);
     try {
-      await loginWithMera(mode);
+      await fn();
       router.replace("/(app)");
     } catch (e) {
-      setError(
-        e instanceof Error
-          ? e.message
-          : "Passkey failed — host AASA/assetlinks and use a native build (see MERA_SETUP.md)",
-      );
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const onFaceId = async () => {
-    setBusy(true);
-    setError(null);
-    try {
-      await loginWithFaceId();
-      router.replace("/(app)");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Face ID / passkey failed");
+      setError(e instanceof Error ? e.message : failMsg);
     } finally {
       setBusy(false);
     }
@@ -69,86 +47,111 @@ export default function LoginScreen() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={[
           styles.wrap,
-          { paddingTop: insets.top + 36, paddingBottom: insets.bottom + 28 },
+          { paddingTop: insets.top + 28, paddingBottom: insets.bottom + 20 },
         ]}
       >
-        <Animated.View entering={FadeInUp.duration(320)} style={styles.hero}>
-          <BrandMark size="lg" />
-          <Text style={styles.tagline}>
-            Passkey wallet · AUSD · Perpl on Monad. Swipe UP/DOWN on 60s markets.
-          </Text>
-        </Animated.View>
+        <View style={styles.top}>
+          <Animated.View entering={FadeInUp.duration(360)} style={styles.hero}>
+            <BrandMark size="lg" />
+            <Text style={styles.headline}>Trade on Monad</Text>
+            <Text style={styles.subhead}>
+              60s UP/DOWN hunches and Perpl perps. One passkey wallet — no seed phrase.
+            </Text>
+          </Animated.View>
 
-        <View style={styles.form}>
-          <MockBanner />
+          <View style={styles.mockWrap}>
+            <MockBanner />
+          </View>
 
           {missingAuthConfig && !meraAvailable ? (
-            <View style={styles.setupBox}>
-              <Text style={styles.setupTitle}>Passkeys need a native build</Text>
-              <Text style={styles.hint}>
-                Use the Expo dev client / TestFlight (not Expo Go). rpId{" "}
-                {MERA_RP_ID} — host AASA + assetlinks (MERA_SETUP.md).
-              </Text>
-            </View>
+            <Animated.View entering={FadeInDown.duration(280)} style={styles.notice}>
+              <Icon name="phone-portrait-outline" size={18} color={colors.danger} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.noticeTitle}>Native build required</Text>
+                <Text style={styles.noticeBody}>
+                  Passkeys need the Expo dev client or TestFlight (not Expo Go).
+                  rpId {MERA_RP_ID} — see MERA_SETUP.md.
+                </Text>
+              </View>
+            </Animated.View>
           ) : null}
 
-          <View style={styles.meraBlock}>
-            <Text style={styles.meraLabel}>ONE LOGIN · MERA PASSKEY</Text>
+          <Animated.View entering={FadeInUp.delay(80).duration(360)} style={styles.ctaCard}>
+            <View style={styles.ctaHead}>
+              <Text style={styles.ctaEyebrow}>SIGN IN</Text>
+              <View style={styles.securePill}>
+                <Icon name="shield-checkmark" size={12} color={colors.brand} />
+                <Text style={styles.securePillText}>DEVICE SECURED</Text>
+              </View>
+            </View>
+
             <PrimaryButton
               label={busy ? "Waiting for Face ID…" : "Continue with Face ID"}
-              onPress={onFaceId}
+              onPress={() => run(loginWithFaceId, "Face ID / passkey failed")}
               disabled={busy || !meraAvailable}
             />
-            <View style={styles.meraRow}>
+
+            <View style={styles.linkRow}>
               <Pressable
-                onPress={() => onMera("create")}
-                hitSlop={8}
+                onPress={() => run(() => loginWithMera("create"), "Could not create passkey")}
+                hitSlop={10}
                 disabled={busy || !meraAvailable}
+                style={styles.linkBtn}
               >
-                <Text style={styles.footerLink}>Create new passkey</Text>
+                <Text style={styles.linkText}>Create passkey</Text>
               </Pressable>
+              <View style={styles.linkDivider} />
               <Pressable
-                onPress={() => onMera("signin")}
-                hitSlop={8}
+                onPress={() => run(() => loginWithMera("signin"), "Could not use passkey")}
+                hitSlop={10}
                 disabled={busy || !meraAvailable}
+                style={styles.linkBtn}
               >
-                <Text style={styles.footerLink}>Use existing passkey</Text>
+                <Text style={styles.linkText}>Use existing</Text>
               </Pressable>
             </View>
-            <Text style={styles.hint}>
-              No seed phrase · no extension · wallet = passkey on device
-              {meraAvailable ? ` · ${MERA_RP_ID}` : ""}
+
+            <Text style={styles.ctaFoot}>
+              Face ID or fingerprint unlocks your wallet on this device.
             </Text>
-          </View>
+          </Animated.View>
 
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-
-          <View style={styles.orRow}>
-            <View style={styles.orLine} />
-            <Text style={styles.orText}>secures by device unlock</Text>
-            <View style={styles.orLine} />
-          </View>
-
-          <View style={styles.facts}>
-            <FactRow icon="shield-checkmark-outline" text="Trade of record = your passkey EOA" />
-            <FactRow icon="wallet-outline" text="Agora AUSD collateral on Monad testnet" />
-            <FactRow icon="trending-up" text="Perpl perps + 60s UP/DOWN markets" />
-          </View>
+          {error ? (
+            <Animated.View entering={FadeInDown.duration(200)} style={styles.errorBox}>
+              <Icon name="alert-circle-outline" size={16} color={colors.danger} />
+              <Text style={styles.error}>{error}</Text>
+            </Animated.View>
+          ) : null}
         </View>
 
-        <View style={styles.footer}>
-          <Text style={styles.footerMuted}>Face ID / fingerprint unlocks your wallet</Text>
-        </View>
+        <Animated.View entering={FadeInUp.delay(160).duration(360)} style={styles.bottom}>
+          <View style={styles.perkRow}>
+            <Perk icon="key-outline" title="Passkey wallet" sub="No seed phrase" />
+            <Perk icon="water-outline" title="Agora AUSD" sub="Testnet collateral" />
+            <Perk icon="trending-up" title="Perpl + 60s" sub="One trading app" />
+          </View>
+          <Pressable onPress={() => router.push("/(auth)/signup")} hitSlop={8}>
+            <Text style={styles.footerLink}>How passkey signup works</Text>
+          </Pressable>
+          <Text style={styles.footerMuted}>Monad testnet · chainId 10143</Text>
+        </Animated.View>
       </KeyboardAvoidingView>
     </Screen>
   );
 }
 
-function FactRow({ icon, text }: { icon: any; text: string }) {
+function Perk({ icon, title, sub }: { icon: any; title: string; sub: string }) {
   return (
-    <View style={styles.factRow}>
-      <Icon name={icon} size={16} color={colors.brand} />
-      <Text style={styles.factText}>{text}</Text>
+    <View style={styles.perk}>
+      <View style={styles.perkIcon}>
+        <Icon name={icon} size={16} color={colors.brand} />
+      </View>
+      <Text style={styles.perkTitle} numberOfLines={1}>
+        {title}
+      </Text>
+      <Text style={styles.perkSub} numberOfLines={1}>
+        {sub}
+      </Text>
     </View>
   );
 }
@@ -158,79 +161,165 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: space.lg,
     justifyContent: "space-between",
+    gap: space.lg,
   },
-  hero: { paddingTop: 20, gap: 14 },
-  tagline: {
+  top: { gap: space.md },
+  hero: { gap: 10, paddingTop: 8 },
+  headline: {
+    color: colors.ink,
+    fontFamily: "BebasNeue_400Regular",
+    fontSize: 40,
+    letterSpacing: 1.2,
+    lineHeight: 44,
+  },
+  subhead: {
     color: colors.muted,
     fontFamily: type.body,
-    fontSize: 16,
+    fontSize: 15,
     lineHeight: 22,
-    maxWidth: 280,
+    maxWidth: 300,
   },
-  form: { gap: space.md },
-  meraBlock: {
+  mockWrap: { marginTop: 2 },
+  notice: {
+    flexDirection: "row",
     gap: 10,
+    alignItems: "flex-start",
     borderWidth: 1,
-    borderColor: colors.brand,
+    borderColor: "rgba(255,107,74,0.45)",
+    backgroundColor: colors.dangerDim,
     borderRadius: radius.md,
     padding: space.md,
-    backgroundColor: colors.brandDim,
   },
-  meraLabel: {
-    color: colors.brand,
-    fontFamily: type.data,
-    fontSize: 11,
-    letterSpacing: 1.2,
+  noticeTitle: {
+    color: colors.danger,
+    fontFamily: type.bold,
+    fontSize: 13,
+    marginBottom: 2,
   },
-  meraRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+  noticeBody: {
+    color: colors.muted,
+    fontFamily: type.body,
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  ctaCard: {
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
+    borderRadius: radius.lg,
+    backgroundColor: colors.bgCard,
+    padding: space.md,
     gap: 12,
   },
-  orRow: {
+  ctaHead: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    justifyContent: "space-between",
   },
-  orLine: { flex: 1, height: 1, backgroundColor: colors.line },
-  orText: {
+  ctaEyebrow: {
     color: colors.muted,
-    fontFamily: type.medium,
+    fontFamily: type.data,
     fontSize: 11,
-    letterSpacing: 1,
-    textTransform: "uppercase",
+    letterSpacing: 1.4,
   },
-  facts: { gap: 10, marginTop: 4 },
-  factRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  factText: { color: colors.muted, fontFamily: type.body, fontSize: 13, flex: 1 },
-  setupBox: {
-    borderColor: colors.danger,
-    borderWidth: 1,
-    borderRadius: radius.md,
-    padding: space.md,
-    backgroundColor: colors.dangerDim,
-    gap: 8,
-  },
-  setupTitle: { color: colors.danger, fontFamily: type.bold, fontSize: 14 },
-  error: { color: colors.danger, fontFamily: type.medium, fontSize: 13 },
-  hint: {
-    color: colors.muted,
-    fontFamily: type.body,
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  footer: {
+  securePill: {
+    flexDirection: "row",
     alignItems: "center",
-    paddingBottom: 4,
+    gap: 4,
+    backgroundColor: colors.brandDim,
+    borderRadius: radius.pill,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
   },
-  footerMuted: {
+  securePillText: {
+    color: colors.brand,
+    fontFamily: type.data,
+    fontSize: 9,
+    letterSpacing: 0.8,
+  },
+  linkRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+  },
+  linkBtn: { paddingVertical: 6, paddingHorizontal: 8 },
+  linkDivider: {
+    width: 1,
+    height: 12,
+    backgroundColor: colors.line,
+  },
+  linkText: {
+    color: colors.brand,
+    fontFamily: type.bold,
+    fontSize: 14,
+  },
+  ctaFoot: {
     color: colors.muted,
     fontFamily: type.body,
+    fontSize: 12,
+    textAlign: "center",
+  },
+  errorBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: colors.dangerDim,
+    borderRadius: radius.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  error: {
+    color: colors.danger,
+    fontFamily: type.medium,
     fontSize: 13,
+    flex: 1,
+  },
+  bottom: {
+    gap: 14,
+    alignItems: "center",
+  },
+  perkRow: {
+    flexDirection: "row",
+    gap: 8,
+    width: "100%",
+  },
+  perk: {
+    flex: 1,
+    alignItems: "center",
+    gap: 4,
+    paddingVertical: 10,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.bgElevated,
+  },
+  perkIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.brandSoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  perkTitle: {
+    color: colors.ink,
+    fontFamily: type.bold,
+    fontSize: 11,
+  },
+  perkSub: {
+    color: colors.muted,
+    fontFamily: type.body,
+    fontSize: 10,
   },
   footerLink: {
     color: colors.brand,
-    fontFamily: type.bold,
-    fontSize: 15,
+    fontFamily: type.medium,
+    fontSize: 13,
+  },
+  footerMuted: {
+    color: colors.muted,
+    fontFamily: type.data,
+    fontSize: 10,
+    letterSpacing: 0.6,
   },
 });
