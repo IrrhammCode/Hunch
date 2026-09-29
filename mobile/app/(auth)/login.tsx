@@ -47,10 +47,13 @@ export default function LoginScreen() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={[
           styles.wrap,
-          { paddingTop: insets.top + 28, paddingBottom: insets.bottom + 20 },
+          {
+            paddingTop: insets.top + 24,
+            paddingBottom: Math.max(insets.bottom, 12) + 8,
+          },
         ]}
       >
-        <View style={styles.top}>
+        <View style={styles.main}>
           <Animated.View entering={FadeInUp.duration(360)} style={styles.hero}>
             <BrandMark size="lg" />
             <Text style={styles.headline}>Trade on Monad</Text>
@@ -59,9 +62,7 @@ export default function LoginScreen() {
             </Text>
           </Animated.View>
 
-          <View style={styles.mockWrap}>
-            <MockBanner />
-          </View>
+          <MockBanner />
 
           {missingAuthConfig && !meraAvailable ? (
             <Animated.View entering={FadeInDown.duration(280)} style={styles.notice}>
@@ -124,34 +125,36 @@ export default function LoginScreen() {
           ) : null}
         </View>
 
-        <Animated.View entering={FadeInUp.delay(160).duration(360)} style={styles.bottom}>
-          <View style={styles.perkRow}>
-            <Perk icon="key-outline" title="Passkey wallet" sub="No seed phrase" />
-            <Perk icon="water-outline" title="Agora AUSD" sub="Testnet collateral" />
-            <Perk icon="trending-up" title="Perpl + 60s" sub="One trading app" />
+        {/* Bottom chrome — one strip + one footer line */}
+        <View style={styles.footer}>
+          <View style={styles.trustRow}>
+            <TrustItem icon="key-outline" label="Passkey wallet" />
+            <View style={styles.dot} />
+            <TrustItem icon="water-outline" label="Agora AUSD" />
+            <View style={styles.dot} />
+            <TrustItem icon="trending-up" label="Perpl + 60s" />
           </View>
-          <Pressable onPress={() => router.push("/(auth)/signup")} hitSlop={8}>
-            <Text style={styles.footerLink}>How passkey signup works</Text>
-          </Pressable>
-          <Text style={styles.footerMuted}>Monad testnet · chainId 10143</Text>
-        </Animated.View>
+          <View style={styles.footerBar}>
+            <Pressable
+              onPress={() => router.push("/(auth)/signup")}
+              hitSlop={10}
+              style={styles.footerLinkHit}
+            >
+              <Text style={styles.footerLink}>Create an account</Text>
+            </Pressable>
+            <Text style={styles.footerMeta}>MONAD TESTNET · 10143</Text>
+          </View>
+        </View>
       </KeyboardAvoidingView>
     </Screen>
   );
 }
 
-function Perk({ icon, title, sub }: { icon: any; title: string; sub: string }) {
+function TrustItem({ icon, label }: { icon: any; label: string }) {
   return (
-    <View style={styles.perk}>
-      <View style={styles.perkIcon}>
-        <Icon name={icon} size={16} color={colors.brand} />
-      </View>
-      <Text style={styles.perkTitle} numberOfLines={1}>
-        {title}
-      </Text>
-      <Text style={styles.perkSub} numberOfLines={1}>
-        {sub}
-      </Text>
+    <View style={styles.trustItem}>
+      <Icon name={icon} size={13} color={colors.muted} />
+      <Text style={styles.trustText}>{label}</Text>
     </View>
   );
 }
@@ -160,11 +163,14 @@ const styles = StyleSheet.create({
   wrap: {
     flex: 1,
     paddingHorizontal: space.lg,
-    justifyContent: "space-between",
-    gap: space.lg,
   },
-  top: { gap: space.md },
-  hero: { gap: 10, paddingTop: 8 },
+  main: {
+    flex: 1,
+    gap: space.md,
+    justifyContent: "center",
+    paddingBottom: space.md,
+  },
+  hero: { gap: 10, marginBottom: 4 },
   headline: {
     color: colors.ink,
     fontFamily: "BebasNeue_400Regular",
@@ -179,7 +185,6 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     maxWidth: 300,
   },
-  mockWrap: { marginTop: 2 },
   notice: {
     flexDirection: "row",
     gap: 10,
@@ -240,23 +245,23 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 12,
+    gap: 10,
   },
-  linkBtn: { paddingVertical: 6, paddingHorizontal: 8 },
+  linkBtn: { paddingVertical: 4, paddingHorizontal: 6 },
   linkDivider: {
     width: 1,
-    height: 12,
+    height: 11,
     backgroundColor: colors.line,
   },
   linkText: {
     color: colors.brand,
     fontFamily: type.bold,
-    fontSize: 14,
+    fontSize: 13,
   },
   ctaFoot: {
     color: colors.muted,
     fontFamily: type.body,
-    fontSize: 12,
+    fontSize: 11,
     textAlign: "center",
   },
   errorBox: {
@@ -274,52 +279,54 @@ const styles = StyleSheet.create({
     fontSize: 13,
     flex: 1,
   },
-  bottom: {
-    gap: 14,
-    alignItems: "center",
+  footer: {
+    gap: 10,
+    paddingTop: 10,
   },
-  perkRow: {
+  trustRow: {
     flexDirection: "row",
-    gap: 8,
-    width: "100%",
-  },
-  perk: {
-    flex: 1,
-    alignItems: "center",
-    gap: 4,
-    paddingVertical: 10,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.line,
-    backgroundColor: colors.bgElevated,
-  },
-  perkIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.brandSoft,
     alignItems: "center",
     justifyContent: "center",
+    gap: 10,
+    paddingVertical: 2,
   },
-  perkTitle: {
-    color: colors.ink,
-    fontFamily: type.bold,
+  trustItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  trustText: {
+    color: colors.muted,
+    fontFamily: type.medium,
     fontSize: 11,
   },
-  perkSub: {
-    color: colors.muted,
-    fontFamily: type.body,
-    fontSize: 10,
+  dot: {
+    width: 3,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: colors.line,
+  },
+  footerBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.line,
+    paddingTop: 12,
+    paddingBottom: 2,
+  },
+  footerLinkHit: {
+    paddingVertical: 4,
   },
   footerLink: {
     color: colors.brand,
-    fontFamily: type.medium,
+    fontFamily: type.bold,
     fontSize: 13,
   },
-  footerMuted: {
+  footerMeta: {
     color: colors.muted,
     fontFamily: type.data,
     fontSize: 10,
-    letterSpacing: 0.6,
+    letterSpacing: 0.7,
   },
 });

@@ -64,7 +64,10 @@ export default function SignupScreen() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={[
           styles.wrap,
-          { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20 },
+          {
+            paddingTop: insets.top + 16,
+            paddingBottom: Math.max(insets.bottom, 12) + 8,
+          },
         ]}
       >
         <View style={styles.topBar}>
@@ -75,9 +78,7 @@ export default function SignupScreen() {
           <BrandMark size="sm" />
         </View>
 
-        <View style={styles.mockWrap}>
-          <MockBanner />
-        </View>
+        <MockBanner />
 
         <Animated.View entering={FadeInUp.duration(320)} style={styles.hero}>
           <Text style={styles.eyebrow}>CREATE ACCOUNT</Text>
@@ -105,16 +106,20 @@ export default function SignupScreen() {
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
-        <View style={styles.actions}>
+        <View style={{ flex: 1 }} />
+
+        <View style={styles.footer}>
           <PrimaryButton
             label={busy ? "Waiting for Face ID…" : "Create passkey wallet"}
             onPress={onCreate}
             disabled={busy || !meraAvailable}
           />
-          <Pressable onPress={() => router.replace("/(auth)/login")} hitSlop={10}>
-            <Text style={styles.secondary}>Already have a passkey? Sign in</Text>
-          </Pressable>
-          <Text style={styles.rpId}>rpId {MERA_RP_ID}</Text>
+          <View style={styles.footerBar}>
+            <Pressable onPress={() => router.replace("/(auth)/login")} hitSlop={10}>
+              <Text style={styles.footerLink}>Already have a passkey? Sign in</Text>
+            </Pressable>
+            <Text style={styles.footerMeta}>rpId {MERA_RP_ID}</Text>
+          </View>
         </View>
       </KeyboardAvoidingView>
     </Screen>
@@ -125,13 +130,12 @@ const styles = StyleSheet.create({
   wrap: {
     flex: 1,
     paddingHorizontal: space.lg,
-    justifyContent: "space-between",
-    gap: space.md,
   },
   topBar: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    marginBottom: space.sm,
   },
   back: {
     flexDirection: "row",
@@ -149,8 +153,7 @@ const styles = StyleSheet.create({
     fontFamily: type.medium,
     fontSize: 13,
   },
-  mockWrap: { marginTop: 2 },
-  hero: { gap: 8, paddingTop: 4 },
+  hero: { gap: 8, paddingTop: 10, marginBottom: space.sm },
   eyebrow: {
     color: colors.brand,
     fontFamily: type.data,
@@ -160,9 +163,9 @@ const styles = StyleSheet.create({
   headline: {
     color: colors.ink,
     fontFamily: "BebasNeue_400Regular",
-    fontSize: 42,
+    fontSize: 40,
     letterSpacing: 1.2,
-    lineHeight: 46,
+    lineHeight: 44,
   },
   subhead: {
     color: colors.muted,
@@ -171,7 +174,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     maxWidth: 320,
   },
-  steps: { gap: 10 },
+  steps: { gap: 8 },
   step: {
     flexDirection: "row",
     gap: 12,
@@ -180,25 +183,25 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
     borderRadius: radius.md,
     backgroundColor: colors.bgElevated,
-    padding: space.md,
+    padding: 14,
   },
   stepN: {
     color: colors.brand,
     fontFamily: type.data,
-    fontSize: 13,
+    fontSize: 12,
     marginTop: 2,
   },
   stepTitle: {
     color: colors.ink,
     fontFamily: type.bold,
-    fontSize: 15,
+    fontSize: 14,
     marginBottom: 2,
   },
   stepBody: {
     color: colors.muted,
     fontFamily: type.body,
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 12,
+    lineHeight: 17,
   },
   error: {
     color: colors.danger,
@@ -206,13 +209,24 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textAlign: "center",
   },
-  actions: { gap: 12, alignItems: "center" },
-  secondary: {
+  footer: {
+    gap: 12,
+    paddingTop: 8,
+  },
+  footerBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.line,
+    paddingTop: 12,
+  },
+  footerLink: {
     color: colors.brand,
     fontFamily: type.medium,
-    fontSize: 14,
+    fontSize: 13,
   },
-  rpId: {
+  footerMeta: {
     color: colors.muted,
     fontFamily: type.data,
     fontSize: 10,
