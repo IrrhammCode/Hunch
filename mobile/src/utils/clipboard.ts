@@ -1,12 +1,16 @@
-import { Platform } from "react-native";
+﻿import { Platform } from "react-native";
 
 /**
- * Copy text without hard-crashing when native ExpoClipboard is missing
- * (dev client / Expo Go built before expo-clipboard was added).
+ * Copy without crashing when native ExpoClipboard is missing
+ * (web, Expo Go, or dev client built before expo-clipboard).
  */
 export async function copyToClipboard(text: string): Promise<boolean> {
   try {
-    if (Platform.OS === "web" && typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+    if (
+      Platform.OS === "web" &&
+      typeof navigator !== "undefined" &&
+      navigator.clipboard?.writeText
+    ) {
       await navigator.clipboard.writeText(text);
       return true;
     }
@@ -15,16 +19,36 @@ export async function copyToClipboard(text: string): Promise<boolean> {
   }
 
   try {
-    // Lazy require — static import throws at bundle load if native module is absent
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const Clipboard = require("expo-clipboard");
-    if (typeof Clipboard?.setStringAsync === "function") {
-      await Clipboard.setStringAsync(text);
+    const RN = require("react-native") as any;
+    const legacy = RN.Clipboard;
+    if (legacy?.setString) {
+      legacy.setString(text);
       return true;
     }
   } catch {
-    /* native module not in this build */
+    /* ignore */
   }
 
   return false;
+}
+
+/** Haptics that never crash on web / missing native. */
+export async function haptic(
+  kind: "selection" | "light" | "medium" | "success" | "warning" | "error" = "selection",
+) {
+  if (Platform.OS === "web") return;
+  try {
+    const Haptics = require("expo-haptics") as any;
+    if (kind === "selection") await Haptics.selectionAsync();
+    else if (kind === "light") await Haptics.impactAsync(Haptics.ImpactFeedbackStyle?.Light);
+    else if (kind === "medium") await Haptics.impactAsync(Haptics.ImpactFeedbackStyle?.Medium);
+    else if (kind === "success")
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType?.Success);
+    else if (kind === "warning")
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType?.Warning);
+    else if (kind === "error")
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType?.Error);
+  } catch {
+    /* optional */
+  }
 }

@@ -1,6 +1,13 @@
 import { useState, useMemo } from "react";
 import { StyleSheet, Text, View, Pressable, ScrollView, TextInput, ActivityIndicator, Dimensions } from "react-native";
-import * as Haptics from "expo-haptics";
+import { haptic as hapticFx } from "@/src/utils/clipboard";
+const Haptics = {
+  selectionAsync: () => hapticFx("selection"),
+  impactAsync: (_style?: unknown) => hapticFx("medium"),
+  notificationAsync: (t?: number) => hapticFx(t === 2 ? "error" : t === 1 ? "warning" : "success"),
+  ImpactFeedbackStyle: { Medium: "medium", Light: "light" },
+  NotificationFeedbackType: { Success: 0, Warning: 1, Error: 2 },
+};
 import { router } from "expo-router";
 import { useAuth } from "@/src/auth/AuthContext";
 import { useWallet } from "@/src/wallet/WalletContext";
