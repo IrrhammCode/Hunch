@@ -21,6 +21,7 @@ import {
   PRIVY_APP_ID,
   PRIVY_CLIENT_ID,
   SUPPORTED_CHAINS,
+  USE_MOCK,
 } from "@/src/config/chain";
 import { colors } from "@/src/theme";
 
@@ -71,7 +72,8 @@ export default function RootLayout() {
 
   if (!loaded) return <BootScreen label="Starting" />;
 
-  if (!HAS_PRIVY) {
+  // Mock design: skip Privy native provider (Expo Go / web OK for UI)
+  if (USE_MOCK || !HAS_PRIVY) {
     return <AppShell />;
   }
 
