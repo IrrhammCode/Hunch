@@ -78,8 +78,12 @@ export default function ProfileScreen() {
   };
 
   const onLogout = async () => {
-    await logout();
-    router.replace("/(auth)/login");
+    try {
+      await logout();
+    } finally {
+      // Keep auth screens visible after sign-out (never bounce back into the app).
+      router.replace("/(auth)/login");
+    }
   };
 
   const onFaucet = async () => {
