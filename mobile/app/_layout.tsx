@@ -1,4 +1,3 @@
-import { PrivyProvider } from "@privy-io/expo";
 import "react-native-gesture-handler";
 import { BebasNeue_400Regular } from "@expo-google-fonts/bebas-neue";
 import {
@@ -16,13 +15,6 @@ import { AuthProvider } from "@/src/auth/AuthContext";
 import { BootScreen } from "@/src/components/BootScreen";
 import { ToastProvider } from "@/src/components/Toast";
 import { WalletProvider } from "@/src/wallet/WalletContext";
-import {
-  HAS_PRIVY,
-  PRIVY_APP_ID,
-  PRIVY_CLIENT_ID,
-  SUPPORTED_CHAINS,
-  USE_MOCK,
-} from "@/src/config/chain";
 import { colors } from "@/src/theme";
 
 export { ErrorBoundary } from "expo-router";
@@ -72,25 +64,5 @@ export default function RootLayout() {
 
   if (!loaded) return <BootScreen label="Starting" />;
 
-  // Mock design: skip Privy native provider (Expo Go / web OK for UI)
-  if (USE_MOCK || !HAS_PRIVY) {
-    return <AppShell />;
-  }
-
-  return (
-    <PrivyProvider
-      appId={PRIVY_APP_ID}
-      clientId={PRIVY_CLIENT_ID}
-      supportedChains={SUPPORTED_CHAINS as any}
-      config={{
-        embedded: {
-          ethereum: {
-            createOnLogin: "users-without-wallets",
-          },
-        },
-      }}
-    >
-      <AppShell />
-    </PrivyProvider>
-  );
+  return <AppShell />;
 }

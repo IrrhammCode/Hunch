@@ -44,26 +44,18 @@ export const baseSepolia = defineChain({
 
 export const SUPPORTED_CHAINS = [monadTestnet, baseSepolia];
 
-export const PRIVY_APP_ID = process.env.EXPO_PUBLIC_PRIVY_APP_ID ?? "";
-export const PRIVY_CLIENT_ID = process.env.EXPO_PUBLIC_PRIVY_CLIENT_ID ?? "";
-
-export function looksLikeBundleId(value: string) {
-  return /^com\.[a-z0-9_.-]+$/i.test(value.trim());
-}
-
-export const PRIVY_CLIENT_ID_OK =
-  Boolean(PRIVY_CLIENT_ID) && !looksLikeBundleId(PRIVY_CLIENT_ID);
-
-export const HAS_PRIVY = Boolean(PRIVY_APP_ID) && PRIVY_CLIENT_ID_OK;
+/** Mera passkey only — Privy removed from product path. */
+export const PRIVY_APP_ID = "";
+export const PRIVY_CLIENT_ID = "";
+export const PRIVY_CLIENT_ID_OK = false;
+export const HAS_PRIVY = false;
 
 /**
  * FULL MOCK MODE — ON by default until Tenderly + live keys are ready.
- * EXPO_PUBLIC_USE_MOCK=0 → real API / Mera / Privy / Perpl.
- * Any other value (or unset) → mock fixtures.
+ * EXPO_PUBLIC_USE_MOCK=0 → real API / Mera / Perpl.
  */
 export const USE_MOCK = process.env.EXPO_PUBLIC_USE_MOCK !== "0";
 
-/** Real trades only when mock is off. */
 export const REAL_TRADING = !USE_MOCK;
 
 export const CHAIN_ID = monadTestnet.id;

@@ -235,7 +235,7 @@ export default function MarketDetailScreen() {
       return;
     }
     if (!user?.address) {
-      toast.error("Sign in required", "Use Mera passkey or Privy first.");
+      toast.error("Sign in required", "Use Face ID / Mera passkey first.");
       return;
     }
     setBusy(side);
@@ -278,7 +278,7 @@ export default function MarketDetailScreen() {
       return;
     }
     if (!user?.address) {
-      toast.error("Sign in required", "Use Mera passkey or Privy first.");
+      toast.error("Sign in required", "Use Face ID / Mera passkey first.");
       return;
     }
     setBusy(side);

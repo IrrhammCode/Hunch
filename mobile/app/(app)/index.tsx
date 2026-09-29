@@ -55,7 +55,7 @@ function formatCountdown(sec: number) {
 export default function HunchScreen() {
   const insets = useSafeAreaInsets();
   const { me, refresh: refreshWallet } = useWallet();
-  const { user, privyMode, getEthereumProvider } = useAuth();
+  const { user, getEthereumProvider } = useAuth();
   const toast = useToast();
   const [tradeMode, setTradeMode] = useState<"perps" | "hunch">("perps");
   const [data, setData] = useState<CurrentRoundResponse | null>(null);
@@ -304,7 +304,6 @@ export default function HunchScreen() {
       refresh,
       refreshWallet,
       tx,
-      privyMode,
       user?.address,
       getEthereumProvider,
       toast,

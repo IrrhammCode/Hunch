@@ -25,7 +25,7 @@ const SIZES = ["5", "10", "25"] as const;
 /** CPMM event-market exchange UI — UP/DOWN contracts, not TradFi vanilla options. */
 export default function OptionsExchangeScreen() {
   const insets = useSafeAreaInsets();
-  const { user, privyMode, getEthereumProvider } = useAuth();
+  const { user, getEthereumProvider } = useAuth();
   const { refresh: refreshWallet } = useWallet();
   const toast = useToast();
 
@@ -87,8 +87,8 @@ export default function OptionsExchangeScreen() {
       toast.show("Market closed", { body: "Keeper is listing the next series." });
       return;
     }
-    if (!privyMode || !user?.address) {
-      toast.error("Auth required", "Sign in with Privy to place a real trade.");
+    if (!user?.address) {
+      toast.error("Auth required", "Sign in with Face ID / Mera passkey first.");
       return;
     }
     setBusy(side);

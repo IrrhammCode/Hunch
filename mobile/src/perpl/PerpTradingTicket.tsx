@@ -67,7 +67,7 @@ export function PerpTradingTicket() {
       return;
     }
     if (!user?.address) {
-      toast.error("Wallet required", "Sign in with Mera passkey or Privy to place a Perpl order.");
+      toast.error("Wallet required", "Sign in with Face ID / Mera passkey to place a Perpl order.");
       return;
     }
     if (marginNum < 5) {

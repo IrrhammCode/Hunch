@@ -21,7 +21,7 @@ function shortAddr(a: string) {
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
-  const { user, logout, privyMode } = useAuth();
+  const { user, logout } = useAuth();
   const { me, error, refresh } = useWallet();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
@@ -79,7 +79,7 @@ export default function ProfileScreen() {
     setBusy(true);
     try {
       if (!user?.address) {
-        toast.error("Wallet not ready", "Sign in with Mera passkey or Privy first.");
+        toast.error("Wallet not ready", "Sign in with Face ID / Mera passkey first.");
         return;
       }
       const r = await fundPrivyWallet(user.address);
@@ -144,19 +144,19 @@ export default function ProfileScreen() {
             <View style={styles.onlineStatusCol}>
               <View style={styles.onlinePill}>
                 <View style={styles.greenDot} />
-                <Text style={styles.onlinePillText}>{privyMode ? "PRIVY" : "SETUP"}</Text>
+                <Text style={styles.onlinePillText}>MERA</Text>
               </View>
             </View>
           </View>
 
-          {/* PRIVY EMBEDDED SMART WALLET CARD */}
+          {/* MERA PASSKEY WALLET CARD */}
           <View style={styles.walletCard}>
             <View style={styles.walletTop}>
               <View style={styles.walletLeftHeader}>
                 <Icon name="shield-checkmark-outline" size={16} color={colors.brand} />
                 <View>
-                  <Text style={styles.walletTitle}>Privy Embedded Smart Wallet</Text>
-                  <Text style={styles.walletSub}>Embedded wallet · Monad testnet</Text>
+                  <Text style={styles.walletTitle}>Mera Passkey Wallet</Text>
+                  <Text style={styles.walletSub}>Passkey EOA · Monad testnet</Text>
                 </View>
               </View>
               <View style={styles.ercBadge}>

@@ -19,7 +19,7 @@ type WalletContextValue = {
 const WalletContext = createContext<WalletContextValue | null>(null);
 
 export function WalletProvider({ children }: { children: React.ReactNode }) {
-  const { user, ready, privyMode } = useAuth();
+  const { user, ready } = useAuth();
   const [me, setMe] = useState<WalletSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +38,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, [address, privyMode]);
+  }, [address]);
 
   useEffect(() => {
     if (!ready) return;

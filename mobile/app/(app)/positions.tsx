@@ -21,7 +21,7 @@ type TabMode = "perps" | "hunch";
 export default function PositionsScreen() {
   const insets = useSafeAreaInsets();
   const { me, error, refresh: refreshWallet } = useWallet();
-  const { user, privyMode, getEthereumProvider } = useAuth();
+  const { user, getEthereumProvider } = useAuth();
   const toast = useToast();
 
   const userAddress = user?.address || me?.address || "";

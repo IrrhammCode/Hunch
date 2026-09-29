@@ -99,10 +99,10 @@ export type PrivyTradeResult = ExecuteTradeResult & {
 };
 
 /**
- * Real trade path (Privy + ecosystem):
+ * Real trade path (Mera passkey EOA):
  * 1. Faucet Agora AUSD + MON when the wallet is thin
- * 2. Privy wallet signs approve + commitBuy on Monad testnet
- * 3. API hot-wallet waits delay-blocks, pulls Pyth, executeBuy (anyone can execute)
+ * 2. Wallet signs approve + commitBuy on Monad testnet
+ * 3. API hot-wallet waits delay-blocks, pulls Pyth, executeBuy (shares credit trader)
  */
 export async function placePrivyTrade(params: {
   provider: any;
@@ -128,7 +128,7 @@ export async function placePrivyTrade(params: {
   }
 
   if (!address || !/^0x[a-fA-F0-9]{40}$/.test(address)) {
-    throw new Error("Wallet required — Mera passkey or Privy login first.");
+    throw new Error("Wallet required — sign in with Face ID / Mera passkey first.");
   }
   await ensureChain(provider);
 
