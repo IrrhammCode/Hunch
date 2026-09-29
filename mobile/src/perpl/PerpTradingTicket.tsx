@@ -504,14 +504,15 @@ const styles = StyleSheet.create({
   priceMetaRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 2,
   },
   bigPrice: {
     color: colors.ink,
     fontFamily: type.data,
-    fontSize: 28,
-    fontWeight: "800",
+    fontSize: 26,
+    fontWeight: "700",
+    flexShrink: 1,
   },
   bigDelta: {
     color: colors.up,
@@ -523,7 +524,6 @@ const styles = StyleSheet.create({
     color: colors.muted,
     fontFamily: type.data,
     fontSize: 10,
-    marginLeft: "auto",
   },
   chartContainer: {
     height: 90,

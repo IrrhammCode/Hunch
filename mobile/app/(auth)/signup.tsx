@@ -12,7 +12,6 @@ import Animated, { FadeInUp } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/src/auth/AuthContext";
 import { MockBanner } from "@/src/components/MockBanner";
-import { BrandMark } from "@/src/components/BrandMark";
 import { Screen } from "@/src/components/Screen";
 import { PrimaryButton } from "@/src/components/ui";
 import { Icon } from "@/src/components/Icon";
@@ -23,17 +22,17 @@ const STEPS = [
   {
     n: "01",
     title: "Create a passkey",
-    body: "Face ID or fingerprint on this device. Nothing to write down.",
+    body: "Face ID on this device. Nothing to write down.",
   },
   {
     n: "02",
     title: "Wallet is generated",
-    body: "A Monad EOA is derived from the passkey. You own the keys.",
+    body: "Monad EOA from the passkey. You own the keys.",
   },
   {
     n: "03",
     title: "Fund and trade",
-    body: "Claim Agora AUSD, then trade Perpl perps and 60s UP/DOWN.",
+    body: "Claim AUSD, then Perpl + 60s markets.",
   },
 ];
 
@@ -65,26 +64,25 @@ export default function SignupScreen() {
         style={[
           styles.wrap,
           {
-            paddingTop: insets.top + 16,
-            paddingBottom: Math.max(insets.bottom, 12) + 8,
+            paddingTop: insets.top + 12,
+            paddingBottom: Math.max(insets.bottom, 10) + 6,
           },
         ]}
       >
         <View style={styles.topBar}>
           <Pressable onPress={() => router.back()} hitSlop={12} style={styles.back}>
-            <Icon name="arrow-back" size={20} color={colors.ink} />
-            <Text style={styles.backText}>Sign in</Text>
+            <Icon name="arrow-back" size={18} color={colors.ink} />
+            <Text style={styles.backText}>Back</Text>
           </Pressable>
-          <BrandMark size="sm" />
         </View>
 
         <MockBanner />
 
-        <Animated.View entering={FadeInUp.duration(320)} style={styles.hero}>
+        <Animated.View entering={FadeInUp.duration(300)} style={styles.hero}>
           <Text style={styles.eyebrow}>CREATE ACCOUNT</Text>
-          <Text style={styles.headline}>One passkey{"\n"}is your wallet</Text>
+          <Text style={styles.headline}>One passkey is your wallet</Text>
           <Text style={styles.subhead}>
-            No email. No seed phrase. No extension. Sign every trade with Face ID on Monad.
+            No email. No seed phrase. Face ID signs every trade on Monad.
           </Text>
         </Animated.View>
 
@@ -92,7 +90,7 @@ export default function SignupScreen() {
           {STEPS.map((s, i) => (
             <Animated.View
               key={s.n}
-              entering={FadeInUp.delay(60 * i).duration(300)}
+              entering={FadeInUp.delay(50 * i).duration(280)}
               style={styles.step}
             >
               <Text style={styles.stepN}>{s.n}</Text>
@@ -110,16 +108,17 @@ export default function SignupScreen() {
 
         <View style={styles.footer}>
           <PrimaryButton
-            label={busy ? "Waiting for Face ID…" : "Create passkey wallet"}
+            label={busy ? "Waiting for Face ID..." : "Create an account"}
             onPress={onCreate}
             disabled={busy || !meraAvailable}
           />
-          <View style={styles.footerBar}>
+          <View style={styles.loginRow}>
+            <Text style={styles.loginLabel}>Already have a passkey?</Text>
             <Pressable onPress={() => router.replace("/(auth)/login")} hitSlop={10}>
-              <Text style={styles.footerLink}>Already have a passkey? Sign in</Text>
+              <Text style={styles.loginBtn}>Sign in</Text>
             </Pressable>
-            <Text style={styles.footerMeta}>rpId {MERA_RP_ID}</Text>
           </View>
+          <Text style={styles.footerMeta}>{MERA_RP_ID} · MONAD 10143</Text>
         </View>
       </KeyboardAvoidingView>
     </Screen>
@@ -134,16 +133,15 @@ const styles = StyleSheet.create({
   topBar: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
     marginBottom: space.sm,
   },
   back: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    height: 36,
-    paddingHorizontal: 10,
-    borderRadius: 18,
+    gap: 4,
+    height: 32,
+    paddingHorizontal: 8,
+    borderRadius: 16,
     backgroundColor: colors.bgElevated,
     borderWidth: 1,
     borderColor: colors.line,
@@ -153,83 +151,88 @@ const styles = StyleSheet.create({
     fontFamily: type.medium,
     fontSize: 13,
   },
-  hero: { gap: 8, paddingTop: 10, marginBottom: space.sm },
+  hero: { gap: 6, marginBottom: space.sm },
   eyebrow: {
     color: colors.brand,
     fontFamily: type.data,
-    fontSize: 11,
-    letterSpacing: 1.5,
+    fontSize: 10,
+    letterSpacing: 1.4,
   },
   headline: {
     color: colors.ink,
     fontFamily: "BebasNeue_400Regular",
-    fontSize: 40,
-    letterSpacing: 1.2,
-    lineHeight: 44,
+    fontSize: 34,
+    letterSpacing: 1,
+    lineHeight: 38,
   },
   subhead: {
     color: colors.muted,
     fontFamily: type.body,
-    fontSize: 15,
-    lineHeight: 22,
-    maxWidth: 320,
+    fontSize: 14,
+    lineHeight: 20,
+    maxWidth: 300,
   },
   steps: { gap: 8 },
   step: {
     flexDirection: "row",
-    gap: 12,
+    gap: 10,
     alignItems: "flex-start",
     borderWidth: 1,
     borderColor: colors.line,
     borderRadius: radius.md,
     backgroundColor: colors.bgElevated,
-    padding: 14,
+    padding: 12,
   },
   stepN: {
     color: colors.brand,
     fontFamily: type.data,
-    fontSize: 12,
+    fontSize: 11,
     marginTop: 2,
   },
   stepTitle: {
     color: colors.ink,
     fontFamily: type.bold,
-    fontSize: 14,
-    marginBottom: 2,
+    fontSize: 13,
+    marginBottom: 1,
   },
   stepBody: {
     color: colors.muted,
     fontFamily: type.body,
     fontSize: 12,
-    lineHeight: 17,
+    lineHeight: 16,
   },
   error: {
     color: colors.danger,
     fontFamily: type.medium,
-    fontSize: 13,
+    fontSize: 12,
     textAlign: "center",
+    marginTop: 8,
   },
   footer: {
-    gap: 12,
-    paddingTop: 8,
+    gap: 10,
+    paddingTop: 6,
   },
-  footerBar: {
+  loginRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.line,
-    paddingTop: 12,
+    justifyContent: "center",
+    gap: 6,
   },
-  footerLink: {
+  loginLabel: {
+    color: colors.muted,
+    fontFamily: type.body,
+    fontSize: 13,
+  },
+  loginBtn: {
     color: colors.brand,
-    fontFamily: type.medium,
+    fontFamily: type.bold,
     fontSize: 13,
   },
   footerMeta: {
     color: colors.muted,
     fontFamily: type.data,
-    fontSize: 10,
+    fontSize: 9,
     letterSpacing: 0.5,
+    textAlign: "center",
   },
 });
