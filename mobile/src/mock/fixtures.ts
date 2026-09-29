@@ -22,33 +22,35 @@ export const MOCK_PRICES: Record<string, number> = {
 function walkSeries(symbol: string, bars: number, resolutionMin: number) {
   const s = symbol.toUpperCase();
   const base = MOCK_PRICES[s] ?? 100;
-  const n = Math.max(24, Math.min(bars || 90, 120));
+  const n = Math.max(36, Math.min(bars || 72, 96));
   const pts: { t: number; o: number; h: number; l: number; c: number; v: number }[] = [];
-  let p = base * 0.978;
+  let p = base * 0.968;
   const t0 = now() - n * resolutionMin * 60;
   for (let i = 0; i < n; i++) {
-    const wave = Math.sin(i / 5.5 + s.length) * base * 0.004 + Math.cos(i / 11) * base * 0.0025;
-    const trend = ((i / n) * 0.022 - 0.008) * base;
-    const target = base + wave + trend * 0.15;
+    const wave =
+      Math.sin(i / 3.8 + s.length) * base * 0.006 +
+      Math.cos(i / 8.2) * base * 0.0035 +
+      Math.sin(i / 15) * base * 0.0025;
+    const trend = ((i / n) * 0.032 - 0.012) * base;
+    const target = base + wave + trend * 0.25;
     const o = p;
-    p = p + (target - p) * 0.18 + Math.sin(i * 1.7 + s.charCodeAt(0)) * base * 0.0008;
+    p += (target - p) * 0.16 + Math.sin(i * 1.9 + s.charCodeAt(0)) * base * 0.0012;
     const c = p;
-    const h = Math.max(o, c) * 1.0012;
-    const l = Math.min(o, c) * 0.9988;
+    const h = Math.max(o, c) * 1.0018;
+    const l = Math.min(o, c) * 0.9982;
     pts.push({
       t: t0 + i * Math.max(1, resolutionMin) * 60,
       o,
       h,
       l,
       c,
-      v: 55 + ((Math.abs(c - o) / base) * 8000) + (i % 7) * 3,
+      v: 22 + Math.abs(Math.sin(i / 2.5)) * 55 + (i % 6) * 5,
     });
   }
-  // pin last close near mock last
   const last = pts[pts.length - 1]!;
   last.c = base;
-  last.h = Math.max(last.h, base);
-  last.l = Math.min(last.l, base);
+  last.h = Math.max(last.h, base * 1.0006);
+  last.l = Math.min(last.l, base * 0.9994);
   return pts;
 }
 
