@@ -106,7 +106,10 @@ export default function MarketsScreen() {
     Haptics.selectionAsync();
     router.push({
       pathname: "/(app)/market-detail",
-      params: { symbol: opts.symbol, kind: opts.kind },
+      params: {
+        symbol: opts.symbol,
+        kind: opts.kind,
+      },
     });
   };
 
@@ -261,17 +264,18 @@ export default function MarketsScreen() {
             </View>
           )}
 
-          {/* Featured mini chart — always visible in mock/design */}
+          {/* Featured mini chart — tap opens BTC detail */}
           {(filter === "all" || filter === "perps") && (
-            <View style={styles.featuredChart}>
+            <Pressable
+              onPress={() => openMarketDetail({ symbol: "BTC", kind: "perp", pair: "BTC-USD", label: "BTC / USD" })}
+              style={styles.featuredChart}
+            >
               <View style={styles.featuredHead}>
                 <Text style={styles.featuredTitle}>BTC · LIVE CHART</Text>
-                <Text style={monoStyle(11, colors.muted)}>
-                  ${mockSeries("BTC", 1).slice(-1)[0]?.c?.toLocaleString(undefined, { maximumFractionDigits: 0 }) ?? "—"}
-                </Text>
+                <Text style={monoStyle(11, colors.brand)}>OPEN →</Text>
               </View>
-              <PriceChart points={mockSeries("BTC", 48)} width={W - 28} height={160} symbol="BTC" />
-            </View>
+              <PriceChart points={mockSeries("BTC", 48)} width={W - 44} height={150} symbol="BTC" />
+            </Pressable>
           )}
 
           {/* TABLE HEADERS */}

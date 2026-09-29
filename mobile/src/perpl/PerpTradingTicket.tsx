@@ -1,14 +1,18 @@
 import { useState, useMemo } from "react";
-import { StyleSheet, Text, View, Pressable, ScrollView, TextInput, ActivityIndicator } from "react-native";
+import { StyleSheet, Text, View, Pressable, ScrollView, TextInput, ActivityIndicator, Dimensions } from "react-native";
 import * as Haptics from "expo-haptics";
+import { router } from "expo-router";
 import { useAuth } from "@/src/auth/AuthContext";
 import { useWallet } from "@/src/wallet/WalletContext";
 import { useToast } from "@/src/components/Toast";
 import { usePerplMarkets, placePerplOrder, PerplMarket } from "./perplClient";
 import { Icon } from "@/src/components/Icon";
+import { setSelectedMarket } from "@/src/market/selection";
 import { colors, radius, space, type, monoStyle } from "@/src/theme";
 import { PriceChart } from "@/src/components/PriceChart";
 import { mockPriceHistory } from "@/src/mock/fixtures";
+
+const { width: W } = Dimensions.get("window");
 
 const LEVERAGE_OPTIONS = [2, 5, 10, 20] as const;
 const MARGIN_CHIPS = ["25", "50", "100", "500"] as const;
@@ -121,7 +125,7 @@ export function PerpTradingTicket() {
         </View>
       ) : (
         <>
-      {/* Top Ticker Selector Strip */}
+      {/* Top Ticker Selector Strip — tap opens coin detail page */}
       <View style={styles.tickerStrip}>
         {displayMarkets.map((m) => {
           const isSel = currentMark.symbol === m.symbol;
@@ -130,7 +134,18 @@ export function PerpTradingTicket() {
               key={m.symbol}
               onPress={() => {
                 setSelectedSymbol(m.symbol);
+                setSelectedMarket({
+                  symbol: m.symbol,
+                  pair: `${m.symbol}-USD`,
+                  label: `${m.symbol} / USD`,
+                  chain: "monad",
+                  chainId: 10143,
+                });
                 Haptics.selectionAsync();
+                router.push({
+                  pathname: "/(app)/market-detail",
+                  params: { symbol: m.symbol, kind: "perp" },
+                });
               }}
               style={[styles.stripPill, isSel && styles.stripPillActive]}
             >
@@ -140,7 +155,7 @@ export function PerpTradingTicket() {
               <Text style={styles.stripPrice}>
                 ${m.markPrice >= 1000 ? m.markPrice.toLocaleString(undefined, { maximumFractionDigits: 0 }) : m.markPrice.toFixed(2)}
               </Text>
-              <Text style={styles.stripDelta} numberOfLines={1}>
+              <Text style={[styles.stripDelta, m.change24hPct >= 0 ? { color: colors.up } : { color: colors.down }]} numberOfLines={1}>
                 {m.change24hPct >= 0 ? "+" : ""}
                 {m.change24hPct}%
               </Text>
@@ -158,17 +173,43 @@ export function PerpTradingTicket() {
               <Text style={styles.maxLevText}>{currentMark.maxLeverage}X MAX</Text>
             </View>
           </View>
-          <View style={styles.subSecondBadge}>
-            <Text style={styles.subSecondText}>PERP</Text>
-          </View>
+          <Pressable
+            onPress={() => {
+              setSelectedMarket({
+                symbol: currentMark.symbol,
+                pair: `${currentMark.symbol}-USD`,
+                label: `${currentMark.symbol} / USD`,
+                chain: "monad",
+                chainId: 10143,
+              });
+              router.push({
+                pathname: "/(app)/market-detail",
+                params: { symbol: currentMark.symbol, kind: "perp" },
+              });
+            }}
+            style={styles.subSecondBadge}
+            hitSlop={8}
+          >
+            <Text style={styles.subSecondText}>OPEN CHART →</Text>
+          </Pressable>
         </View>
 
-        <View style={styles.priceRow}>
-          <Text style={styles.bigPrice}>
-            ${currentMark.markPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+        <View style={styles.priceBlock}>
+          <Text style={styles.bigPrice} numberOfLines={1}>
+            ${currentMark.markPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </Text>
-          <Text style={styles.bigDelta}>+{currentMark.change24hPct}%</Text>
-          <Text style={styles.pythFeedText}>Pyth · Monad</Text>
+          <View style={styles.priceMetaRow}>
+            <Text
+              style={[
+                styles.bigDelta,
+                currentMark.change24hPct >= 0 ? { color: colors.up } : { color: colors.down },
+              ]}
+            >
+              {currentMark.change24hPct >= 0 ? "+" : ""}
+              {currentMark.change24hPct.toFixed(2)}%
+            </Text>
+            <Text style={styles.pythFeedText}>Perpl · Monad</Text>
+          </View>
         </View>
 
         {/* Wave area graphic */}
@@ -449,11 +490,15 @@ const styles = StyleSheet.create({
     fontFamily: type.bold,
     fontSize: 9,
   },
-  priceRow: {
+  priceBlock: {
+    gap: 4,
+    marginTop: 6,
+  },
+  priceMetaRow: {
     flexDirection: "row",
-    alignItems: "baseline",
-    gap: 8,
-    marginTop: 8,
+    alignItems: "center",
+    gap: 10,
+    flexWrap: "wrap",
   },
   bigPrice: {
     color: colors.ink,

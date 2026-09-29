@@ -312,8 +312,9 @@ export default function MarketDetailScreen() {
         <MockBanner />
         {/* Instrument strip */}
         <View style={styles.header}>
-          <Pressable onPress={() => router.back()} hitSlop={12} style={styles.back}>
-            <Icon name="arrow-back" size={20} color={colors.ink} />
+          <Pressable onPress={() => router.back()} hitSlop={16} style={styles.back}>
+            <Icon name="arrow-back" size={22} color={colors.ink} />
+            <Text style={styles.backText}>Markets</Text>
           </Pressable>
           <TokenBadge symbol={symbol} size={36} />
           <View style={{ flex: 1 }}>
@@ -526,14 +527,20 @@ const styles = StyleSheet.create({
   wrap: { flex: 1, width: "100%", paddingHorizontal: 14 },
   header: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 10 },
   back: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    gap: 6,
+    height: 36,
+    paddingHorizontal: 10,
+    borderRadius: 18,
     backgroundColor: colors.bgElevated,
     borderWidth: 1,
     borderColor: colors.line,
+  },
+  backText: {
+    color: colors.ink,
+    fontFamily: type.medium,
+    fontSize: 13,
   },
   symRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   symbol: {

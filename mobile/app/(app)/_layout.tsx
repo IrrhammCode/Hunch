@@ -25,6 +25,14 @@ const TAB_ICONS: Record<string, IconName> = {
   YOU: "person",
 };
 
+/** Only these routes get a tab slot — detail screens never appear as tabs. */
+const TAB_LABELS: Record<string, string> = {
+  markets: "MARKETS",
+  index: "TRADE",
+  positions: "PORTFOLIO",
+  profile: "YOU",
+};
+
 function TabIcon({ label, focused }: { label: string; focused: boolean }) {
   const name = TAB_ICONS[label] ?? "ellipse";
   const color = focused ? colors.brand : colors.muted;
@@ -48,22 +56,14 @@ function ArenaTabBar({ state, navigation }: TabBarProps) {
       style={[
         styles.bar,
         {
-          // Home indicator / gesture bar: content flows above this chrome
           paddingBottom: Math.max(insets.bottom, Platform.OS === "ios" ? 8 : 12) + 10,
         },
       ]}
     >
       {state.routes.map((route, index) => {
-        if (route.name === "exchange") return null;
+        const label = TAB_LABELS[route.name];
+        if (!label) return null;
         const focused = state.index === index;
-        const label =
-          route.name === "index"
-            ? "TRADE"
-            : route.name === "markets"
-              ? "MARKETS"
-              : route.name === "positions"
-                ? "PORTFOLIO"
-                : "YOU";
 
         const onPress = () => {
           const event = navigation.emit({
@@ -116,6 +116,7 @@ export default function AppLayout() {
       <Tabs.Screen name="profile" options={{ title: "You" }} />
       <Tabs.Screen name="exchange" options={{ href: null, title: "Exchange" }} />
       <Tabs.Screen name="market-detail" options={{ href: null, title: "Market" }} />
+      {/* market-detail / exchange never get tab slots (see TAB_LABELS) */}
     </Tabs>
   );
 }
