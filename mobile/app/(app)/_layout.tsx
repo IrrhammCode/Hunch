@@ -61,9 +61,8 @@ function ArenaTabBar({ state, navigation }: TabBarProps) {
       ]}
     >
       {state.routes.map((route, index) => {
+        // Only MARKETS / TRADE / PORTFOLIO / YOU (profile) — hide detail screens
         const label = TAB_LABELS[route.name];
-        // Only MARKETS / TRADE / PORTFOLIO / YOU — never extra YOU from detail screens
-        if (!label || label === "YOU" && route.name !== "profile") return null;
         if (!label) return null;
         const focused = state.index === index;
 
