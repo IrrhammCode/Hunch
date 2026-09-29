@@ -266,6 +266,43 @@ export function mockFaucet(address: string) {
   };
 }
 
+export function mockPerplRisk(address: string) {
+  const account = mockPerplAccount(address);
+  const positions = account.positions.map((p) => ({
+    ...p,
+    notionalAUSD: p.sizeAUSD,
+    unrealizedPnLAUSD: p.unrealizedPnLAUSD ?? 0,
+    unrealizedPnLPct: p.unrealizedPnLPct ?? 0,
+    liqDistancePct: 12.4,
+  }));
+  const collateral = Number(account.onchainCollateralAUSD || 2450);
+  const marginUsed = account.marginUsedAUSD;
+  return {
+    address: address.toLowerCase(),
+    authConfigured: true,
+    accountId: 644,
+    collateralAUSD: collateral,
+    marginUsedAUSD: marginUsed,
+    freeMarginAUSD: collateral - marginUsed,
+    unrealizedPnLAUSD: account.unrealizedPnLAUSD,
+    openNotionalAUSD: positions.reduce((s, p) => s + p.notionalAUSD, 0),
+    effectiveLeverage: Number(((positions.reduce((s, p) => s + p.notionalAUSD, 0) / marginUsed).toFixed(2))),
+    maxPositionLeverage: 10,
+    openCount: positions.length,
+    longCount: positions.filter((p) => p.side === "LONG").length,
+    shortCount: positions.filter((p) => p.side === "SHORT").length,
+    riskLevel: "LOW" as const,
+    warnings: ["MOCK risk report — EXPO_PUBLIC_USE_MOCK"],
+    positions,
+    marketMarks: mockPerplMarkets().markets.map((m) => ({
+      symbol: m.symbol,
+      markPrice: m.markPrice,
+      change24hPct: m.change24hPct,
+    })),
+    source: "mock-design",
+  };
+}
+
 export function mockSponsors() {
   return {
     quicknode: "mock",

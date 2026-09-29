@@ -82,9 +82,12 @@ Solo builder: **Irham** · https://github.com/IrrhammCode
 ## Sponsor bounties targeted
 
 - **Agora** — Best Mobile Trading App on Monad ($10,000): **Mera passkey** + official Agora AUSD + **Perpl** trade in one mobile demo
-- **Privy** — Privy Bounty ($5,000): Email OTP + embedded non-custodial wallet as alternate login / trader
-- **Track 01** — Onchain Finance & Trading: short-horizon markets + perps on Monad
-- **Perpl** — Best use of Perpl's API: mobile perpetual trading via Perpl testnet
+- **Privy** — Privy Bounty ($5,000): Email OTP + embedded non-custodial wallet as trader of record (not login-only)
+- **Perpl** — Best use of Perpl's API ($5,000): mobile + `perpl:bot` automation placing signed orders via trade-scope keys ([PERPL_BOUNTY.md](./PERPL_BOUNTY.md))
+- **Perpl** — Best Analytics / Risk Tool ($3,000): live risk panel — margin, uPnL, liq distance, risk level ([PERPL_BOUNTY.md](./PERPL_BOUNTY.md))
+- **Monad Foundation** — Best Mera-Powered UX ($2,500): passkey is the account layer (optional add)
+- **Track 01** — Onchain Finance & Trading ($30,000): 60s markets + perps on Monad
+
 
 ## Contract addresses
 

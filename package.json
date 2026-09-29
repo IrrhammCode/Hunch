@@ -28,6 +28,7 @@
     "rpc:check": "ts-node scripts/rpcCheck.ts",
     "perpl:account": "ts-node scripts/perplAccount.ts",
     "perpl:order": "ts-node scripts/perplOrder.ts",
+    "perpl:bot": "ts-node scripts/perplBot.ts",
     "sim:tx": "ts-node scripts/tenderlySimulate.ts",
     "clean": "hardhat clean"
   },

@@ -5,6 +5,7 @@ import {
   mockMarketBoard,
   mockPerplAccount,
   mockPerplMarkets,
+  mockPerplRisk,
   mockPriceHistory,
   mockPriceLatest,
   mockSponsors,
@@ -425,6 +426,37 @@ export async function fetchPerplMarkets(): Promise<{ markets: PerplMarket[]; con
 export async function fetchPerplAccount(address: string): Promise<PerplAccount> {
   if (USE_MOCK) return mockPerplAccount(address) as any;
   return get<PerplAccount>(`/v1/perpl/account/${address}`);
+}
+
+export type PerplRiskReport = {
+  address: string;
+  authConfigured: boolean;
+  accountId: number | null;
+  collateralAUSD: number;
+  marginUsedAUSD: number;
+  freeMarginAUSD: number;
+  unrealizedPnLAUSD: number;
+  openNotionalAUSD: number;
+  effectiveLeverage: number;
+  maxPositionLeverage: number;
+  openCount: number;
+  longCount: number;
+  shortCount: number;
+  riskLevel: "LOW" | "MEDIUM" | "HIGH" | "FLAT";
+  warnings: string[];
+  positions: (PerplPosition & {
+    notionalAUSD: number;
+    liqDistancePct: number | null;
+  })[];
+  marketMarks?: { symbol: string; markPrice: number; change24hPct: number }[];
+  source?: string;
+};
+
+export function fetchPerplRisk(address: string) {
+  if (MOCK) {
+    return Promise.resolve(mockPerplRisk(address) as unknown as PerplRiskReport);
+  }
+  return get<PerplRiskReport>(`/v1/perpl/risk/${address}`);
 }
 
 export function placePerplOrder(params: {

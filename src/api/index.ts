@@ -37,6 +37,7 @@ import {
   closePerplPosition,
   linkPerplAccount,
 } from "./perpl";
+import { buildPerplRisk } from "./perplRisk";
 import { PERPL_TESTNET } from "../shared/perpl";
 
 loadEnv();
@@ -105,6 +106,16 @@ app.get("/v1/perpl/account/:address", async (c) => {
   try {
     const address = c.req.param("address");
     return c.json(await getUserPerplAccount(address));
+  } catch (e: any) {
+    return c.json({ error: e.message || String(e) }, 400);
+  }
+});
+
+/** Perpl portfolio risk + analytics (Best Analytics / Risk Tool bounty). */
+app.get("/v1/perpl/risk/:address", async (c) => {
+  try {
+    const address = c.req.param("address");
+    return c.json(await buildPerplRisk(address));
   } catch (e: any) {
     return c.json({ error: e.message || String(e) }, 400);
   }

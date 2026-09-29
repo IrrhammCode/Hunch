@@ -13,6 +13,7 @@ import { explorerTx } from "@/src/config/chain";
 import { useWallet } from "@/src/wallet/WalletContext";
 import { redeemPrivyPosition } from "@/src/wallet/privyTrade";
 import { usePerplAccount, closePerplPosition, PerplPosition } from "@/src/perpl/perplClient";
+import { fetchPerplRisk, type PerplRiskReport } from "@/src/api/client";
 import { colors, radius, space, type, monoStyle } from "@/src/theme";
 
 type TabMode = "perps" | "hunch";
@@ -29,12 +30,18 @@ export default function PositionsScreen() {
   const [tab, setTab] = useState<TabMode>("perps");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [closingId, setClosingId] = useState<string | null>(null);
+  const [risk, setRisk] = useState<PerplRiskReport | null>(null);
 
   useFocusEffect(
     useCallback(() => {
       refreshWallet();
       refreshPerpl();
-    }, [refreshWallet, refreshPerpl]),
+      if (userAddress) {
+        fetchPerplRisk(userAddress)
+          .then(setRisk)
+          .catch(() => setRisk(null));
+      }
+    }, [refreshWallet, refreshPerpl, userAddress]),
   );
 
   const hunchPositions = me?.positions ?? [];
@@ -150,7 +157,11 @@ export default function PositionsScreen() {
             <View style={styles.pnlPillRow}>
               <View style={styles.pnlPill}>
                 <Text style={styles.pnlArrow}>↗</Text>
-                <Text style={styles.pnlPillText}>+$235.50 (+18.8%) 24h Net PnL</Text>
+                <Text style={styles.pnlPillText}>
+                  {unrealizedPnL !== "0.00"
+                    ? `${unrealizedPnL.startsWith("-") ? "" : "+"}$${unrealizedPnL} open PnL`
+                    : "No open Perpl PnL"}
+                </Text>
               </View>
             </View>
 
@@ -165,9 +176,66 @@ export default function PositionsScreen() {
               </View>
               <View style={styles.metricItem}>
                 <Text style={styles.metricLabel}>UNREALIZED PnL</Text>
-                <Text style={[styles.metricVal, styles.posColor]}>{unrealizedPnL.startsWith("+") ? "" : "+"}${unrealizedPnL}</Text>
+                <Text style={[styles.metricVal, styles.posColor]}>
+                  {unrealizedPnL.startsWith("-") ? "" : "+"}${unrealizedPnL}
+                </Text>
               </View>
             </View>
+          </View>
+
+          {/* PERPL RISK / ANALYTICS — bounty surface */}
+          <View style={styles.overviewCard}>
+            <View style={styles.overviewTop}>
+              <View style={styles.overviewLiveBadge}>
+                <Text style={styles.overviewLabel}>PERPL RISK · ANALYTICS</Text>
+                <View style={styles.liveTag}>
+                  <Text style={styles.liveTagText}>{risk?.riskLevel || "—"}</Text>
+                </View>
+              </View>
+              <Text style={styles.subSecondNet}>
+                {risk?.accountId != null ? `ACCOUNT #${risk.accountId}` : "NOT LINKED"}
+              </Text>
+            </View>
+            <View style={styles.metricsGrid}>
+              <View style={styles.metricItem}>
+                <Text style={styles.metricLabel}>FREE MARGIN</Text>
+                <Text style={styles.metricVal}>
+                  ${risk?.freeMarginAUSD != null ? risk.freeMarginAUSD.toFixed(2) : "—"}
+                </Text>
+              </View>
+              <View style={styles.metricItem}>
+                <Text style={styles.metricLabel}>EFF. LEVERAGE</Text>
+                <Text style={styles.metricVal}>{risk?.effectiveLeverage != null ? `${risk.effectiveLeverage}x` : "—"}</Text>
+              </View>
+              <View style={styles.metricItem}>
+                <Text style={styles.metricLabel}>OPEN PnL</Text>
+                <Text
+                  style={[
+                    styles.metricVal,
+                    (risk?.unrealizedPnLAUSD ?? 0) >= 0 ? styles.posColor : { color: colors.down },
+                  ]}
+                >
+                  {risk?.unrealizedPnLAUSD != null
+                    ? `${risk.unrealizedPnLAUSD >= 0 ? "+" : ""}$${risk.unrealizedPnLAUSD.toFixed(2)}`
+                    : "—"}
+                </Text>
+              </View>
+            </View>
+            {(risk?.positions || []).slice(0, 4).map((p) => (
+              <View key={`risk-${p.id}`} style={{ gap: 2, marginTop: 6 }}>
+                <Text style={monoStyle(11, colors.muted)}>
+                  {p.symbol} {p.side} {p.leverage}x · liq{" "}
+                  {p.liqDistancePct != null ? `${p.liqDistancePct.toFixed(1)}% away` : "—"} ·{" "}
+                  {p.unrealizedPnLAUSD != null && p.unrealizedPnLAUSD >= 0 ? "+" : ""}
+                  ${((p as any).unrealizedPnLAUSD ?? 0).toFixed(2)}
+                </Text>
+              </View>
+            ))}
+            {(risk?.warnings || []).map((w) => (
+              <Text key={w} style={monoStyle(10, colors.down)}>
+                ! {w}
+              </Text>
+            ))}
           </View>
 
           {/* REAL REDEEMABLE HUNCH ONLY — no hardcoded payouts */}
