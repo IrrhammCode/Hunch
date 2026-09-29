@@ -16,6 +16,7 @@ export const MOCK_PRICES: Record<string, number> = {
   ZEC: 42.8,
   LIT: 1.24,
   PUMP: 0.0042,
+  NEAR: 5.82,
 };
 
 /** Deterministic series so charts look stable between remounts. */
@@ -114,6 +115,9 @@ export function mockMarketBoard() {
       mk("BTC", "open", "1842", 0.56),
       mk("ETH", "open", "1843", 0.44),
       mk("SOL", "open", "1844", 0.61),
+      mk("MON", "open", "1845", 0.52),
+      mk("ZEC", "open", "1846", 0.48),
+      mk("NEAR", "open", "1847", 0.57),
     ],
   };
 }
@@ -144,8 +148,9 @@ export function mockPerplMarkets() {
       mk(48, "SOL", MOCK_PRICES.SOL!, 2.15),
       mk(64, "MON", MOCK_PRICES.MON!, 3.4),
       mk(256, "ZEC", MOCK_PRICES.ZEC!, -0.55),
-      mk(300, "LIT", MOCK_PRICES.LIT!, 1.2),
-      mk(400, "PUMP", MOCK_PRICES.PUMP!, 5.8),
+      mk(272, "LIT", MOCK_PRICES.LIT!, 1.2),
+      mk(320, "PUMP", MOCK_PRICES.PUMP!, 5.8),
+      mk(336, "NEAR", MOCK_PRICES.NEAR!, -0.72),
     ],
     context: {
       chainId: 10143,

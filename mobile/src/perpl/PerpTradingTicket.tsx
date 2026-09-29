@@ -17,6 +17,7 @@ import { Icon } from "@/src/components/Icon";
 import { setSelectedMarket } from "@/src/market/selection";
 import { colors, radius, space, type, monoStyle } from "@/src/theme";
 import { PriceChart } from "@/src/components/PriceChart";
+import { TokenLogo } from "@/src/components/TokenLogo";
 import { mockPriceHistory } from "@/src/mock/fixtures";
 
 const { width: W } = Dimensions.get("window");
@@ -156,9 +157,12 @@ export function PerpTradingTicket() {
               }}
               style={[styles.stripPill, isSel && styles.stripPillActive]}
             >
-              <Text style={[styles.stripSymbol, isSel && styles.stripSymbolActive]}>
-                {m.symbol}
-              </Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                <TokenLogo symbol={m.symbol} size={14} />
+                <Text style={[styles.stripSymbol, isSel && styles.stripSymbolActive]}>
+                  {m.symbol}
+                </Text>
+              </View>
               <Text style={styles.stripPrice}>
                 ${m.markPrice >= 1000 ? m.markPrice.toLocaleString(undefined, { maximumFractionDigits: 0 }) : m.markPrice.toFixed(2)}
               </Text>

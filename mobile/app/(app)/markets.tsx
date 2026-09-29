@@ -20,7 +20,8 @@ import {
 import { Screen } from "@/src/components/Screen";
 import { MockBanner } from "@/src/components/MockBanner";
 import { PriceChart } from "@/src/components/PriceChart";
-import { AssetGlyph, Icon } from "@/src/components/Icon";
+import { Icon } from "@/src/components/Icon";
+import { TokenLogo } from "@/src/components/TokenLogo";
 import { getSelectedMarket, setSelectedMarket } from "@/src/market/selection";
 import { mockMarketBoard, mockPerplMarkets, mockSeries } from "@/src/mock/fixtures";
 import { colors, monoStyle, radius, space, type } from "@/src/theme";
@@ -278,7 +279,10 @@ export default function MarketsScreen() {
               style={styles.featuredChart}
             >
               <View style={styles.featuredHead}>
+                <View style={styles.featuredHeadLeft}>
+                <TokenLogo symbol="BTC" size={22} />
                 <Text style={styles.featuredTitle}>BTC · LIVE CHART</Text>
+              </View>
                 <Text style={monoStyle(11, colors.brand)}>OPEN →</Text>
               </View>
               <PriceChart points={mockSeries("BTC", 48)} width={W - 44} height={150} symbol="BTC" />
@@ -303,14 +307,6 @@ export default function MarketsScreen() {
               </View>
             ) : null}
             {filteredPerps.map((m) => {
-              const isMon = m.symbol === "MON";
-              const isBtc = m.symbol === "BTC";
-              const isSol = m.symbol === "SOL";
-              const isPump = m.symbol === "PUMP";
-              const iconBg = isMon ? "#836EF9" : isBtc ? "#F7931A" : isSol ? "#14F195" : "#FF007A";
-              const isEth = m.symbol === "ETH";
-              const iconGlyph = isMon ? "M" : isBtc ? "₿" : isEth ? "Ξ" : isSol ? "◎" : (m.symbol || "•").charAt(0);
-
               return (
                 <Pressable
                   key={`perp-${m.id}`}
@@ -318,9 +314,7 @@ export default function MarketsScreen() {
                   style={styles.marketRow}
                 >
                   <View style={styles.rowLeft}>
-                    <View style={[styles.tokenIcon, { backgroundColor: iconBg }]}>
-                      <Text style={styles.tokenGlyph}>{iconGlyph}</Text>
-                    </View>
+                    <TokenLogo symbol={m.symbol} size={36} />
                     <View>
                       <View style={styles.pairWithBadge}>
                         <Text style={styles.pairTitle} numberOfLines={1}>{m.symbol}</Text>
@@ -358,9 +352,6 @@ export default function MarketsScreen() {
             {/* All 60s blitz markets from API board (BTC/ETH/SOL…) */}
             {(filter === "all" || filter === "blitz") &&
               hunchMarkets.map((row) => {
-                const iconBg =
-                  row.symbol === "BTC" ? "#F7931A" : row.symbol === "ETH" ? "#627EEA" : row.symbol === "SOL" ? "#14F195" : "#836EF9";
-                const glyph = row.symbol === "BTC" ? "₿" : row.symbol === "ETH" ? "Ξ" : row.symbol === "SOL" ? "◎" : row.symbol.charAt(0);
                 const yesC = row.spot ? Number(row.spot.yes) * 100 : null;
                 return (
                   <Pressable
@@ -369,9 +360,7 @@ export default function MarketsScreen() {
                     style={styles.marketRow}
                   >
                     <View style={styles.rowLeft}>
-                      <View style={[styles.tokenIcon, { backgroundColor: iconBg }]}>
-                        <Text style={styles.tokenGlyph}>{glyph}</Text>
-                      </View>
+                      <TokenLogo symbol={row.symbol} size={36} />
                       <View>
                         <View style={styles.pairWithBadge}>
                           <Text style={styles.pairTitle}>{row.symbol}</Text>
@@ -454,6 +443,11 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     padding: space.sm,
     backgroundColor: colors.bgCard,
+    gap: 8,
+  },
+  featuredHeadLeft: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   featuredHead: {

@@ -29,6 +29,7 @@ import {
 import { useAuth } from "@/src/auth/AuthContext";
 import { Screen } from "@/src/components/Screen";
 import { MockBanner } from "@/src/components/MockBanner";
+import { TokenLogo } from "@/src/components/TokenLogo";
 import { Icon } from "@/src/components/Icon";
 import { useToast } from "@/src/components/Toast";
 import { PriceChart, type ChartPoint } from "@/src/components/PriceChart";
@@ -57,25 +58,6 @@ function fmtUsd(n: number | null | undefined) {
   return `$${n.toFixed(n >= 1 ? 2 : 4)}`;
 }
 
-function TokenBadge({ symbol, size = 40 }: { symbol: string; size?: number }) {
-  const bg =
-    symbol === "BTC" ? "#F7931A" : symbol === "ETH" ? "#627EEA" : symbol === "SOL" ? "#14F195" : "#836EF9";
-  const glyph = symbol === "BTC" ? "₿" : symbol === "ETH" ? "Ξ" : symbol === "SOL" ? "◎" : symbol.charAt(0);
-  return (
-    <View
-      style={{
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-        backgroundColor: bg,
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      <Text style={{ color: "#0A0B0D", fontSize: size * 0.45, fontWeight: "800" }}>{glyph}</Text>
-    </View>
-  );
-}
 
 export default function MarketDetailScreen() {
   const insets = useSafeAreaInsets();
@@ -323,7 +305,7 @@ export default function MarketDetailScreen() {
             <Icon name="arrow-back" size={22} color={colors.ink} />
             <Text style={styles.backText}>Markets</Text>
           </Pressable>
-          <TokenBadge symbol={symbol} size={36} />
+          <TokenLogo symbol={symbol} size={40} />
           <View style={{ flex: 1 }}>
             <View style={styles.symRow}>
               <Text style={styles.symbol}>{symbol}</Text>
