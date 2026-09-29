@@ -18,9 +18,9 @@ function encode(price: bigint, conf: bigint, publishTime: number) {
 async function main() {
   const [deployer, lp, alice, bob, feeRecipient] = await ethers.getSigners();
 
-  const ausd = await (await ethers.getContractFactory("MockAUSD")).deploy();
-  const pyth = await (await ethers.getContractFactory("MockPyth")).deploy();
-  const factory = await (
+  const ausd: any = await (await ethers.getContractFactory("MockAUSD")).deploy();
+  const pyth: any = await (await ethers.getContractFactory("MockPyth")).deploy();
+  const factory: any = await (
     await ethers.getContractFactory("HunchFactory")
   ).deploy(await ausd.getAddress(), await pyth.getAddress(), feeRecipient.address);
 
@@ -38,7 +38,7 @@ async function main() {
   await ausd.connect(lp).approve(await factory.getAddress(), AUSD(10_000));
   await factory.connect(lp).createAndOpen(FEED, AUSD(10_000), [openUpdate], { value: openFee });
 
-  const market = await ethers.getContractAt("HunchMarket", await factory.rounds(1));
+  const market: any = await ethers.getContractAt("HunchMarket", await factory.rounds(1));
   console.log("Market:", await market.getAddress());
   console.log("Strike:", (await market.strikePrice()).toString());
 

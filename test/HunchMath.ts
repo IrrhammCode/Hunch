@@ -16,7 +16,7 @@ describe("HunchMath", () => {
     const [shares, newY, newN] = await m.buyYes(y, n, amount);
     // x*y=k with integer division: product may be slightly below k
     expect(newY * newN).to.be.lte(k);
-    expect(k - newY * newN).to.be.lt(newN); // remainder < one full unit of the other reserve
+    expect(k - BigInt(newY) * BigInt(newN)).to.be.lt(BigInt(newN));
     expect(shares).to.be.gt(amount);
     // Balanced pool: buying YES should leave YES more expensive
     const yesBefore = await m.spotYes(y, n);

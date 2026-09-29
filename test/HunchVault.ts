@@ -5,9 +5,9 @@ import { AUSD, BTC_USD_FEED, deployHunchFixture, encodePythUpdate, openRound } f
 
 describe("HunchVault LP", () => {
   it("deposits, seeds via factory path, claims residual after resolve", async () => {
-    const { lp, alice, ausd, pyth, factory, feeRecipient, deployer } = await deployHunchFixture();
+    const { lp, alice, ausd, pyth, factory, feeRecipient, deployer }: any = await deployHunchFixture();
 
-    const vault = await (
+    const vault: any = await (
       await ethers.getContractFactory("HunchVault")
     ).deploy(await ausd.getAddress(), await factory.getAddress(), AUSD(1_000));
     await vault.waitForDeployment();
@@ -27,7 +27,7 @@ describe("HunchVault LP", () => {
     await vault.seedRound(BTC_USD_FEED);
     const roundId = await factory.roundCount();
     const marketAddr = await factory.rounds(roundId);
-    const market = await ethers.getContractAt("HunchMarket", marketAddr);
+    const market: any = await ethers.getContractAt("HunchMarket", marketAddr);
     expect(await market.seedProvider()).to.equal(await vault.getAddress());
 
     await ausd.connect(alice).approve(marketAddr, AUSD(100));

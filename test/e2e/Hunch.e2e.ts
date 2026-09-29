@@ -16,11 +16,11 @@ import {
  */
 describe("Hunch E2E", () => {
   it("runs a full 60s UP hunch round end-to-end", async () => {
-    const { lp, alice, bob, ausd, pyth, factory } = await deployHunchFixture();
+    const { lp, alice, bob, ausd, pyth, factory }: any = await deployHunchFixture();
 
     // ── 1. Open round at BTC = 100_000 ──────────────────────────────────────
     const strike = 100_000_00000000n; // expo -8
-    const { market } = await openRound(factory, ausd, pyth, lp, {
+    const { market }: any = await openRound(factory, ausd, pyth, lp, {
       seed: AUSD(10_000),
       price: strike,
     });
@@ -97,9 +97,9 @@ describe("Hunch E2E", () => {
   });
 
   it("DOWN side wins when settlement < strike", async () => {
-    const { lp, alice, bob, ausd, pyth, factory } = await deployHunchFixture();
+    const { lp, alice, bob, ausd, pyth, factory }: any = await deployHunchFixture();
     const strike = 100_000_00000000n;
-    const { market } = await openRound(factory, ausd, pyth, lp, { price: strike });
+    const { market }: any = await openRound(factory, ausd, pyth, lp, { price: strike });
 
     await ausd.connect(alice).approve(await market.getAddress(), AUSD(100));
     await ausd.connect(bob).approve(await market.getAddress(), AUSD(100));
@@ -124,7 +124,7 @@ describe("Hunch E2E", () => {
   });
 
   it("rejects stale oracle on open", async () => {
-    const { lp, ausd, pyth, factory } = await deployHunchFixture();
+    const { lp, ausd, pyth, factory }: any = await deployHunchFixture();
     const staleTime = (await time.latest()) - 60;
     await pyth.pushPrice(BTC_USD_FEED, 100_000_00000000n, 1n, -8, staleTime);
 

@@ -10,7 +10,7 @@ import { fetchLatestPriceUpdate } from "./hermes";
  * Pyth verify → OOG with empty revert reason.
  */
 export async function pullPythOnchain(
-  pyth: Contract,
+  pyth: any,
   feedId: string,
   signer: Signer,
   gasLimit = 5_000_000n

@@ -25,9 +25,9 @@ export function encodePythUpdate(
 export async function deployHunchFixture() {
   const [deployer, lp, alice, bob, feeRecipient] = await ethers.getSigners();
 
-  const ausd = await (await ethers.getContractFactory("MockAUSD")).deploy();
-  const pyth = await (await ethers.getContractFactory("MockPyth")).deploy();
-  const factory = await (
+  const ausd: any = await (await ethers.getContractFactory("MockAUSD")).deploy();
+  const pyth: any = await (await ethers.getContractFactory("MockPyth")).deploy();
+  const factory: any = await (
     await ethers.getContractFactory("HunchFactory")
   ).deploy(await ausd.getAddress(), await pyth.getAddress(), feeRecipient.address);
 
@@ -42,9 +42,9 @@ export async function deployHunchFixture() {
 }
 
 export async function openRound(
-  factory: Contract,
-  ausd: Contract,
-  pyth: Contract,
+  factory: any,
+  ausd: any,
+  pyth: any,
   lp: HardhatEthersSigner,
   opts?: { seed?: bigint; price?: bigint; conf?: bigint }
 ) {
@@ -64,15 +64,15 @@ export async function openRound(
 
   const roundId = await factory.roundCount();
   const marketAddr = await factory.rounds(roundId);
-  const market = await ethers.getContractAt("HunchMarket", marketAddr);
+  const market: any = await ethers.getContractAt("HunchMarket", marketAddr);
 
   return { market, roundId, seed, strike: price, publishTime };
 }
 
 export async function commitAndExecute(
-  market: Contract,
-  ausd: Contract,
-  pyth: Contract,
+  market: any,
+  ausd: any,
+  pyth: any,
   trader: HardhatEthersSigner,
   side: 0 | 1,
   amount: bigint,
