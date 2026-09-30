@@ -4,6 +4,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -45,24 +46,30 @@ export default function LoginScreen() {
     <Screen>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={[
-          styles.wrap,
-          {
-            paddingTop: insets.top + 16,
-            paddingBottom: Math.max(insets.bottom, 12) + 8,
-          },
-        ]}
+        style={styles.wrap}
       >
-        <View style={styles.center}>
-          <Animated.View entering={FadeInUp.duration(320)} style={styles.hero}>
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={[
+            styles.scrollContent,
+            {
+              paddingTop: insets.top + 20,
+              paddingBottom: 16,
+            },
+          ]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
+          <Animated.View entering={FadeInUp.duration(300)} style={styles.hero}>
             <BrandMark size="md" />
             <Text style={styles.headline}>Trade on Monad</Text>
             <Text style={styles.subhead}>
-              60s UP/DOWN + Perpl perps.{"\n"}Passkey wallet only — no seed phrase.
+              60s UP/DOWN + Perpl perps. Passkey wallet only.
             </Text>
           </Animated.View>
 
-          <View style={styles.banner}>
+          <View style={styles.block}>
             <MockBanner />
           </View>
 
@@ -76,14 +83,13 @@ export default function LoginScreen() {
           ) : null}
 
           <View style={styles.actions}>
+            <Text style={styles.eyebrow}>NEW HERE</Text>
             <PrimaryButton
               label={busy ? "Waiting for Face ID..." : "Create an account"}
               onPress={() => router.push("/(auth)/signup")}
               disabled={busy}
             />
-            <Text style={styles.ctaFoot}>
-              New passkey wallet · Agora AUSD + Perpl ready
-            </Text>
+            <Text style={styles.ctaFoot}>Passkey wallet in one Face ID</Text>
           </View>
 
           <View style={styles.divider}>
@@ -110,7 +116,7 @@ export default function LoginScreen() {
               hitSlop={10}
               disabled={busy || !meraAvailable}
             >
-              <Text style={styles.tertiary}>Use existing passkey instead</Text>
+              <Text style={styles.tertiary}>Use existing passkey</Text>
             </Pressable>
           </View>
 
@@ -120,11 +126,18 @@ export default function LoginScreen() {
               <Text style={styles.error}>{error}</Text>
             </View>
           ) : null}
-        </View>
+        </ScrollView>
 
-        <View style={styles.footerBar}>
+        <View
+          style={[
+            styles.footerBar,
+            { paddingBottom: Math.max(insets.bottom, 10) + 4 },
+          ]}
+        >
           <Text style={styles.footerMeta}>MONAD TESTNET · 10143</Text>
-          <Text style={styles.footerMeta}>{MERA_RP_ID}</Text>
+          <Text style={styles.footerMeta} numberOfLines={1}>
+            {MERA_RP_ID}
+          </Text>
         </View>
       </KeyboardAvoidingView>
     </Screen>
@@ -134,35 +147,36 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   wrap: {
     flex: 1,
-    paddingHorizontal: space.lg,
-    justifyContent: "space-between",
   },
-  center: {
+  scroll: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "stretch",
-    gap: 18,
+  },
+  scrollContent: {
+    paddingHorizontal: space.lg,
+    gap: 16,
   },
   hero: {
     alignItems: "center",
-    gap: 10,
+    gap: 8,
+    marginBottom: 4,
   },
   headline: {
     color: colors.ink,
     fontFamily: "BebasNeue_400Regular",
-    fontSize: 38,
-    letterSpacing: 1.2,
-    lineHeight: 42,
+    fontSize: 34,
+    letterSpacing: 1.1,
+    lineHeight: 38,
     textAlign: "center",
   },
   subhead: {
     color: colors.muted,
     fontFamily: type.body,
-    fontSize: 14,
-    lineHeight: 21,
+    fontSize: 13,
+    lineHeight: 19,
     textAlign: "center",
+    maxWidth: 260,
   },
-  banner: { marginTop: 2 },
+  block: { gap: 8 },
   notice: {
     flexDirection: "row",
     gap: 8,
@@ -181,7 +195,14 @@ const styles = StyleSheet.create({
     lineHeight: 17,
   },
   actions: {
-    gap: 10,
+    gap: 8,
+  },
+  eyebrow: {
+    color: colors.muted,
+    fontFamily: type.data,
+    fontSize: 10,
+    letterSpacing: 1.2,
+    textAlign: "center",
   },
   ctaFoot: {
     color: colors.muted,
@@ -193,6 +214,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+    marginVertical: 2,
   },
   line: {
     flex: 1,
@@ -236,7 +258,6 @@ const styles = StyleSheet.create({
     color: colors.brand,
     fontFamily: type.medium,
     fontSize: 12,
-    marginTop: 2,
   },
   errorBox: {
     flexDirection: "row",
@@ -257,12 +278,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingTop: 12,
+    paddingHorizontal: space.lg,
+    paddingTop: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.line,
   },
   footerMeta: {
     color: colors.muted,
     fontFamily: type.data,
     fontSize: 9,
-    letterSpacing: 0.6,
+    letterSpacing: 0.5,
+    maxWidth: "55%",
+    textAlign: "right",
   },
 });

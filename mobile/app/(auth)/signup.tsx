@@ -4,6 +4,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -22,17 +23,17 @@ const STEPS = [
   {
     n: "01",
     title: "Create a passkey",
-    body: "Face ID on this device. Nothing to write down.",
+    body: "Face ID on this device.",
   },
   {
     n: "02",
     title: "Wallet is generated",
-    body: "Monad EOA from the passkey. You own the keys.",
+    body: "Monad EOA from the passkey.",
   },
   {
     n: "03",
     title: "Fund and trade",
-    body: "Claim AUSD, then Perpl + 60s markets.",
+    body: "AUSD, Perpl, 60s markets.",
   },
 ];
 
@@ -61,31 +62,29 @@ export default function SignupScreen() {
     <Screen>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={[
-          styles.wrap,
-          {
-            paddingTop: insets.top + 12,
-            paddingBottom: Math.max(insets.bottom, 12) + 8,
-          },
-        ]}
+        style={styles.wrap}
       >
-        <View style={styles.topBar}>
+        <View style={[styles.topBar, { paddingTop: insets.top + 10 }]}>
           <Pressable onPress={() => router.back()} hitSlop={12} style={styles.back}>
             <Icon name="arrow-back" size={18} color={colors.ink} />
             <Text style={styles.backText}>Back</Text>
           </Pressable>
         </View>
 
-        <View style={styles.center}>
-          <View style={styles.banner}>
-            <MockBanner />
-          </View>
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
+          <MockBanner />
 
-          <Animated.View entering={FadeInUp.duration(300)} style={styles.hero}>
+          <Animated.View entering={FadeInUp.duration(280)} style={styles.hero}>
             <Text style={styles.eyebrow}>CREATE ACCOUNT</Text>
-            <Text style={styles.headline}>One passkey is your wallet</Text>
+            <Text style={styles.headline}>One passkey{"\n"}is your wallet</Text>
             <Text style={styles.subhead}>
-              No email. No seed phrase.{"\n"}Face ID signs every trade on Monad.
+              No email. No seed phrase. Face ID signs trades.
             </Text>
           </Animated.View>
 
@@ -93,7 +92,7 @@ export default function SignupScreen() {
             {STEPS.map((s, i) => (
               <Animated.View
                 key={s.n}
-                entering={FadeInUp.delay(50 * i).duration(280)}
+                entering={FadeInUp.delay(40 * i).duration(240)}
                 style={styles.step}
               >
                 <Text style={styles.stepN}>{s.n}</Text>
@@ -111,9 +110,16 @@ export default function SignupScreen() {
               <Text style={styles.error}>{error}</Text>
             </View>
           ) : null}
-        </View>
+        </ScrollView>
 
-        <View style={styles.footer}>
+        <View
+          style={[
+            styles.footer,
+            {
+              paddingBottom: Math.max(insets.bottom, 10) + 6,
+            },
+          ]}
+        >
           <PrimaryButton
             label={busy ? "Waiting for Face ID..." : "Create an account"}
             onPress={onCreate}
@@ -125,7 +131,9 @@ export default function SignupScreen() {
               <Text style={styles.loginBtn}>Sign in</Text>
             </Pressable>
           </View>
-          <Text style={styles.footerMeta}>{MERA_RP_ID} · MONAD 10143</Text>
+          <Text style={styles.footerMeta} numberOfLines={1}>
+            {MERA_RP_ID} · MONAD 10143
+          </Text>
         </View>
       </KeyboardAvoidingView>
     </Screen>
@@ -135,12 +143,10 @@ export default function SignupScreen() {
 const styles = StyleSheet.create({
   wrap: {
     flex: 1,
-    paddingHorizontal: space.lg,
-    justifyContent: "space-between",
   },
   topBar: {
-    flexDirection: "row",
-    alignItems: "center",
+    paddingHorizontal: space.lg,
+    paddingBottom: 6,
   },
   back: {
     flexDirection: "row",
@@ -152,72 +158,76 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bgElevated,
     borderWidth: 1,
     borderColor: colors.line,
+    alignSelf: "flex-start",
   },
   backText: {
     color: colors.ink,
     fontFamily: type.medium,
     fontSize: 13,
   },
-  center: {
+  scroll: {
     flex: 1,
-    justifyContent: "center",
-    gap: 16,
   },
-  banner: { marginBottom: 4 },
+  scrollContent: {
+    paddingHorizontal: space.lg,
+    paddingTop: 8,
+    paddingBottom: 12,
+    gap: 14,
+  },
   hero: {
     alignItems: "center",
-    gap: 8,
+    gap: 6,
   },
   eyebrow: {
     color: colors.brand,
     fontFamily: type.data,
-    fontSize: 11,
-    letterSpacing: 1.5,
+    fontSize: 10,
+    letterSpacing: 1.4,
     textAlign: "center",
   },
   headline: {
     color: colors.ink,
     fontFamily: "BebasNeue_400Regular",
-    fontSize: 36,
-    letterSpacing: 1.1,
-    lineHeight: 40,
+    fontSize: 32,
+    letterSpacing: 1,
+    lineHeight: 36,
     textAlign: "center",
   },
   subhead: {
     color: colors.muted,
     fontFamily: type.body,
-    fontSize: 14,
-    lineHeight: 21,
+    fontSize: 13,
+    lineHeight: 19,
     textAlign: "center",
   },
-  steps: { gap: 10 },
+  steps: { gap: 8 },
   step: {
     flexDirection: "row",
-    gap: 12,
+    gap: 10,
     alignItems: "flex-start",
     borderWidth: 1,
     borderColor: colors.line,
     borderRadius: radius.md,
     backgroundColor: colors.bgElevated,
-    padding: 14,
+    padding: 12,
   },
   stepN: {
     color: colors.brand,
     fontFamily: type.data,
-    fontSize: 12,
-    marginTop: 3,
+    fontSize: 11,
+    marginTop: 2,
   },
   stepTitle: {
     color: colors.ink,
     fontFamily: type.bold,
-    fontSize: 14,
-    marginBottom: 3,
+    fontSize: 13,
+    marginBottom: 2,
   },
   stepBody: {
     color: colors.muted,
     fontFamily: type.body,
     fontSize: 12,
-    lineHeight: 17,
+    lineHeight: 16,
   },
   errorBox: {
     flexDirection: "row",
@@ -235,9 +245,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   footer: {
-    gap: 12,
-    paddingTop: 8,
-    alignItems: "stretch",
+    paddingHorizontal: space.lg,
+    paddingTop: 10,
+    gap: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.line,
   },
   loginRow: {
     flexDirection: "row",
