@@ -39,7 +39,7 @@ import { explorerTx } from "@/src/config/chain";
 import { getSelectedMarket } from "@/src/market/selection";
 import { addHunch, listHunches, settleRound } from "@/src/hunchBook";
 import { useWallet } from "@/src/wallet/WalletContext";
-import { placePrivyTrade } from "@/src/wallet/privyTrade";
+import { placeWalletTrade } from "@/src/wallet/privyTrade";
 import { PerpTradingTicket } from "@/src/perpl/PerpTradingTicket";
 import { colors, radius, space, type } from "@/src/theme";
 
@@ -258,7 +258,7 @@ export default function HunchScreen() {
         let hash: string;
 
         const provider = await getEthereumProvider();
-        const result = await placePrivyTrade({
+        const result = await placeWalletTrade({
           provider,
           address: user.address,
           side,

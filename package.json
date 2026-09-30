@@ -24,6 +24,7 @@
     "dev": "cmd /c scripts\\dev.cmd",
     "dev:mobile": "cmd /c scripts\\dev-mobile.cmd",
     "smoke:demo": "ts-node scripts/smokeDemo.ts",
+    "e2e:smoke": "ts-node scripts/e2eSmoke.ts",
     "doctor": "ts-node scripts/doctor.ts",
     "rpc:check": "ts-node scripts/rpcCheck.ts",
     "perpl:account": "ts-node scripts/perplAccount.ts",

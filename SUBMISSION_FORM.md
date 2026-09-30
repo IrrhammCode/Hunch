@@ -54,6 +54,19 @@ TODO — paste public URL after host is live.
 
 TODO — record after Mera login + AUSD + one Perpl trade ([DEMO_VIDEO_SCRIPT.md](./DEMO_VIDEO_SCRIPT.md)).
 
+## E2E smoke (live, npm run e2e:smoke)
+
+| Check | Result |
+|---|---|
+| Quicknode + Perpl trade keys | PASS |
+| Price BTC/ETH + history | PASS |
+| Markets board BTC,ETH,SOL | PASS |
+| Perpl markets n=8 | PASS |
+| Perpl account 643/644 + risk | PASS |
+| Wallet AUSD 9900 | PASS |
+| Chain block / MON | PASS (MON low ~0.02) |
+| Perpl IOC order | PASS (WS code 0, account 643) |
+
 ## Stack verified (live)
 
 | Piece | Status |

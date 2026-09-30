@@ -17,7 +17,7 @@ import { MockBanner } from "@/src/components/MockBanner";
 import { Icon } from "@/src/components/Icon";
 import { useToast } from "@/src/components/Toast";
 import { copyToClipboard } from "@/src/utils/clipboard";
-import { fundPrivyWallet } from "@/src/wallet/privyTrade";
+import { fundWallet } from "@/src/wallet/privyTrade";
 import { useWallet } from "@/src/wallet/WalletContext";
 import { colors, radius, space, type, monoStyle } from "@/src/theme";
 
@@ -93,7 +93,7 @@ export default function ProfileScreen() {
         toast.error("Wallet not ready", "Sign in with Face ID / Mera passkey first.");
         return;
       }
-      const r = await fundPrivyWallet(user.address);
+      const r = await fundWallet(user.address);
       await refresh();
       toast.success(
         "Funded AUSD",

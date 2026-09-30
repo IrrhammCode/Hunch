@@ -23,7 +23,7 @@ import { useToast } from "@/src/components/Toast";
 import { AmountChip, PrimaryButton } from "@/src/components/ui";
 import { explorerTx } from "@/src/config/chain";
 import { getSelectedMarket, setSelectedMarket } from "@/src/market/selection";
-import { placePrivyTrade } from "@/src/wallet/privyTrade";
+import { placeWalletTrade } from "@/src/wallet/privyTrade";
 import { useWallet } from "@/src/wallet/WalletContext";
 import { colors, monoStyle, radius, space, type } from "@/src/theme";
 
@@ -114,7 +114,7 @@ export default function OptionsExchangeScreen() {
       let hash = "";
       let roundId = active.roundId || "—";
       const provider = await getEthereumProvider();
-      const result = await placePrivyTrade({
+      const result = await placeWalletTrade({
         provider,
         address: user.address,
         side,

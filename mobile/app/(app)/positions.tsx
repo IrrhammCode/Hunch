@@ -18,7 +18,7 @@ import { Icon } from "@/src/components/Icon";
 import { useToast } from "@/src/components/Toast";
 import { explorerTx } from "@/src/config/chain";
 import { useWallet } from "@/src/wallet/WalletContext";
-import { redeemPrivyPosition } from "@/src/wallet/privyTrade";
+import { redeemWalletPosition } from "@/src/wallet/privyTrade";
 import { usePerplAccount, closePerplPosition, PerplPosition } from "@/src/perpl/perplClient";
 import { fetchPerplRisk, type PerplRiskReport } from "@/src/api/client";
 import { colors, radius, space, type, monoStyle } from "@/src/theme";
@@ -64,7 +64,7 @@ export default function PositionsScreen() {
         throw new Error("Sign in with Mera passkey or Privy to claim onchain.");
       }
       const provider = await getEthereumProvider();
-      const r = await redeemPrivyPosition({ provider, address: user.address, market });
+      const r = await redeemWalletPosition({ provider, address: user.address, market });
       txHash = r.tx;
       payoutLine = "Payout sent to your wallet";
       await refreshWallet();

@@ -158,7 +158,8 @@ export async function placePerplOrderWs(input: PerplWsOrderInput): Promise<{
         if (first?.lfr != null) rq = Number(first.lfr) + 1;
         const discoveredId =
           first?.id != null ? Number(first.id) : first?.acc != null ? Number(first.acc) : 0;
-        const accountId = input.accountId || discoveredId;
+        // Trade with the API-key's own account when discovered (key wallet != local link)
+        const accountId = discoveredId || input.accountId;
         console.log(
           `[perpl-ws] mt19 addr=${wsAddr} discoveredId=${discoveredId} usingAccountId=${accountId} accs=${accs.length}`,
         );
@@ -192,7 +193,7 @@ export async function placePerplOrderWs(input: PerplWsOrderInput): Promise<{
           s: sizeScaled,
           fl: input.limitPriceScaled ? 0 : 4,
           lv: Math.round(input.leverage * 100),
-          lb: input.lastExecutionBlock || Number(msg?.at?.b ?? msg?.sn ?? 0),
+          lb: input.lastExecutionBlock ?? 0,
         };
         console.log("[perpl-ws] send order", JSON.stringify(order));
         ws.send(JSON.stringify(order));
@@ -201,18 +202,14 @@ export async function placePerplOrderWs(input: PerplWsOrderInput): Promise<{
       if (msg?.mt === 3) {
         clearTimeout(timeout);
         const code = msg?.status?.code ?? msg?.code;
-        const sid = msg?.sid;
         try {
           ws.close();
         } catch {
           /* noop */
         }
-        // Accept any gateway ack after order send (sid may not always be 100)
-        if (code === 0 || code === undefined || sid === 100) {
-          if (code === 0 || sid === 100) {
-            resolve({ accepted: true, code: code ?? 0, raw: msg });
-            return;
-          }
+        if (code === 0) {
+          resolve({ accepted: true, code: 0, raw: msg });
+          return;
         }
         resolve({
           accepted: false,

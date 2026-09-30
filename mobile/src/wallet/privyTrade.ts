@@ -104,7 +104,7 @@ export type PrivyTradeResult = ExecuteTradeResult & {
  * 2. Wallet signs approve + commitBuy on Monad testnet
  * 3. API hot-wallet waits delay-blocks, pulls Pyth, executeBuy (shares credit trader)
  */
-export async function placePrivyTrade(params: {
+export async function placeWalletTrade(params: {
   provider: any;
   address: string;
   side: "UP" | "DOWN";
@@ -174,7 +174,7 @@ export async function placePrivyTrade(params: {
   };
 }
 
-export async function redeemPrivyPosition(params: {
+export async function redeemWalletPosition(params: {
   provider: any;
   address: string;
   market: string;
@@ -190,6 +190,15 @@ export async function getWalletSnapshot(address: string): Promise<WalletSnapshot
   return fetchWallet(address);
 }
 
-export async function fundPrivyWallet(address: string) {
+export async function fundWallet(address: string) {
   return walletFaucet(address, "1000");
 }
+
+/** @deprecated alias */
+export const placePrivyTrade = placeWalletTrade;
+
+/** @deprecated alias */
+export const redeemPrivyPosition = redeemWalletPosition;
+
+/** @deprecated alias */
+export const fundPrivyWallet = fundWallet;
