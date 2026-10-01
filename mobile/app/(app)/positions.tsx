@@ -43,6 +43,8 @@ export default function PositionsScreen() {
   const { account: perplAccount, refresh: refreshPerpl, loading: perplLoading } = usePerplAccount(userAddress);
 
   const [tab, setTab] = useState<TabMode>("perps");
+  const [perpSubTab, setPerpSubTab] = useState<"open" | "history">("open");
+  const [optimisticClosedIds, setOptimisticClosedIds] = useState<Set<string>>(new Set());
   const [busyId, setBusyId] = useState<string | null>(null);
   const [closingId, setClosingId] = useState<string | null>(null);
   const [reversingId, setReversingId] = useState<string | null>(null);
@@ -67,6 +69,14 @@ export default function PositionsScreen() {
   const hunchPositions = me?.positions ?? [];
   const redeemableHunches = hunchPositions.filter((p) => p.redeemable);
   const perpPositions = perplAccount?.positions ?? [];
+
+  const openPerps = perpPositions.filter(
+    (p) => p.status === "OPEN" && !optimisticClosedIds.has(p.id)
+  );
+  const historyPerps = perpPositions.filter(
+    (p) => p.status === "CLOSED" || optimisticClosedIds.has(p.id)
+  );
+  const displayPerps = perpSubTab === "open" ? openPerps : historyPerps;
 
   const onRedeemHunch = async (roundId: string, market: string) => {
     setBusyId(roundId);
@@ -98,8 +108,10 @@ export default function PositionsScreen() {
   };
 
   const onClosePerp = async (pos: PerplPosition) => {
+    setOptimisticClosedIds((prev) => new Set(prev).add(pos.id));
     setClosingId(pos.id);
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
     try {
       const traderAddr = userAddress || pos.trader;
       const res = await closePerplPosition(pos.id, traderAddr, {
@@ -109,15 +121,23 @@ export default function PositionsScreen() {
         leverage: pos.leverage,
         entryPrice: pos.entryPrice,
       });
+
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      const pnl = res.realizedPnL >= 0 ? `+$${res.realizedPnL}` : `-$${Math.abs(res.realizedPnL)}`;
+      const pnlNum = res.realizedPnL ?? 0;
+      const pnlStr = pnlNum >= 0 ? `+$${pnlNum.toFixed(2)}` : `-$${Math.abs(pnlNum).toFixed(2)}`;
       toast.show("Position Closed", {
-        body: `${pos.symbol} ${pos.side} · ${pnl} AUSD realized PnL`,
-        tone: res.realizedPnL >= 0 ? "success" : "neutral",
+        body: `${pos.symbol} ${pos.side} · ${pnlStr} AUSD realized PnL`,
+        tone: pnlNum >= 0 ? "success" : "neutral",
       });
-      refreshPerpl();
-      refreshWallet();
+
+      await refreshPerpl();
+      await refreshWallet();
     } catch (e: any) {
+      setOptimisticClosedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(pos.id);
+        return next;
+      });
       toast.error("Failed to close", e.message || String(e));
     } finally {
       setClosingId(null);
@@ -128,6 +148,7 @@ export default function PositionsScreen() {
     const nextSide = pos.side === "LONG" ? "SHORT" : "LONG";
     setReversingId(pos.id);
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
     try {
       const traderAddr = userAddress || pos.trader;
       const res = await reversePerplPosition(pos.id, traderAddr, {
@@ -138,14 +159,17 @@ export default function PositionsScreen() {
         entryPrice: pos.entryPrice,
         marginAUSD: pos.marginAUSD,
       });
+
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      const pnl = res.realizedPnL >= 0 ? `+$${res.realizedPnL}` : `-$${Math.abs(res.realizedPnL)}`;
+      const pnlNum = res.realizedPnL ?? 0;
+      const pnlStr = pnlNum >= 0 ? `+$${pnlNum.toFixed(2)}` : `-$${Math.abs(pnlNum).toFixed(2)}`;
       toast.show("Position Reversed", {
-        body: `Flipped to ${nextSide} ${pos.symbol} (${pnl} AUSD closed)`,
+        body: `Flipped to ${nextSide} ${pos.symbol} (${pnlStr} closed)`,
         tone: "success",
       });
-      refreshPerpl();
-      refreshWallet();
+
+      await refreshPerpl();
+      await refreshWallet();
     } catch (e: any) {
       toast.error("Failed to reverse", e.message || String(e));
     } finally {
@@ -154,12 +178,18 @@ export default function PositionsScreen() {
   };
 
   const totalCollateral = me?.ausd ? Number(me.ausd).toFixed(2) : "—";
-  const marginInUse = perplAccount?.marginUsedAUSD != null ? perplAccount.marginUsedAUSD.toFixed(2) : "0.00";
-  const unrealizedPnL = perplAccount?.unrealizedPnLAUSD != null ? perplAccount.unrealizedPnLAUSD.toFixed(2) : "0.00";
-  const totalEquity = totalCollateral === "—" ? "—" : (Number(totalCollateral.replace(",", "")) + Number(marginInUse.replace(",", ""))).toFixed(2);
-
-  // Real Perpl account positions only
-  const displayPerps: PerplPosition[] = perpPositions;
+  const openMargin = openPerps.reduce((s, p) => s + (p.marginAUSD || 0), 0);
+  const openPnL = openPerps.reduce((s, p) => s + (p.unrealizedPnLAUSD || 0), 0);
+  const marginInUse = openMargin.toFixed(2);
+  const unrealizedPnL = openPnL.toFixed(2);
+  const totalEquity =
+    totalCollateral === "—"
+      ? "—"
+      : (
+          Number(totalCollateral.replace(",", "")) +
+          openMargin +
+          openPnL
+        ).toFixed(2);
 
   return (
     <Screen>
@@ -321,7 +351,7 @@ export default function PositionsScreen() {
                 disabled={busyId !== null}
               >
                 <Icon name="flash" size={14} color="#0A0B0D" />
-                <Text style={styles.claimBtnText}>
+                <Text style={styles.claimAllBtnText}>
                   CLAIM $
                   {redeemableHunches
                     .reduce((s, h) => s + Number(h.estimatedPayout || 0), 0)
@@ -340,7 +370,7 @@ export default function PositionsScreen() {
             >
               <Icon name="trending-up" size={13} color={colors.brand} />
               <Text style={[styles.filterChipText, tab === "perps" && styles.filterChipTextActive]}>
-                PERPETUALS ({displayPerps.length})
+                PERPETUALS ({openPerps.length})
               </Text>
             </Pressable>
 
@@ -355,32 +385,68 @@ export default function PositionsScreen() {
             </Pressable>
           </View>
 
+          {/* PERP SUB-TABS: OPEN vs HISTORY */}
+          {tab === "perps" && (
+            <View style={styles.subFilterRow}>
+              <Pressable
+                onPress={() => { setPerpSubTab("open"); Haptics.selectionAsync(); }}
+                style={[styles.subFilterBtn, perpSubTab === "open" && styles.subFilterBtnActive]}
+              >
+                <Text style={[styles.subFilterText, perpSubTab === "open" && styles.subFilterTextActive]}>
+                  OPEN ({openPerps.length})
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => { setPerpSubTab("history"); Haptics.selectionAsync(); }}
+                style={[styles.subFilterBtn, perpSubTab === "history" && styles.subFilterBtnActive]}
+              >
+                <Text style={[styles.subFilterText, perpSubTab === "history" && styles.subFilterTextActive]}>
+                  HISTORY ({historyPerps.length})
+                </Text>
+              </Pressable>
+            </View>
+          )}
+
           {/* PERPETUAL POSITIONS LIST — live Perpl data only */}
           {tab === "perps" && (
             <View style={styles.posList}>
               {displayPerps.length === 0 ? (
                 <EmptyState
                   icon="trending-up"
-                  title="No open Perpl positions"
-                  body="Open TRADE → pick BTC/ETH → LONG or SHORT to open a mock/live perp."
+                  title={perpSubTab === "open" ? "No open Perpl positions" : "No position history"}
+                  body={
+                    perpSubTab === "open"
+                      ? "Open TRADE → pick BTC/ETH/PUMP → LONG or SHORT to open a live perp."
+                      : "Closed positions and realized PnL will be listed here."
+                  }
                 />
               ) : null}
               {displayPerps.map((pos) => {
                 const isClosing = closingId === pos.id;
+                const isClosed = pos.status === "CLOSED" || optimisticClosedIds.has(pos.id);
+
                 return (
                   <View key={pos.id} style={styles.posCard}>
                     <View style={styles.posCardTop}>
                       <View style={styles.posLeftHeader}>
-                        <View style={styles.longBadge}>
-                          <Text style={styles.longBadgeText}>
+                        <View style={pos.side === "LONG" ? styles.longBadge : styles.shortBadge}>
+                          <Text style={pos.side === "LONG" ? styles.longBadgeText : styles.shortBadgeText}>
                             {pos.side} {pos.leverage}x
                           </Text>
                         </View>
                         <Text style={styles.posSymbol}>{pos.symbol} / AUSD PERP</Text>
                       </View>
                       <View style={styles.oracleStatusRow}>
-                        <View style={styles.greenPulse} />
-                        <Text style={styles.oracleStatusText}>PERPL LIVE</Text>
+                        {isClosed ? (
+                          <View style={styles.closedBadge}>
+                            <Text style={styles.closedBadgeText}>CLOSED</Text>
+                          </View>
+                        ) : (
+                          <>
+                            <View style={styles.greenPulse} />
+                            <Text style={styles.oracleStatusText}>PERPL LIVE</Text>
+                          </>
+                        )}
                       </View>
                     </View>
 
@@ -400,18 +466,31 @@ export default function PositionsScreen() {
                         <Text style={styles.posStatVal}>${pos.entryPrice.toLocaleString()}</Text>
                       </View>
                       <View style={styles.posStatCol}>
-                        <Text style={styles.posStatLabel}>MARK PRICE</Text>
-                        <Text style={styles.posStatVal}>${(pos.markPrice ?? pos.entryPrice).toLocaleString()}</Text>
+                        <Text style={styles.posStatLabel}>{isClosed ? "CLOSED PRICE" : "MARK PRICE"}</Text>
+                        <Text style={styles.posStatVal}>
+                          ${(isClosed ? (pos.closedPrice ?? pos.markPrice ?? pos.entryPrice) : (pos.markPrice ?? pos.entryPrice)).toLocaleString()}
+                        </Text>
                       </View>
                       <View style={styles.posStatCol}>
                         <Text style={styles.posStatLabel}>MARGIN</Text>
                         <Text style={styles.posStatVal}>${pos.marginAUSD} AUSD</Text>
                       </View>
                       <View style={[styles.posStatCol, { alignItems: "flex-end" }]}>
-                        <Text style={styles.posStatLabel}>UNREALIZED PnL</Text>
-                        <Text style={[styles.posStatVal, styles.posColor]}>
-                          ${(pos.unrealizedPnLAUSD ?? 0).toFixed(2)} ({(pos.unrealizedPnLPct ?? 0).toFixed(1)}%)
-                        </Text>
+                        <Text style={styles.posStatLabel}>{isClosed ? "REALIZED PnL" : "UNREALIZED PnL"}</Text>
+                        {isClosed ? (
+                          <Text
+                            style={[
+                              styles.posStatVal,
+                              (pos.realizedPnLAUSD ?? 0) >= 0 ? styles.posColor : styles.negColor,
+                            ]}
+                          >
+                            {(pos.realizedPnLAUSD ?? 0) >= 0 ? "+" : ""}${(pos.realizedPnLAUSD ?? 0).toFixed(2)}
+                          </Text>
+                        ) : (
+                          <Text style={[styles.posStatVal, (pos.unrealizedPnLAUSD ?? 0) >= 0 ? styles.posColor : styles.negColor]}>
+                            {(pos.unrealizedPnLAUSD ?? 0) >= 0 ? "+" : ""}${(pos.unrealizedPnLAUSD ?? 0).toFixed(2)} ({(pos.unrealizedPnLPct ?? 0).toFixed(1)}%)
+                          </Text>
+                        )}
                       </View>
                     </View>
 
@@ -446,36 +525,40 @@ export default function PositionsScreen() {
                     )}
 
                     <View style={styles.actionRow}>
-                      <Pressable
-                        onPress={() => onReversePerp(pos)}
-                        disabled={isClosing || reversingId === pos.id}
-                        style={[styles.actionBtn, styles.reverseBtn]}
-                      >
-                        {reversingId === pos.id ? (
-                          <ActivityIndicator color="#D6FF3F" size="small" />
-                        ) : (
-                          <Text style={styles.reverseBtnText}>REVERSE</Text>
-                        )}
-                      </Pressable>
+                      {!isClosed && (
+                        <>
+                          <Pressable
+                            onPress={() => onReversePerp(pos)}
+                            disabled={isClosing || reversingId === pos.id}
+                            style={[styles.actionBtn, styles.reverseBtn]}
+                          >
+                            {reversingId === pos.id ? (
+                              <ActivityIndicator color="#D6FF3F" size="small" />
+                            ) : (
+                              <Text style={styles.reverseBtnText}>REVERSE</Text>
+                            )}
+                          </Pressable>
 
-                      <Pressable
-                        onPress={() => onClosePerp(pos)}
-                        disabled={isClosing || reversingId === pos.id}
-                        style={[styles.actionBtn, styles.closeBtn]}
-                      >
-                        {isClosing ? (
-                          <ActivityIndicator color="#FFFFFF" size="small" />
-                        ) : (
-                          <Text style={styles.closeBtnText}>CLOSE</Text>
-                        )}
-                      </Pressable>
+                          <Pressable
+                            onPress={() => onClosePerp(pos)}
+                            disabled={isClosing || reversingId === pos.id}
+                            style={[styles.actionBtn, styles.closeBtn]}
+                          >
+                            {isClosing ? (
+                              <ActivityIndicator color="#FFFFFF" size="small" />
+                            ) : (
+                              <Text style={styles.closeBtnText}>CLOSE</Text>
+                            )}
+                          </Pressable>
+                        </>
+                      )}
 
                       <Pressable
                         onPress={() => {
                           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                           setSharePos(pos);
                         }}
-                        style={[styles.actionBtn, styles.shareBtn]}
+                        style={[styles.actionBtn, styles.shareBtn, isClosed && { flex: 1 }]}
                       >
                         <Text style={styles.shareBtnText}>SHARE</Text>
                       </Pressable>
@@ -775,6 +858,9 @@ const styles = StyleSheet.create({
   posColor: {
     color: colors.up,
   },
+  negColor: {
+    color: colors.down,
+  },
   marginActionRow: {
     flexDirection: "row",
     gap: 10,
@@ -955,7 +1041,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "bold",
   },
-  claimBtnText: {
+  claimAllBtnText: {
     color: "#000",
     fontFamily: type.bold,
     fontSize: 13,
@@ -1036,6 +1122,33 @@ const styles = StyleSheet.create({
     fontFamily: type.bold,
     fontSize: 10,
   },
+  subFilterRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 2,
+    marginBottom: 4,
+  },
+  subFilterBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: radius.pill,
+    backgroundColor: "#12141A",
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  subFilterBtnActive: {
+    backgroundColor: "#182012",
+    borderColor: colors.brand,
+  },
+  subFilterText: {
+    color: colors.muted,
+    fontFamily: type.bold,
+    fontSize: 10,
+    letterSpacing: 0.6,
+  },
+  subFilterTextActive: {
+    color: colors.brand,
+  },
   posList: {
     gap: 12,
   },
@@ -1067,6 +1180,32 @@ const styles = StyleSheet.create({
     color: colors.up,
     fontFamily: type.data,
     fontSize: 10,
+    fontWeight: "bold",
+  },
+  shortBadge: {
+    backgroundColor: "rgba(255,77,106,0.18)",
+    paddingVertical: 2,
+    paddingHorizontal: 6,
+    borderRadius: 4,
+  },
+  shortBadgeText: {
+    color: colors.down,
+    fontFamily: type.data,
+    fontSize: 10,
+    fontWeight: "bold",
+  },
+  closedBadge: {
+    backgroundColor: "#1F2330",
+    paddingVertical: 2,
+    paddingHorizontal: 6,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: "#2B3245",
+  },
+  closedBadgeText: {
+    color: colors.muted,
+    fontFamily: type.data,
+    fontSize: 9,
     fontWeight: "bold",
   },
   posSymbol: {

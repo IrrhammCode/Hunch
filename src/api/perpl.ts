@@ -18,6 +18,7 @@ import { ausdContract, getProvider, getWallet, loadDeployment } from "../shared/
 import {
   perplAuthConfigured,
   placePerplOrderWs,
+  perplFetchPositions,
   perplFetchPositionHistory,
 } from "../shared/perplAuth";
 
@@ -110,30 +111,41 @@ export async function getUserPerplAccount(address: string) {
 
   if (perplAuthConfigured()) {
     try {
-      const hist = await perplFetchPositionHistory(20);
-      const rows = (hist?.d || hist?.positions || []) as any[];
-      positions = rows.slice(0, 20).map((row, i) => {
-        const side = row?.t === 2 || row?.side === 2 ? "SHORT" : "LONG";
-        const mktId = Number(row?.mkt ?? row?.market_id ?? 0);
-        const symbol =
-          markets.find((m) => m.id === mktId || m.perpetualId === mktId)?.symbol || "PERP";
-        return {
-          id: String(row?.id ?? row?.o ?? `h_${i}`),
-          trader: normalized,
-          symbol,
-          side: side as "LONG" | "SHORT",
-          size: Number(row?.s ?? 0),
-          sizeAUSD: Number(row?.s ?? 0),
-          entryPrice: Number(row?.p ?? 0),
-          leverage: Number(row?.lv ?? 0) / 100,
-          marginAUSD: 0,
-          liquidationPrice: 0,
-          openedAt: Number(row?.at ?? Date.now()),
-          status: row?.st === 4 || row?.r ? "CLOSED" : "OPEN",
-          execution: "perpl-ws" as const,
-          accountId: accountId ?? undefined,
-        };
-      });
+      const posRes = await perplFetchPositions();
+      const rows = (posRes?.d || []) as any[];
+      positions = rows
+        .filter((row: any) => Number(row?.s ?? 0) > 0)
+        .map((row: any) => {
+          const mktId = Number(row?.mkt ?? row?.market_id ?? 0);
+          const market = markets.find((m) => m.id === mktId || m.perpetualId === mktId);
+          const symbol = market?.symbol || "PERP";
+          const pDec = market?.priceDecimals ?? 2;
+          const sDec = market?.sizeDecimals ?? 2;
+          const entryPrice = row?.ep != null ? Number(row.ep) / Math.pow(10, pDec) : 0;
+          const size = row?.s != null ? Number(row.s) / Math.pow(10, sDec) : 0;
+          const leverage = row?.lv != null ? Math.max(1, Math.round(Number(row.lv) / 100)) : 1;
+          const side: "LONG" | "SHORT" = row?.sd === 2 || row?.t === 2 ? "SHORT" : "LONG";
+          const sizeAUSD = size * entryPrice;
+          const marginAUSD = Number((sizeAUSD / leverage).toFixed(2));
+          const pid = String(row?.pid || `perpl_${mktId}`);
+
+          return {
+            id: pid,
+            trader: normalized,
+            symbol,
+            side,
+            size: Number(size.toFixed(sDec)),
+            sizeAUSD: Number(sizeAUSD.toFixed(2)),
+            entryPrice: Number(entryPrice.toFixed(pDec)),
+            leverage,
+            marginAUSD,
+            liquidationPrice: 0,
+            openedAt: Number(row?.ots?.t ?? Date.now()),
+            status: "OPEN" as const,
+            execution: "perpl-ws" as const,
+            accountId: Number(row?.acc ?? accountId ?? 643),
+          };
+        });
     } catch (e: any) {
       historyError = e?.message || String(e);
     }
@@ -144,25 +156,33 @@ export async function getUserPerplAccount(address: string) {
 
   // Merge with local mirror for real-time order visibility and status reconciliation
   const localPositions = readJson<PerplPosition[]>(POSITIONS_FILE, []);
-  const traderLocal = localPositions.filter((p) => p.trader.toLowerCase() === normalized);
+  const traderLocal = localPositions.filter(
+    (p) =>
+      p.trader.toLowerCase() === normalized &&
+      !p.id.startsWith("h_") &&
+      (p.entryPrice > 0 || p.status === "OPEN"),
+  );
   const mergedMap = new Map<string, PerplPosition>();
 
   for (const p of positions) {
     mergedMap.set(p.id, p);
   }
+  const liveBySymbol = new Map(positions.map((p) => [p.symbol.toUpperCase(), p]));
+
   for (const lp of traderLocal) {
-    if (!mergedMap.has(lp.id)) {
-      mergedMap.set(lp.id, lp);
-    } else {
-      const existing = mergedMap.get(lp.id)!;
-      if (lp.status === "CLOSED" && existing.status !== "CLOSED") {
-        mergedMap.set(lp.id, {
-          ...existing,
-          status: "CLOSED",
-          closedPrice: lp.closedPrice,
-          realizedPnLAUSD: lp.realizedPnLAUSD,
-          closedAt: lp.closedAt,
-        });
+    if (lp.status === "OPEN") {
+      const live = liveBySymbol.get(lp.symbol.toUpperCase());
+      if (live) {
+        if (lp.tpPrice != null) live.tpPrice = lp.tpPrice;
+        if (lp.slPrice != null) live.slPrice = lp.slPrice;
+        continue;
+      }
+      if (!mergedMap.has(lp.id)) {
+        mergedMap.set(lp.id, lp);
+      }
+    } else if (lp.status === "CLOSED") {
+      if (!mergedMap.has(lp.id)) {
+        mergedMap.set(lp.id, lp);
       }
     }
   }
@@ -419,7 +439,7 @@ export async function placePerplOrder(params: {
     marketId: market.perpetualId || market.id,
     side,
     size,
-    sizeDecimals: market.sizeDecimals || 2,
+    sizeDecimals: market.sizeDecimals ?? 2,
     leverage,
     // market IOC
     limitPriceScaled: 0,
@@ -434,9 +454,9 @@ export async function placePerplOrder(params: {
     trader: trader.toLowerCase(),
     symbol: symbol.toUpperCase(),
     side,
-    size: Number(size.toFixed(market.sizeDecimals || 4)),
+    size: Number(size.toFixed(market.sizeDecimals ?? 4)),
     sizeAUSD: Number(sizeAUSD.toFixed(2)),
-    entryPrice: Number(entryPrice.toFixed(market.priceDecimals || 2)),
+    entryPrice: Number(entryPrice.toFixed(market.priceDecimals ?? 2)),
     leverage,
     marginAUSD: Number(marginAUSD.toFixed(2)),
     liquidationPrice: 0,
@@ -444,8 +464,8 @@ export async function placePerplOrder(params: {
     status: "OPEN",
     execution: "perpl-ws",
     accountId,
-    tpPrice: tpPrice ? Number(tpPrice.toFixed(market.priceDecimals || 2)) : undefined,
-    slPrice: slPrice ? Number(slPrice.toFixed(market.priceDecimals || 2)) : undefined,
+    tpPrice: tpPrice ? Number(tpPrice.toFixed(market.priceDecimals ?? 2)) : undefined,
+    slPrice: slPrice ? Number(slPrice.toFixed(market.priceDecimals ?? 2)) : undefined,
   };
 
   // Local mirror only
@@ -542,12 +562,34 @@ export async function closePerplPosition(
       getLinkedPerplAccountId(normalized) ??
       644;
 
+    const sDec = market.sizeDecimals ?? 2;
+    let closeSize = pos.size;
+
+    // Check live position on Perpl to ensure exact size close
+    try {
+      const posRes = await perplFetchPositions();
+      const liveRow = (posRes?.d || []).find(
+        (r: any) =>
+          Number(r.mkt) === market.id ||
+          Number(r.mkt) === market.perpetualId ||
+          String(r.pid) === pos.id,
+      );
+      if (liveRow && liveRow.s != null) {
+        const liveScaled = Number(liveRow.s) / Math.pow(10, sDec);
+        if (liveScaled > 0) {
+          closeSize = liveScaled;
+        }
+      }
+    } catch {
+      /* ignore and use pos.size */
+    }
+
     wsResult = await placePerplOrderWs({
       accountId,
       marketId: market.perpetualId || market.id,
       side: closeSide,
-      size: pos.size,
-      sizeDecimals: market.sizeDecimals || 2,
+      size: closeSize,
+      sizeDecimals: sDec,
       leverage: pos.leverage || 1,
       limitPriceScaled: 0,
     });
@@ -565,8 +607,22 @@ export async function closePerplPosition(
 
   if (posIndex >= 0) {
     all[posIndex] = pos;
-    writeJson(POSITIONS_FILE, all);
   }
+  // Mark any matching open position for this trader and symbol as closed
+  for (const p of all) {
+    if (
+      p.trader.toLowerCase() === normalized &&
+      p.symbol.toUpperCase() === pos.symbol.toUpperCase() &&
+      p.status === "OPEN"
+    ) {
+      p.status = "CLOSED";
+      p.closedAt = Date.now();
+      p.closedPrice = closePrice;
+      p.realizedPnLAUSD = realizedPnLAUSD;
+      p.closeReason = fallback?.reason || "USER";
+    }
+  }
+  writeJson(POSITIONS_FILE, all);
 
   return {
     success: true,
@@ -599,17 +655,21 @@ export async function reversePerplPosition(
   const closedPos = closeRes.position;
 
   // 2. Open new opposite position with same size & leverage
+  const symbol = closedPos.symbol?.toUpperCase() || fallback?.symbol?.toUpperCase() || "BTC";
   const newSide: "LONG" | "SHORT" = closedPos.side === "LONG" ? "SHORT" : "LONG";
   const marginAUSD =
-    closedPos.marginAUSD ||
-    (closedPos.sizeAUSD && closedPos.leverage ? closedPos.sizeAUSD / closedPos.leverage : 10);
+    closedPos.marginAUSD && closedPos.marginAUSD > 0
+      ? closedPos.marginAUSD
+      : closedPos.sizeAUSD && closedPos.leverage
+      ? closedPos.sizeAUSD / closedPos.leverage
+      : fallback?.marginAUSD || 10;
 
   const openRes = await placePerplOrder({
     trader,
-    symbol: closedPos.symbol,
+    symbol,
     side: newSide,
     marginAUSD: Math.max(5, Number(marginAUSD.toFixed(2))),
-    leverage: closedPos.leverage || 2,
+    leverage: closedPos.leverage || fallback?.leverage || 2,
     accountId: closedPos.accountId,
   });
 

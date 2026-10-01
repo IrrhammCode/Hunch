@@ -51,7 +51,9 @@ export async function buildPerplRisk(address: string): Promise<PerplRiskReport> 
   ]);
   const marketMap = new Map(markets.map((m) => [m.symbol.toUpperCase(), m]));
 
-  const positions: PerplRiskPosition[] = (account.positions || []).map((p) => {
+  const positions: PerplRiskPosition[] = (account.positions || [])
+    .filter((p) => p.status === "OPEN")
+    .map((p) => {
     const mkt = marketMap.get(p.symbol.toUpperCase());
     const mark = p.markPrice ?? mkt?.markPrice ?? p.entryPrice;
     const delta = mark - p.entryPrice;

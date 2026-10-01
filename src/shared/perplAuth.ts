@@ -178,9 +178,10 @@ export async function placePerplOrderWs(input: PerplWsOrderInput): Promise<{
           return;
         }
 
+        const sizeDecimals = input.sizeDecimals ?? 2;
         const sizeScaled = Math.max(
           1,
-          Math.round(input.size * Math.pow(10, input.sizeDecimals || 2)),
+          Math.round(input.size * Math.pow(10, sizeDecimals)),
         );
         const order = {
           mt: 22,
@@ -248,8 +249,13 @@ export async function perplFetchFills(count = 20) {
   return (await perplSignedFetch("GET", `/v1/trading/fills?count=${count}`)).json();
 }
 
+export async function perplFetchPositions() {
+  return (await perplSignedFetch("GET", "/v1/trading/positions")).json();
+}
+
 export async function perplFetchPositionHistory(count = 20) {
   return (
     await perplSignedFetch("GET", `/v1/trading/position-history?count=${count}`)
   ).json();
 }
+
