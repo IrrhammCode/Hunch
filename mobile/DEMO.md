@@ -28,24 +28,31 @@ Repo: https://github.com/IrrhammCode/Hunch
 
 ---
 
-## 5-minute path (Agora Bounty & Track 01)
+## 5-minute path (Agora $10k, Perpl $8k & Track 01)
 
 1. **Open Hunch** — dark splash, lime chevrons mark.
-2. **Login** — enter your email → **Send code** → OTP → **Verify & enter** (Privy creates your embedded wallet on Monad Testnet).
-3. **YOU tab** — confirm **Privy wallet** + short `0x…` address. Tap **Claim Agora AUSD + Gas MON** (official Agora AUSD `0xa901...22dc`).
+2. **Login** — enter your email → **Send code** → OTP → **Verify & enter** (Privy creates your embedded wallet on Monad Testnet) or use **Mera Passkey** (Face ID).
+3. **YOU tab** — confirm wallet + short `0x…` address. Tap **Claim Agora AUSD + Gas MON** (official Agora AUSD `0xa901...22dc`).
 4. **TRADE tab — Perpetuals (Perpl DEX)**:
    - Tap **PERPETUALS (PERPL)** at the top.
    - Pick **BTC** (or ETH/SOL/MON).
+   - Toggle **TP / SL Guard** → select `+25%` TP and `-10%` SL preset targets.
    - Choose **BUY / LONG**, select **10x** leverage, input margin (e.g. 50 AUSD).
-   - Tap **OPEN LONG BTC** → Order executes on Monad.
-   - Check **PORTFOLIO** tab → see open position, mark price, and live PnL. Tap **CLOSE POSITION** to take profit.
-5. **TRADE tab — 60s UP/DOWN Hunch**:
+   - Tap **OPEN LONG BTC** → Order executes sub-second on Monad via Perpl signed WebSocket.
+5. **TRADE tab — "Hedge-My-Hunch" Cross-Product**:
    - Tap **60s UP/DOWN**.
-   - Swipe **right = UP** or **left = DOWN** (or tap buttons) on the live round.
-   - Wait ~60s → Pyth resolves.
-   - Open **PORTFOLIO** → 60s Hunches → **Claim** your payout in Agora AUSD. Tap **View on MonadVision** for onchain proof.
+   - Toggle **⚡ HEDGE ON PERPL** and select `50%` hedge ratio.
+   - Swipe **right = UP** (or left = DOWN) on the live round → atomic 60s hunch + inverse SHORT perp hedge on Perpl.
+6. **PORTFOLIO tab — Risk & Execution**:
+   - Check the **Liquidation Health Gauge** (shows SAFE / MODERATE / DANGER, utilization %, buffer distance).
+   - Tap **+ MARGIN** to open the in-app `MarginModal` to deposit/withdraw Agora AUSD collateral.
+   - On the active Perpl position:
+     - Tap **⟲ REVERSE** to flip position direction in 1 tap.
+     - Tap **✕ CLOSE** to close position with 0 slippage.
+     - Tap **↗ SHARE** to preview the viral Cyberpunk PnL Share Card with copyable text.
+   - Switch to **60s HUNCHES** → tap **CLAIM ONCHAIN** on winning rounds to receive Agora AUSD. Tap **View on MonadVision** for onchain proof.
 
-You’re done. That’s the full loop: Privy identity → Agora AUSD collateral → Perpl perpetuals DEX + 60s Pyth hunch → live portfolio tracking & claims.
+You’re done. That’s the full loop: Mera/Privy identity → Agora AUSD collateral → Perpl perpetuals DEX + automated TP/SL guard keeper + Hedge-My-Hunch cross-product + live portfolio tracking & claims.
 
 ---
 
