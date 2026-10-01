@@ -383,6 +383,7 @@ export default function ProfileScreen() {
           visible={showReceiveModal}
           onClose={() => setShowReceiveModal(false)}
           walletAddress={address || ""}
+          userHandle={user?.displayName || "trader"}
         />
 
         <SendModal

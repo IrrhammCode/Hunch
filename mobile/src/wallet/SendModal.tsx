@@ -16,6 +16,14 @@ import { colors, radius, space, type, monoStyle } from "@/src/theme";
 import { Icon } from "@/src/components/Icon";
 import { useToast } from "@/src/components/Toast";
 import { sendOnchainTransfer } from "./privyTrade";
+import { QrScannerModal } from "./QrScannerModal";
+import {
+  resolveUserInput,
+  getRecentRecipients,
+  saveRecentRecipient,
+  type ContactProfile,
+  type ParsedPaymentQr,
+} from "./userDirectory";
 
 interface SendModalProps {
   visible: boolean;
@@ -44,6 +52,9 @@ export function SendModal({
   const [amountStr, setAmountStr] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [stepLabel, setStepLabel] = useState<string | null>(null);
+  const [showScanner, setShowScanner] = useState(false);
+  const [contacts, setContacts] = useState<ContactProfile[]>([]);
+  const [resolvedProfile, setResolvedProfile] = useState<ContactProfile | null>(null);
 
   useEffect(() => {
     if (visible) {
@@ -52,6 +63,9 @@ export function SendModal({
       setAmountStr("");
       setIsSending(false);
       setStepLabel(null);
+      setResolvedProfile(null);
+      setShowScanner(false);
+      getRecentRecipients().then(setContacts).catch(() => {});
     }
   }, [visible, initialToken]);
 
@@ -60,13 +74,14 @@ export function SendModal({
   const availableBal = token === "AUSD" ? numAUSD : numMON;
   const parsedAmount = parseFloat(amountStr) || 0;
 
-  // Validation
-  const cleanRecipient = recipient.trim();
-  const isValidAddress = /^0x[a-fA-F0-9]{40}$/.test(cleanRecipient);
+  // Resolve target address from handle (@alice) or raw 0x address
+  const resolved = resolveUserInput(recipient);
+  const targetAddress = resolved.isValid ? resolved.address : recipient.trim();
+  const isValidAddress = /^0x[a-fA-F0-9]{40}$/.test(targetAddress);
   const isSelf =
     isValidAddress &&
     walletAddress &&
-    cleanRecipient.toLowerCase() === walletAddress.toLowerCase();
+    targetAddress.toLowerCase() === walletAddress.toLowerCase();
 
   const isInsufficient = parsedAmount > availableBal;
   const isExceedsMonGas =
@@ -78,10 +93,22 @@ export function SendModal({
     (!isExceedsMonGas || availableBal <= 0.002) &&
     !isSending;
 
+  const onRecipientChange = (text: string) => {
+    setRecipient(text);
+    const res = resolveUserInput(text);
+    setResolvedProfile(res.profile);
+  };
+
+  const onSelectContact = (c: ContactProfile) => {
+    setRecipient(c.handle);
+    setResolvedProfile(c);
+    haptic("selection");
+  };
+
   const onPasteRecipient = async () => {
     const text = await pasteFromClipboard();
     if (text) {
-      setRecipient(text.trim());
+      onRecipientChange(text.trim());
       await haptic("selection");
     } else {
       toast.show("Clipboard Empty", {
@@ -91,12 +118,36 @@ export function SendModal({
     }
   };
 
+  const onScanQrSuccess = (payload: ParsedPaymentQr) => {
+    if (payload.handle) {
+      setRecipient(payload.handle);
+      const res = resolveUserInput(payload.handle);
+      setResolvedProfile(res.profile);
+    } else {
+      setRecipient(payload.address);
+      const res = resolveUserInput(payload.address);
+      setResolvedProfile(res.profile);
+    }
+
+    if (payload.amount) {
+      setAmountStr(payload.amount);
+    }
+    if (payload.token) {
+      setToken(payload.token);
+    }
+
+    haptic("success");
+    toast.show("QR Scanned", {
+      body: `Ready to send to ${payload.handle || payload.address.slice(0, 8)}...`,
+      tone: "success",
+    });
+  };
+
   const onQuickChip = (pct: number) => {
     if (availableBal <= 0) return;
     let target = 0;
     if (pct === 100) {
       if (token === "MON") {
-        // Reserve 0.005 MON for gas
         target = Math.max(0, Math.floor((availableBal - 0.005) * 10000) / 10000);
       } else {
         target = Math.floor(availableBal * 100) / 100;
@@ -110,7 +161,10 @@ export function SendModal({
 
   const handleSend = async () => {
     if (!isValidAddress) {
-      toast.error("Invalid Address", "Please enter a valid 42-character Monad EVM address.");
+      toast.error(
+        "Invalid Recipient",
+        "Please enter a valid @username or 42-character Monad EVM address.",
+      );
       return;
     }
     if (parsedAmount <= 0) {
@@ -133,14 +187,22 @@ export function SendModal({
       const result = await sendOnchainTransfer({
         provider,
         from: walletAddress,
-        to: cleanRecipient,
+        to: targetAddress,
         amount: amountStr.trim(),
         token,
       });
 
+      // Save to recent recipients cache
+      saveRecentRecipient({
+        address: targetAddress,
+        handle: resolvedProfile?.handle,
+      }).catch(() => {});
+
       await haptic("success");
       toast.show("Transfer Confirmed", {
-        body: `Sent ${amountStr} ${token} to ${cleanRecipient.slice(0, 6)}…${cleanRecipient.slice(-4)}`,
+        body: `Sent ${amountStr} ${token} to ${
+          resolvedProfile ? resolvedProfile.handle : `${targetAddress.slice(0, 6)}…${targetAddress.slice(-4)}`
+        }`,
         tone: "success",
       });
 
@@ -156,201 +218,310 @@ export function SendModal({
   };
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.overlay}
+    <>
+      <Modal
+        visible={visible}
+        transparent
+        animationType="fade"
+        onRequestClose={onClose}
       >
-        <Pressable style={styles.backdrop} onPress={onClose} />
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.overlay}
+        >
+          <Pressable style={styles.backdrop} onPress={onClose} />
 
-        <View style={styles.sheet}>
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-          >
-            {/* Header */}
-            <View style={styles.header}>
-              <View>
-                <Text style={styles.title}>SEND ASSETS</Text>
-                <Text style={styles.subtitle}>Instant Transfer · Monad Testnet</Text>
+          <View style={styles.sheet}>
+            <ScrollView
+              contentContainerStyle={styles.scrollContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              {/* Header */}
+              <View style={styles.header}>
+                <View>
+                  <Text style={styles.title}>SEND ASSETS</Text>
+                  <Text style={styles.subtitle}>Instant Transfer · Monad Testnet</Text>
+                </View>
+                <Pressable onPress={onClose} style={styles.closeIconBtn} hitSlop={12}>
+                  <Text style={styles.closeIconText}>✕</Text>
+                </Pressable>
               </View>
-              <Pressable onPress={onClose} style={styles.closeIconBtn} hitSlop={12}>
-                <Text style={styles.closeIconText}>✕</Text>
-              </Pressable>
-            </View>
 
-            {/* Token Switcher */}
-            <View style={styles.tokenTabs}>
-              <Pressable
-                onPress={() => {
-                  setToken("AUSD");
-                  haptic("selection");
-                }}
-                style={[styles.tokenTab, token === "AUSD" && styles.tokenTabActive]}
-              >
-                <View style={[styles.tabGlyph, { backgroundColor: "#0E2B1F" }]}>
-                  <Text style={[styles.tabGlyphText, { color: colors.up }]}>A</Text>
-                </View>
-                <View>
-                  <Text style={[styles.tokenTabName, token === "AUSD" && styles.tokenTabNameActive]}>
-                    Agora AUSD
-                  </Text>
-                  <Text style={styles.tokenTabBal}>Bal: ${walletAUSD}</Text>
-                </View>
-              </Pressable>
-
-              <Pressable
-                onPress={() => {
-                  setToken("MON");
-                  haptic("selection");
-                }}
-                style={[styles.tokenTab, token === "MON" && styles.tokenTabActive]}
-              >
-                <View style={[styles.tabGlyph, { backgroundColor: "rgba(131,110,249,0.2)" }]}>
-                  <Text style={[styles.tabGlyphText, { color: colors.monadPurple }]}>M</Text>
-                </View>
-                <View>
-                  <Text style={[styles.tokenTabName, token === "MON" && styles.tokenTabNameActive]}>
-                    Monad Gas
-                  </Text>
-                  <Text style={styles.tokenTabBal}>{walletMON} MON</Text>
-                </View>
-              </Pressable>
-            </View>
-
-            {/* Recipient Address Section */}
-            <View style={styles.section}>
-              <View style={styles.sectionHeaderRow}>
-                <Text style={styles.sectionLabel}>RECIPIENT ADDRESS</Text>
-                {isValidAddress ? (
-                  <View style={styles.validBadge}>
-                    <Icon name="checkmark-circle" size={12} color={colors.up} />
-                    <Text style={styles.validBadgeText}>
-                      {isSelf ? "Self-transfer" : "Valid Address"}
-                    </Text>
+              {/* Token Switcher */}
+              <View style={styles.tokenTabs}>
+                <Pressable
+                  onPress={() => {
+                    setToken("AUSD");
+                    haptic("selection");
+                  }}
+                  style={[styles.tokenTab, token === "AUSD" && styles.tokenTabActive]}
+                >
+                  <View style={[styles.tabGlyph, { backgroundColor: "#0E2B1F" }]}>
+                    <Text style={[styles.tabGlyphText, { color: colors.up }]}>A</Text>
                   </View>
-                ) : cleanRecipient.length > 0 ? (
-                  <Text style={styles.invalidBadgeText}>Invalid 0x address</Text>
+                  <View>
+                    <Text style={[styles.tokenTabName, token === "AUSD" && styles.tokenTabNameActive]}>
+                      Agora AUSD
+                    </Text>
+                    <Text style={styles.tokenTabBal}>Bal: ${walletAUSD}</Text>
+                  </View>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => {
+                    setToken("MON");
+                    haptic("selection");
+                  }}
+                  style={[styles.tokenTab, token === "MON" && styles.tokenTabActive]}
+                >
+                  <View style={[styles.tabGlyph, { backgroundColor: "rgba(131,110,249,0.2)" }]}>
+                    <Text style={[styles.tabGlyphText, { color: colors.monadPurple }]}>M</Text>
+                  </View>
+                  <View>
+                    <Text style={[styles.tokenTabName, token === "MON" && styles.tokenTabNameActive]}>
+                      Monad Gas
+                    </Text>
+                    <Text style={styles.tokenTabBal}>{walletMON} MON</Text>
+                  </View>
+                </Pressable>
+              </View>
+
+              {/* Recipient Input Section */}
+              <View style={styles.section}>
+                <View style={styles.sectionHeaderRow}>
+                  <Text style={styles.sectionLabel}>RECIPIENT (@USERNAME OR 0x...)</Text>
+                  {isValidAddress ? (
+                    <View style={styles.validBadge}>
+                      <Icon name="checkmark-circle" size={12} color={colors.up} />
+                      <Text style={styles.validBadgeText}>
+                        {isSelf
+                          ? "Self-transfer"
+                          : resolvedProfile
+                          ? "Resolved User"
+                          : "Valid Address"}
+                      </Text>
+                    </View>
+                  ) : recipient.trim().length > 0 ? (
+                    <Text style={styles.invalidBadgeText}>Enter @user or 0x...</Text>
+                  ) : null}
+                </View>
+
+                {/* Recipient Input Row with SCAN & PASTE */}
+                <View style={styles.recipientInputWrap}>
+                  <TextInput
+                    style={styles.recipientInput}
+                    value={recipient}
+                    onChangeText={onRecipientChange}
+                    placeholder="@alice or 0x..."
+                    placeholderTextColor={colors.muted}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    editable={!isSending}
+                  />
+
+                  <View style={styles.recipientActions}>
+                    <Pressable
+                      onPress={() => setShowScanner(true)}
+                      style={styles.scanBtn}
+                      disabled={isSending}
+                    >
+                      <Icon name="qr-code-outline" size={13} color={colors.brand} />
+                      <Text style={styles.scanBtnText}>SCAN</Text>
+                    </Pressable>
+
+                    <Pressable
+                      onPress={onPasteRecipient}
+                      style={styles.pasteBtn}
+                      disabled={isSending}
+                    >
+                      <Icon name="copy-outline" size={13} color={colors.ink} />
+                      <Text style={styles.pasteBtnText}>PASTE</Text>
+                    </Pressable>
+                  </View>
+                </View>
+
+                {/* Quick Contacts Horizontal Selector */}
+                {contacts.length > 0 ? (
+                  <View style={styles.quickContactsWrap}>
+                    <Text style={styles.quickContactsTitle}>DIRECTORY & RECENT:</Text>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={styles.quickContactsRow}
+                    >
+                      {contacts.map((c) => {
+                        const isSelected =
+                          resolvedProfile?.handle === c.handle ||
+                          recipient.toLowerCase() === c.handle.toLowerCase();
+                        return (
+                          <Pressable
+                            key={c.address + c.handle}
+                            onPress={() => onSelectContact(c)}
+                            style={[
+                              styles.contactChip,
+                              isSelected && styles.contactChipActive,
+                            ]}
+                          >
+                            <View
+                              style={[
+                                styles.contactAvatar,
+                                { backgroundColor: c.avatarColor },
+                              ]}
+                            >
+                              <Text style={styles.contactAvatarText}>
+                                {c.handle.slice(1, 2).toUpperCase()}
+                              </Text>
+                            </View>
+                            <Text
+                              style={[
+                                styles.contactChipText,
+                                isSelected && styles.contactChipTextActive,
+                              ]}
+                            >
+                              {c.handle}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </ScrollView>
+                  </View>
+                ) : null}
+
+                {/* Resolved Contact Card Preview */}
+                {resolvedProfile ? (
+                  <View style={styles.resolvedCard}>
+                    <View
+                      style={[
+                        styles.resolvedAvatar,
+                        { backgroundColor: resolvedProfile.avatarColor },
+                      ]}
+                    >
+                      <Text style={styles.resolvedAvatarText}>
+                        {resolvedProfile.handle.slice(1, 2).toUpperCase()}
+                      </Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <View style={styles.resolvedHeader}>
+                        <Text style={styles.resolvedName}>{resolvedProfile.name}</Text>
+                        <Text style={styles.resolvedHandle}>
+                          {resolvedProfile.handle}
+                        </Text>
+                        {resolvedProfile.verified ? (
+                          <View style={styles.verifiedBadge}>
+                            <Icon name="checkmark-circle" size={11} color={colors.brand} />
+                            <Text style={styles.verifiedText}>VERIFIED</Text>
+                          </View>
+                        ) : null}
+                      </View>
+                      <Text style={styles.resolvedAddr} numberOfLines={1}>
+                        {resolvedProfile.address}
+                      </Text>
+                    </View>
+                  </View>
                 ) : null}
               </View>
 
-              <View style={styles.recipientInputWrap}>
-                <TextInput
-                  style={styles.recipientInput}
-                  value={recipient}
-                  onChangeText={setRecipient}
-                  placeholder="0x..."
-                  placeholderTextColor={colors.muted}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  editable={!isSending}
-                />
-                <Pressable
-                  onPress={onPasteRecipient}
-                  style={styles.pasteBtn}
-                  disabled={isSending}
-                >
-                  <Icon name="copy-outline" size={14} color={colors.brand} />
-                  <Text style={styles.pasteBtnText}>PASTE</Text>
-                </Pressable>
-              </View>
-            </View>
-
-            {/* Amount Section */}
-            <View style={styles.section}>
-              <View style={styles.sectionHeaderRow}>
-                <Text style={styles.sectionLabel}>AMOUNT</Text>
-                <Text style={styles.availableText}>
-                  Avail: <Text style={styles.boldWhite}>{availableBal.toFixed(token === "AUSD" ? 2 : 4)} {token}</Text>
-                </Text>
-              </View>
-
-              <View style={styles.amountInputWrap}>
-                <Text style={styles.currencyPrefix}>
-                  {token === "AUSD" ? "$" : "M"}
-                </Text>
-                <TextInput
-                  style={styles.amountInput}
-                  value={amountStr}
-                  onChangeText={setAmountStr}
-                  keyboardType="numeric"
-                  placeholder="0.00"
-                  placeholderTextColor={colors.muted}
-                  editable={!isSending}
-                />
-                <Text style={styles.currencySuffix}>{token}</Text>
-              </View>
-
-              {/* Quick Chips */}
-              <View style={styles.chipsRow}>
-                {[25, 50, 75, 100].map((pct) => (
-                  <Pressable
-                    key={pct}
-                    onPress={() => onQuickChip(pct)}
-                    disabled={isSending}
-                    style={styles.chip}
-                  >
-                    <Text style={styles.chipText}>
-                      {pct === 100 ? "MAX" : `${pct}%`}
+              {/* Amount Section */}
+              <View style={styles.section}>
+                <View style={styles.sectionHeaderRow}>
+                  <Text style={styles.sectionLabel}>AMOUNT</Text>
+                  <Text style={styles.availableText}>
+                    Avail:{" "}
+                    <Text style={styles.boldWhite}>
+                      {availableBal.toFixed(token === "AUSD" ? 2 : 4)} {token}
                     </Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-
-            {/* Estimated Breakdown */}
-            <View style={styles.breakdownCard}>
-              <View style={styles.breakdownRow}>
-                <Text style={styles.breakdownLabel}>Network</Text>
-                <Text style={styles.breakdownVal}>Monad Testnet (10143)</Text>
-              </View>
-              <View style={styles.breakdownRow}>
-                <Text style={styles.breakdownLabel}>Estimated Gas</Text>
-                <Text style={styles.breakdownVal}>&lt; 0.0008 MON (&lt;$0.01)</Text>
-              </View>
-              <View style={styles.breakdownRow}>
-                <Text style={styles.breakdownLabel}>Finality Speed</Text>
-                <Text style={[styles.breakdownVal, { color: colors.brand }]}>
-                  ~400 ms (Single-slot)
-                </Text>
-              </View>
-            </View>
-
-            {/* Send Button */}
-            <Pressable
-              onPress={handleSend}
-              disabled={!canSend}
-              style={[styles.sendBtn, !canSend && styles.sendBtnDisabled]}
-            >
-              {isSending ? (
-                <View style={styles.sendingRow}>
-                  <ActivityIndicator color="#0A0B0D" size="small" />
-                  <Text style={styles.sendBtnText}>
-                    {stepLabel || "PROCESSING..."}
                   </Text>
                 </View>
-              ) : (
-                <Text style={styles.sendBtnText}>
-                  {parsedAmount <= 0
-                    ? "ENTER AMOUNT"
-                    : isInsufficient
-                    ? "INSUFFICIENT BALANCE"
-                    : !isValidAddress
-                    ? "ENTER VALID RECIPIENT"
-                    : `SEND ${parsedAmount} ${token}`}
-                </Text>
-              )}
-            </Pressable>
-          </ScrollView>
-        </View>
-      </KeyboardAvoidingView>
-    </Modal>
+
+                <View style={styles.amountInputWrap}>
+                  <Text style={styles.currencyPrefix}>
+                    {token === "AUSD" ? "$" : "M"}
+                  </Text>
+                  <TextInput
+                    style={styles.amountInput}
+                    value={amountStr}
+                    onChangeText={setAmountStr}
+                    keyboardType="numeric"
+                    placeholder="0.00"
+                    placeholderTextColor={colors.muted}
+                    editable={!isSending}
+                  />
+                  <Text style={styles.currencySuffix}>{token}</Text>
+                </View>
+
+                {/* Quick Chips */}
+                <View style={styles.chipsRow}>
+                  {[25, 50, 75, 100].map((pct) => (
+                    <Pressable
+                      key={pct}
+                      onPress={() => onQuickChip(pct)}
+                      disabled={isSending}
+                      style={styles.chip}
+                    >
+                      <Text style={styles.chipText}>
+                        {pct === 100 ? "MAX" : `${pct}%`}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+
+              {/* Estimated Breakdown */}
+              <View style={styles.breakdownCard}>
+                <View style={styles.breakdownRow}>
+                  <Text style={styles.breakdownLabel}>Network</Text>
+                  <Text style={styles.breakdownVal}>Monad Testnet (10143)</Text>
+                </View>
+                <View style={styles.breakdownRow}>
+                  <Text style={styles.breakdownLabel}>Estimated Gas</Text>
+                  <Text style={styles.breakdownVal}>&lt; 0.0008 MON (&lt;$0.01)</Text>
+                </View>
+                <View style={styles.breakdownRow}>
+                  <Text style={styles.breakdownLabel}>Finality Speed</Text>
+                  <Text style={[styles.breakdownVal, { color: colors.brand }]}>
+                    ~400 ms (Single-slot)
+                  </Text>
+                </View>
+              </View>
+
+              {/* Send Button */}
+              <Pressable
+                onPress={handleSend}
+                disabled={!canSend}
+                style={[styles.sendBtn, !canSend && styles.sendBtnDisabled]}
+              >
+                {isSending ? (
+                  <View style={styles.sendingRow}>
+                    <ActivityIndicator color="#0A0B0D" size="small" />
+                    <Text style={styles.sendBtnText}>
+                      {stepLabel || "PROCESSING..."}
+                    </Text>
+                  </View>
+                ) : (
+                  <Text style={styles.sendBtnText}>
+                    {parsedAmount <= 0
+                      ? "ENTER AMOUNT"
+                      : isInsufficient
+                      ? "INSUFFICIENT BALANCE"
+                      : !isValidAddress
+                      ? "ENTER VALID RECIPIENT"
+                      : `SEND ${parsedAmount} ${token}`}
+                  </Text>
+                )}
+              </Pressable>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* QR Scanner Viewfinder Modal */}
+      <QrScannerModal
+        visible={showScanner}
+        onClose={() => setShowScanner(false)}
+        onScan={onScanQrSuccess}
+      />
+    </>
   );
 }
 
@@ -516,10 +687,32 @@ const styles = StyleSheet.create({
     color: colors.ink,
     paddingVertical: 12,
   },
+  recipientActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  scanBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(214, 255, 63, 0.14)",
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "rgba(214, 255, 63, 0.3)",
+    gap: 4,
+  },
+  scanBtnText: {
+    fontFamily: type.data,
+    fontSize: 10,
+    fontWeight: "800",
+    color: colors.brand,
+  },
   pasteBtn: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(214, 255, 63, 0.12)",
+    backgroundColor: "#20283A",
     paddingHorizontal: 8,
     paddingVertical: 6,
     borderRadius: 6,
@@ -529,7 +722,119 @@ const styles = StyleSheet.create({
     fontFamily: type.data,
     fontSize: 10,
     fontWeight: "700",
+    color: colors.ink,
+  },
+  quickContactsWrap: {
+    gap: 4,
+    marginTop: 2,
+  },
+  quickContactsTitle: {
+    fontFamily: type.data,
+    fontSize: 9,
+    fontWeight: "700",
+    color: colors.muted,
+    letterSpacing: 0.5,
+  },
+  quickContactsRow: {
+    gap: 6,
+    paddingVertical: 2,
+  },
+  contactChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#161D2B",
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#232F44",
+    gap: 5,
+  },
+  contactChipActive: {
+    backgroundColor: "#202A3D",
+    borderColor: colors.brand,
+  },
+  contactAvatar: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  contactAvatarText: {
+    fontFamily: type.data,
+    fontSize: 8,
+    fontWeight: "800",
+    color: "#0A0B0D",
+  },
+  contactChipText: {
+    fontFamily: type.data,
+    fontSize: 10,
+    color: colors.muted,
+  },
+  contactChipTextActive: {
+    color: colors.ink,
+    fontWeight: "700",
+  },
+  resolvedCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#0D111A",
+    padding: 10,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: "rgba(214, 255, 63, 0.25)",
+    gap: 10,
+    marginTop: 2,
+  },
+  resolvedAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  resolvedAvatarText: {
+    fontFamily: type.data,
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#0A0B0D",
+  },
+  resolvedHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  resolvedName: {
+    fontFamily: type.bold,
+    fontSize: 12,
+    color: colors.ink,
+  },
+  resolvedHandle: {
+    fontFamily: type.data,
+    fontSize: 11,
     color: colors.brand,
+  },
+  verifiedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(214, 255, 63, 0.12)",
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 4,
+    gap: 3,
+  },
+  verifiedText: {
+    fontFamily: type.data,
+    fontSize: 8,
+    fontWeight: "800",
+    color: colors.brand,
+  },
+  resolvedAddr: {
+    fontFamily: type.data,
+    fontSize: 10,
+    color: colors.muted,
+    marginTop: 1,
   },
   amountInputWrap: {
     flexDirection: "row",
