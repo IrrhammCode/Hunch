@@ -38,6 +38,7 @@
     "test:perpl:hedge": "ts-node scripts/testPerplHedge.ts",
     "test:master": "ts-node scripts/testMasterE2E.ts",
     "test:qr": "ts-node scripts/testQrSystem.ts",
+    "test:agora": "ts-node scripts/testAgoraBounty.ts",
     "keeper:perpl": "ts-node scripts/perplGuardKeeper.ts",
     "sim:tx": "ts-node scripts/tenderlySimulate.ts",
     "clean": "hardhat clean"

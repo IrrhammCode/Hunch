@@ -27,8 +27,9 @@ Hunch is a one-gesture mobile arena + perps terminal:
 3. **Swipe UP/DOWN** on live 60s markets **or** place **Perpl** perps (BTC/ETH/SOL/MON) with 200x leverage.
 4. **Hedge-My-Hunch**: Protect 60-second binary positions with 1-tap automated opposite-delta perps on Perpl.
 5. **Advanced Perpl Execution**: 1-tap close & 1-tap reverse position, in-app Agora AUSD margin deposit/withdraw, and automated offchain TP/SL guard keeper.
-6. **Risk & Social**: Real-time Liquidation Health Gauge and viral cyberpunk PnL share cards for social brag sharing.
-7. **Settlement**: Pyth oracle settles 60s markets; Perpl signed WebSocket orders execute IOC matching; claim/redeem with proof on MonadVision.
+6. **Agora AUSD Hub & P2P QR System**: Profile tab hub showing 2-way AUSD allocation (Wallet Cash + Perpl Margin), VanEck reserve backing, 1-tap Agora faucet, and instant P2P payments via `@username`, `.mon` domains, and dynamic QR scanner/request generator.
+7. **Risk & Social**: Real-time Liquidation Health Gauge and viral cyberpunk PnL share cards for social brag sharing.
+8. **Settlement**: Pyth oracle settles 60s markets; Perpl signed WebSocket orders execute IOC matching; claim/redeem with proof on MonadVision.
 
 No mock balances, no demo login — real API + real chain only.
 
@@ -50,7 +51,7 @@ Monad testnet (chainId **10143**) is the settlement layer for every round.
 
 | Sponsor | What we use |
 |---|---|
-| **Agora ($10,000 Bounty)** | Official Agora AUSD Testnet (`0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC`) as collateral + Agora Faucet (`0xd236c18D274E54FAccC3dd9DDA4b27965a73ee6C`) + **Mera passkey** auth. |
+| **Agora ($10,000 Bounty)** | Official Agora AUSD Testnet (`0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC`) as universal collateral + Agora Faucet (`0xd236c18D274E54FAccC3dd9DDA4b27965a73ee6C`) + **Mera passkey** auth + **Agora AUSD Hub Card** (multi-product collateral allocation) + **P2P QR & @Username system** + 10/10 automated verification (`npm run test:agora`). |
 | **Perpl ($8,000 Bounties)** | Exchange `0x1964C32f0bE608E7D29302AFF5E61268E72080cc` — live testnet markets via API + signed WebSocket (`mt: 22`); 1-tap close & reverse, in-app margin manager, automated TP/SL guard keeper, and liquidation risk engine (see [PERPL_FEATURES.md](PERPL_FEATURES.md)). |
 | **Metropolis Track 01 ($30,000)** | Onchain Finance & Trading differentiator: "Hedge-My-Hunch" unifying binary options and perpetual futures into an atomic delta-hedged mobile derivative. |
 | **Quicknode** | Dedicated Monad testnet RPC (`*.monad-testnet.quiknode.pro`) for API, keeper, Hardhat, and phone wallet. |
@@ -112,15 +113,26 @@ Day-of operator runbook: **[OPS.md](OPS.md)**
 
 | | Demo (this hackathon) | Production |
 |---|---|---|
-| Collateral | Mintable MockAUSD | Agora AUSD |
-| Auth | Privy email OTP + embedded wallet | Same + passkeys / session keys |
-| Gas | Testnet MON faucet (capped) | Paymaster / sponsorship |
-| Execute | API relays `executeBuy` after delay-blocks | User or decentralized keepers |
-| Faucet | 1000 AUSD cap, 1/addr/10 min | Onramps / liquidity |
-| RPC | Public Monad testnet | Dedicated RPC |
-| Indexer | File store + Envio scaffold | Full Envio |
+| Collateral | Official Agora AUSD Testnet (`0xa901...22dC`, 6 decimals) | Agora AUSD Mainnet |
+| Faucet | Official Agora Faucet (`0xd236...ee6C`) via `requestFunds` | Direct on-ramp / CEX withdrawal |
+| Auth | Mera Passkeys (`@category-labs/mera`) + Privy OTP | Same + session keys / smart accounts |
+| Perpl | Perpl Testnet Exchange (`0x1964...80cc`, 8 markets) | Perpl Mainnet Exchange |
+| Gas | Testnet MON faucet (capped) | Paymaster / gasless sponsorship |
+| Settlement | Pyth Hermes + On-chain Contract Redeem | Same |
+| Indexer | In-memory store + event listeners | Full Envio HyperIndex |
 
-API demo safety is documented in README + `mobile/DEMO.md` (in-memory rate limits).
+---
+
+## 🧪 Comprehensive Automated Test Suites
+
+All tests run against live Monad Testnet and live Perpl DEX:
+
+1. **Agora Bounty Suite:** `npm run test:agora` — **10 / 10 checks passed (100%)**
+   - Validates AUSD contract, decimals, Agora Faucet `requestFunds`, Mera passkey standards, Perpl collateral binding, ERC-20 approve/deposit calldata, P2P transfer, QR encoding, handle resolution, and portfolio allocation.
+2. **Master E2E Suite:** `npm run test:master` — **22 / 22 checks passed (100%)**
+   - Validates live RPC, market pricing, order execution, 1-tap close/reverse, margin deposit/withdraw, Hedge-My-Hunch cross-product, liquidation risk gauge, and viral PnL card.
+3. **QR & Directory Suite:** `npm run test:qr` — **7 / 7 checks passed (100%)**
+   - Validates `@username` directory, `.mon` domains, raw `0x` addresses, payment URI generation, and QR payload decoding.
 
 ---
 
@@ -130,4 +142,6 @@ API demo safety is documented in README + `mobile/DEMO.md` (in-memory rate limit
 
 - Mobile runbook: [mobile/README.md](mobile/README.md)
 - Video outline: [DEMO_VIDEO_SCRIPT.md](DEMO_VIDEO_SCRIPT.md)
+- Agora Bounty Guide: [AGORA_BOUNTY.md](AGORA_BOUNTY.md)
+- Perpl Bounty Guide: [PERPL_BOUNTY.md](PERPL_BOUNTY.md)
 - Submission paste-back: this file

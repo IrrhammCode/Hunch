@@ -21,6 +21,9 @@ import { fundWallet } from "@/src/wallet/privyTrade";
 import { useWallet } from "@/src/wallet/WalletContext";
 import { ReceiveModal } from "@/src/wallet/ReceiveModal";
 import { SendModal } from "@/src/wallet/SendModal";
+import { AgoraHubCard } from "@/src/wallet/AgoraHubCard";
+import { usePerplAccount } from "@/src/perpl/perplClient";
+import { MarginModal } from "@/src/perpl/MarginModal";
 import { colors, radius, space, type, monoStyle } from "@/src/theme";
 
 function shortAddr(a: string) {
@@ -38,11 +41,16 @@ export default function ProfileScreen() {
   const [zerionNote, setZerionNote] = useState<string | null>(null);
   const [showReceiveModal, setShowReceiveModal] = useState(false);
   const [showSendModal, setShowSendModal] = useState(false);
+  const [showMarginModal, setShowMarginModal] = useState(false);
   const [sendToken, setSendToken] = useState<"AUSD" | "MON">("AUSD");
+
+  const userAddr = user?.address || me?.address || "";
+  const { account: perplAccount, refresh: refreshPerpl } = usePerplAccount(userAddr);
 
   useFocusEffect(
     useCallback(() => {
       refresh();
+      refreshPerpl();
       (async () => {
         const addr = user?.address || me?.address;
         if (!addr) return;
@@ -341,6 +349,18 @@ export default function ProfileScreen() {
             </Pressable>
           </View>
 
+          {/* AGORA AUSD COLLATERAL HUB */}
+          <AgoraHubCard
+            walletAUSD={ausdBalance}
+            perplMarginAUSD={
+              perplAccount?.onchainCollateralAUSD ||
+              (perplAccount?.marginUsedAUSD ? String(perplAccount.marginUsedAUSD) : "0.00")
+            }
+            onOpenMarginModal={() => setShowMarginModal(true)}
+            onClaimFaucet={onFaucet}
+            faucetBusy={busy}
+          />
+
           {/* REAL WALLET STATS — no hardcoded performance */}
           <View style={styles.perfCard}>
             <View style={styles.perfTop}>
@@ -395,6 +415,22 @@ export default function ProfileScreen() {
           getEthereumProvider={getEthereumProvider}
           onSuccess={refresh}
           initialToken={sendToken}
+        />
+
+        <MarginModal
+          visible={showMarginModal}
+          onClose={() => setShowMarginModal(false)}
+          walletAddress={address || ""}
+          walletAUSD={ausdBalance}
+          perplMarginAUSD={
+            perplAccount?.onchainCollateralAUSD ||
+            (perplAccount?.marginUsedAUSD ? String(perplAccount.marginUsedAUSD) : "0.00")
+          }
+          getEthereumProvider={getEthereumProvider}
+          onSuccess={() => {
+            refresh();
+            refreshPerpl();
+          }}
         />
       </View>
     </Screen>
