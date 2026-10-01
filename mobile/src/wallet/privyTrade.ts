@@ -2,6 +2,8 @@ import {
   decodeFunctionResult,
   encodeFunctionData,
   parseAbi,
+  parseEther,
+  parseUnits,
 } from "viem";
 import {
   executeTrade,
@@ -18,8 +20,14 @@ import {
 } from "../api/client";
 import { CHAIN_ID } from "../config/chain";
 
+export const AUSD_TOKEN_ADDRESS = "0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC";
+
 const MARKET_ABI = parseAbi([
   "function nextIntentId() view returns (uint256)",
+]);
+
+const ERC20_TRANSFER_ABI = parseAbi([
+  "function transfer(address to, uint256 amount) returns (bool)",
 ]);
 
 async function rpc(provider: any, method: string, params: any[] = []) {
@@ -310,3 +318,92 @@ export const redeemPrivyPosition = redeemWalletPosition;
 
 /** @deprecated alias */
 export const fundPrivyWallet = fundWallet;
+
+export type SendTransferParams = {
+  provider: any;
+  from: string;
+  to: string;
+  amount: string;
+  token: "AUSD" | "MON";
+};
+
+export type SendTransferResult = {
+  txHash: string;
+  from: string;
+  to: string;
+  amount: string;
+  token: "AUSD" | "MON";
+};
+
+/**
+ * Onchain transfer for Agora AUSD (ERC-20, 6 decimals) or native MON (18 decimals) on Monad Testnet (10143).
+ */
+export async function sendOnchainTransfer(
+  params: SendTransferParams,
+): Promise<SendTransferResult> {
+  const { provider, from, to, amount, token } = params;
+
+  if (!from || !/^0x[a-fA-F0-9]{40}$/.test(from)) {
+    throw new Error("Invalid sender wallet address.");
+  }
+  if (!to || !/^0x[a-fA-F0-9]{40}$/.test(to)) {
+    throw new Error("Invalid recipient EVM address. Address must start with 0x and be 42 characters.");
+  }
+  const cleanAmount = amount.trim();
+  const numAmount = parseFloat(cleanAmount);
+  if (isNaN(numAmount) || numAmount <= 0) {
+    throw new Error("Transfer amount must be greater than 0.");
+  }
+
+  // MOCK MODE
+  if (process.env.EXPO_PUBLIC_USE_MOCK !== "0" || provider?.isMock) {
+    await new Promise((r) => setTimeout(r, 600));
+    return {
+      txHash: "0xmockTransfer" + Date.now().toString(16),
+      from,
+      to,
+      amount: cleanAmount,
+      token,
+    };
+  }
+
+  await ensureChain(provider);
+
+  if (token === "MON") {
+    const valueWei = parseEther(cleanAmount);
+    const valueHex = `0x${valueWei.toString(16)}`;
+    const receipt = await sendTx(provider, from, {
+      to,
+      data: "0x",
+      value: valueHex,
+    });
+    return {
+      txHash: receipt.transactionHash,
+      from,
+      to,
+      amount: cleanAmount,
+      token: "MON",
+    };
+  } else {
+    // Agora AUSD (6 decimals)
+    const amountRaw = parseUnits(cleanAmount, 6);
+    const data = encodeFunctionData({
+      abi: ERC20_TRANSFER_ABI,
+      functionName: "transfer",
+      args: [to as `0x${string}`, amountRaw],
+    });
+    const receipt = await sendTx(provider, from, {
+      to: AUSD_TOKEN_ADDRESS,
+      data,
+      value: "0x0",
+    });
+    return {
+      txHash: receipt.transactionHash,
+      from,
+      to,
+      amount: cleanAmount,
+      token: "AUSD",
+    };
+  }
+}
+

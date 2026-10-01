@@ -1,4 +1,4 @@
-﻿import { Platform } from "react-native";
+import { Platform } from "react-native";
 
 /**
  * Copy without crashing when native ExpoClipboard is missing
@@ -30,6 +30,45 @@ export async function copyToClipboard(text: string): Promise<boolean> {
   }
 
   return false;
+}
+
+/**
+ * Read text from clipboard with cross-platform fallbacks.
+ */
+export async function pasteFromClipboard(): Promise<string> {
+  try {
+    if (
+      Platform.OS === "web" &&
+      typeof navigator !== "undefined" &&
+      navigator.clipboard?.readText
+    ) {
+      return (await navigator.clipboard.readText()) || "";
+    }
+  } catch {
+    /* fall through */
+  }
+
+  try {
+    const ExpoClipboard = require("expo-clipboard") as any;
+    if (ExpoClipboard?.getStringAsync) {
+      const text = await ExpoClipboard.getStringAsync();
+      return text || "";
+    }
+  } catch {
+    /* fall through */
+  }
+
+  try {
+    const RN = require("react-native") as any;
+    if (RN.Clipboard?.getString) {
+      const text = await RN.Clipboard.getString();
+      return text || "";
+    }
+  } catch {
+    /* ignore */
+  }
+
+  return "";
 }
 
 /** Haptics that never crash on web / missing native. */

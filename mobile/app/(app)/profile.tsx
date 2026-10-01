@@ -19,6 +19,8 @@ import { useToast } from "@/src/components/Toast";
 import { copyToClipboard } from "@/src/utils/clipboard";
 import { fundWallet } from "@/src/wallet/privyTrade";
 import { useWallet } from "@/src/wallet/WalletContext";
+import { ReceiveModal } from "@/src/wallet/ReceiveModal";
+import { SendModal } from "@/src/wallet/SendModal";
 import { colors, radius, space, type, monoStyle } from "@/src/theme";
 
 function shortAddr(a: string) {
@@ -28,12 +30,15 @@ function shortAddr(a: string) {
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
-  const { user, logout } = useAuth();
+  const { user, logout, getEthereumProvider } = useAuth();
   const { me, error, refresh } = useWallet();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const [zerionNote, setZerionNote] = useState<string | null>(null);
+  const [showReceiveModal, setShowReceiveModal] = useState(false);
+  const [showSendModal, setShowSendModal] = useState(false);
+  const [sendToken, setSendToken] = useState<"AUSD" | "MON">("AUSD");
 
   useFocusEffect(
     useCallback(() => {
@@ -185,9 +190,15 @@ export default function ProfileScreen() {
                 <Icon name="copy-outline" size={16} color={colors.muted} />
                 <Text style={styles.copyBtnText}>{copied ? "Copied" : "Copy"}</Text>
               </Pressable>
-              <View style={styles.qrBtn}>
-                <Icon name="qr-code-outline" size={16} color={colors.muted} />
-              </View>
+              <Pressable
+                onPress={() => {
+                  hapticFx("selection");
+                  setShowReceiveModal(true);
+                }}
+                style={styles.qrBtn}
+              >
+                <Icon name="qr-code-outline" size={16} color={colors.brand} />
+              </Pressable>
             </View>
 
             {/* Total Portfolio Balance */}
@@ -204,9 +215,61 @@ export default function ProfileScreen() {
               ) : null}
             </View>
 
+            {/* QUICK ACTIONS BAR: SEND / RECEIVE / FAUCET */}
+            <View style={styles.quickActionsBar}>
+              <Pressable
+                style={({ pressed }) => [styles.quickActionBtn, pressed && styles.quickActionBtnPressed]}
+                onPress={() => {
+                  hapticFx("selection");
+                  setSendToken("AUSD");
+                  setShowSendModal(true);
+                }}
+              >
+                <View style={[styles.quickActionIconWrap, { backgroundColor: "rgba(214, 255, 63, 0.15)" }]}>
+                  <Icon name="arrow-up" size={16} color={colors.brand} />
+                </View>
+                <Text style={styles.quickActionLabel}>SEND</Text>
+              </Pressable>
+
+              <Pressable
+                style={({ pressed }) => [styles.quickActionBtn, pressed && styles.quickActionBtnPressed]}
+                onPress={() => {
+                  hapticFx("selection");
+                  setShowReceiveModal(true);
+                }}
+              >
+                <View style={[styles.quickActionIconWrap, { backgroundColor: "rgba(131, 110, 249, 0.18)" }]}>
+                  <Icon name="arrow-down" size={16} color={colors.monadPurple} />
+                </View>
+                <Text style={styles.quickActionLabel}>RECEIVE</Text>
+              </Pressable>
+
+              <Pressable
+                style={({ pressed }) => [styles.quickActionBtn, pressed && styles.quickActionBtnPressed]}
+                onPress={onFaucet}
+                disabled={busy}
+              >
+                <View style={[styles.quickActionIconWrap, { backgroundColor: "rgba(0, 229, 255, 0.15)" }]}>
+                  {busy ? (
+                    <ActivityIndicator size="small" color="#00E5FF" />
+                  ) : (
+                    <Icon name="water-outline" size={16} color="#00E5FF" />
+                  )}
+                </View>
+                <Text style={styles.quickActionLabel}>FAUCET</Text>
+              </Pressable>
+            </View>
+
             {/* 2-Column Asset Breakdown */}
             <View style={styles.assetGrid}>
-              <View style={styles.assetCol}>
+              <Pressable
+                onPress={() => {
+                  hapticFx("selection");
+                  setSendToken("AUSD");
+                  setShowSendModal(true);
+                }}
+                style={({ pressed }) => [styles.assetCol, pressed && styles.assetColPressed]}
+              >
                 <View style={styles.assetHeader}>
                   <View style={[styles.assetIcon, { backgroundColor: "#0E2B1F" }]}>
                     <Text style={[styles.assetGlyph, { color: colors.up }]}>A</Text>
@@ -214,10 +277,20 @@ export default function ProfileScreen() {
                   <Text style={styles.assetName}>AUSD (TESTNET)</Text>
                 </View>
                 <Text style={styles.assetAmount}>{ausdBalance}</Text>
-                <Text style={styles.assetFiat}>${ausdBalance}</Text>
-              </View>
+                <View style={styles.assetActionRow}>
+                  <Text style={styles.assetFiat}>${ausdBalance}</Text>
+                  <Text style={styles.assetSendHint}>Send ›</Text>
+                </View>
+              </Pressable>
 
-              <View style={styles.assetCol}>
+              <Pressable
+                onPress={() => {
+                  hapticFx("selection");
+                  setSendToken("MON");
+                  setShowSendModal(true);
+                }}
+                style={({ pressed }) => [styles.assetCol, pressed && styles.assetColPressed]}
+              >
                 <View style={styles.assetHeader}>
                   <View style={[styles.assetIcon, { backgroundColor: "rgba(131,110,249,0.2)" }]}>
                     <Text style={[styles.assetGlyph, { color: colors.monadPurple }]}>M</Text>
@@ -225,8 +298,11 @@ export default function ProfileScreen() {
                   <Text style={styles.assetName}>MONAD GAS</Text>
                 </View>
                 <Text style={styles.assetAmount}>{monBalance} MON</Text>
-                <Text style={styles.assetFiat}>${(Number(monBalance) * 3.5).toFixed(2)}</Text>
-              </View>
+                <View style={styles.assetActionRow}>
+                  <Text style={styles.assetFiat}>${(Number(monBalance) * 3.5).toFixed(2)}</Text>
+                  <Text style={[styles.assetSendHint, { color: colors.monadPurple }]}>Send ›</Text>
+                </View>
+              </Pressable>
             </View>
           </View>
 
@@ -302,6 +378,23 @@ export default function ProfileScreen() {
             <Text style={styles.logoutText}>Sign Out</Text>
           </Pressable>
         </ScrollView>
+
+        <ReceiveModal
+          visible={showReceiveModal}
+          onClose={() => setShowReceiveModal(false)}
+          walletAddress={address || ""}
+        />
+
+        <SendModal
+          visible={showSendModal}
+          onClose={() => setShowSendModal(false)}
+          walletAddress={address || ""}
+          walletAUSD={ausdBalance}
+          walletMON={monBalance}
+          getEthereumProvider={getEthereumProvider}
+          onSuccess={refresh}
+          initialToken={sendToken}
+        />
       </View>
     </Screen>
   );
@@ -611,6 +704,43 @@ const styles = StyleSheet.create({
     fontFamily: type.bold,
     fontSize: 13,
   },
+  quickActionsBar: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 10,
+    marginBottom: 6,
+  },
+  quickActionBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#161B26",
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: "#232C3E",
+    gap: 8,
+  },
+  quickActionBtnPressed: {
+    backgroundColor: "#1E2638",
+    borderColor: colors.brand,
+  },
+  quickActionIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  quickActionLabel: {
+    fontFamily: type.bold,
+    fontSize: 12,
+    fontWeight: "800",
+    color: colors.ink,
+    letterSpacing: 0.5,
+  },
   assetGrid: {
     flexDirection: "row",
     gap: 10,
@@ -623,6 +753,23 @@ const styles = StyleSheet.create({
     backgroundColor: "#0E1117",
     borderRadius: radius.md,
     padding: 10,
+  },
+  assetColPressed: {
+    backgroundColor: "#151B25",
+    borderWidth: 1,
+    borderColor: "rgba(214,255,63,0.3)",
+  },
+  assetActionRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 2,
+  },
+  assetSendHint: {
+    fontFamily: type.data,
+    fontSize: 10,
+    fontWeight: "700",
+    color: colors.up,
   },
   assetHeader: {
     flexDirection: "row",
