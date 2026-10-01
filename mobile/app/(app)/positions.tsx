@@ -19,8 +19,17 @@ import { useToast } from "@/src/components/Toast";
 import { explorerTx } from "@/src/config/chain";
 import { useWallet } from "@/src/wallet/WalletContext";
 import { redeemWalletPosition } from "@/src/wallet/privyTrade";
-import { usePerplAccount, closePerplPosition, PerplPosition } from "@/src/perpl/perplClient";
+import {
+  usePerplAccount,
+  closePerplPosition,
+  reversePerplPosition,
+  PerplPosition,
+} from "@/src/perpl/perplClient";
+import { MarginModal } from "@/src/perpl/MarginModal";
+import { LiquidationHealthGauge } from "@/src/perpl/LiquidationHealthGauge";
+import { PnlShareModal } from "@/src/perpl/PnlShareModal";
 import { fetchPerplRisk, type PerplRiskReport } from "@/src/api/client";
+import { listHunches, type HunchEntry } from "@/src/hunchBook";
 import { colors, radius, space, type, monoStyle } from "@/src/theme";
 
 type TabMode = "perps" | "hunch";
@@ -37,12 +46,17 @@ export default function PositionsScreen() {
   const [tab, setTab] = useState<TabMode>("perps");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [closingId, setClosingId] = useState<string | null>(null);
+  const [reversingId, setReversingId] = useState<string | null>(null);
+  const [showMarginModal, setShowMarginModal] = useState(false);
   const [risk, setRisk] = useState<PerplRiskReport | null>(null);
+  const [localHunches, setLocalHunches] = useState<HunchEntry[]>([]);
+  const [sharePos, setSharePos] = useState<PerplPosition | null>(null);
 
   useFocusEffect(
     useCallback(() => {
       refreshWallet();
       refreshPerpl();
+      listHunches().then(setLocalHunches).catch(() => {});
       if (userAddress) {
         fetchPerplRisk(userAddress)
           .then(setRisk)
@@ -88,11 +102,17 @@ export default function PositionsScreen() {
     setClosingId(pos.id);
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
-      const res = await closePerplPosition(pos.id, userAddress);
+      const res = await closePerplPosition(pos.id, userAddress, {
+        symbol: pos.symbol,
+        side: pos.side,
+        size: pos.size,
+        leverage: pos.leverage,
+        entryPrice: pos.entryPrice,
+      });
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       const pnl = res.realizedPnL >= 0 ? `+$${res.realizedPnL}` : `-$${Math.abs(res.realizedPnL)}`;
       toast.show("Position Closed", {
-        body: `${pos.symbol} ${pos.side} · ${pnl} AUSD`,
+        body: `${pos.symbol} ${pos.side} · ${pnl} AUSD realized PnL`,
         tone: res.realizedPnL >= 0 ? "success" : "neutral",
       });
       refreshPerpl();
@@ -101,6 +121,34 @@ export default function PositionsScreen() {
       toast.error("Failed to close", e.message || String(e));
     } finally {
       setClosingId(null);
+    }
+  };
+
+  const onReversePerp = async (pos: PerplPosition) => {
+    const nextSide = pos.side === "LONG" ? "SHORT" : "LONG";
+    setReversingId(pos.id);
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    try {
+      const res = await reversePerplPosition(pos.id, userAddress, {
+        symbol: pos.symbol,
+        side: pos.side,
+        size: pos.size,
+        leverage: pos.leverage,
+        entryPrice: pos.entryPrice,
+        marginAUSD: pos.marginAUSD,
+      });
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      const pnl = res.realizedPnL >= 0 ? `+$${res.realizedPnL}` : `-$${Math.abs(res.realizedPnL)}`;
+      toast.show("Position Reversed", {
+        body: `Flipped to ${nextSide} ${pos.symbol} (${pnl} AUSD closed)`,
+        tone: "success",
+      });
+      refreshPerpl();
+      refreshWallet();
+    } catch (e: any) {
+      toast.error("Failed to reverse", e.message || String(e));
+    } finally {
+      setReversingId(null);
     }
   };
 
@@ -188,62 +236,36 @@ export default function PositionsScreen() {
                 </Text>
               </View>
             </View>
+
+            {/* MARGIN MANAGEMENT ROW */}
+            <View style={styles.marginActionRow}>
+              <Pressable
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  setShowMarginModal(true);
+                }}
+                style={({ pressed }) => [styles.depositMarginBtn, pressed && { opacity: 0.85 }]}
+              >
+                <Text style={styles.depositMarginGlyph}>+</Text>
+                <Text style={styles.depositMarginText}>DEPOSIT AGORA AUSD</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setShowMarginModal(true);
+                }}
+                style={({ pressed }) => [styles.withdrawMarginBtn, pressed && { opacity: 0.85 }]}
+              >
+                <Text style={styles.withdrawMarginText}>WITHDRAW</Text>
+              </Pressable>
+            </View>
           </View>
 
-          {/* PERPL RISK / ANALYTICS — bounty surface */}
-          <View style={styles.overviewCard}>
-            <View style={styles.overviewTop}>
-              <View style={styles.overviewLiveBadge}>
-                <Text style={styles.overviewLabel}>PERPL RISK · ANALYTICS</Text>
-                <View style={styles.liveTag}>
-                  <Text style={styles.liveTagText}>{risk?.riskLevel || "—"}</Text>
-                </View>
-              </View>
-              <Text style={styles.subSecondNet}>
-                {risk?.accountId != null ? `ACCOUNT #${risk.accountId}` : "NOT LINKED"}
-              </Text>
-            </View>
-            <View style={styles.metricsGrid}>
-              <View style={styles.metricItem}>
-                <Text style={styles.metricLabel}>FREE MARGIN</Text>
-                <Text style={styles.metricVal}>
-                  ${risk?.freeMarginAUSD != null ? risk.freeMarginAUSD.toFixed(2) : "—"}
-                </Text>
-              </View>
-              <View style={styles.metricItem}>
-                <Text style={styles.metricLabel}>EFF. LEVERAGE</Text>
-                <Text style={styles.metricVal}>{risk?.effectiveLeverage != null ? `${risk.effectiveLeverage}x` : "—"}</Text>
-              </View>
-              <View style={styles.metricItem}>
-                <Text style={styles.metricLabel}>OPEN PnL</Text>
-                <Text
-                  style={[
-                    styles.metricVal,
-                    (risk?.unrealizedPnLAUSD ?? 0) >= 0 ? styles.posColor : { color: colors.down },
-                  ]}
-                >
-                  {risk?.unrealizedPnLAUSD != null
-                    ? `${risk.unrealizedPnLAUSD >= 0 ? "+" : ""}$${risk.unrealizedPnLAUSD.toFixed(2)}`
-                    : "—"}
-                </Text>
-              </View>
-            </View>
-            {(risk?.positions || []).slice(0, 4).map((p) => (
-              <View key={`risk-${p.id}`} style={{ gap: 2, marginTop: 6 }}>
-                <Text style={monoStyle(11, colors.muted)}>
-                  {p.symbol} {p.side} {p.leverage}x · liq{" "}
-                  {p.liqDistancePct != null ? `${p.liqDistancePct.toFixed(1)}% away` : "—"} ·{" "}
-                  {p.unrealizedPnLAUSD != null && p.unrealizedPnLAUSD >= 0 ? "+" : ""}
-                  ${((p as any).unrealizedPnLAUSD ?? 0).toFixed(2)}
-                </Text>
-              </View>
-            ))}
-            {(risk?.warnings || []).map((w) => (
-              <Text key={w} style={monoStyle(10, colors.down)}>
-                ! {w}
-              </Text>
-            ))}
-          </View>
+          {/* LIQUIDATION HEALTH GAUGE & ANALYTICS — bounty surface */}
+          <LiquidationHealthGauge
+            risk={risk}
+            onDepositPress={() => setShowMarginModal(true)}
+          />
 
           {/* REAL REDEEMABLE HUNCH ONLY — no hardcoded payouts */}
           {redeemableHunches.length > 0 ? (
@@ -355,6 +377,17 @@ export default function PositionsScreen() {
                       </View>
                     </View>
 
+                    {pos.id.startsWith("hedge_") && (
+                      <View style={styles.hedgePillRow}>
+                        <View style={styles.hedgePill}>
+                          <Text style={styles.hedgePillIcon}>⚡</Text>
+                          <Text style={styles.hedgePillText}>
+                            PROTECTIVE HEDGE FOR 60s HUNCH
+                          </Text>
+                        </View>
+                      </View>
+                    )}
+
                     <View style={styles.posStatsGrid}>
                       <View style={styles.posStatCol}>
                         <Text style={styles.posStatLabel}>ENTRY PRICE</Text>
@@ -376,17 +409,73 @@ export default function PositionsScreen() {
                       </View>
                     </View>
 
-                    <Pressable
-                      onPress={() => onClosePerp(pos)}
-                      disabled={isClosing}
-                      style={styles.closeBtn}
-                    >
-                      {isClosing ? (
-                        <ActivityIndicator color={colors.down} size="small" />
-                      ) : (
-                        <Text style={styles.closeBtnText}>CLOSE POSITION (MARKET)</Text>
-                      )}
-                    </Pressable>
+                    {(pos.tpPrice != null || pos.slPrice != null || (pos.closeReason && pos.closeReason !== "USER")) && (
+                      <View style={styles.posGuardsRow}>
+                        {pos.tpPrice != null && (
+                          <View style={styles.posGuardBadgeTP}>
+                            <Text style={styles.posGuardBadgeTPText}>
+                              🎯 TP ${pos.tpPrice.toLocaleString()}
+                            </Text>
+                          </View>
+                        )}
+                        {pos.slPrice != null && (
+                          <View style={styles.posGuardBadgeSL}>
+                            <Text style={styles.posGuardBadgeSLText}>
+                              🛑 SL ${pos.slPrice.toLocaleString()}
+                            </Text>
+                          </View>
+                        )}
+                        {pos.closeReason && pos.closeReason !== "USER" && (
+                          <View style={styles.posReasonBadge}>
+                            <Text style={styles.posReasonBadgeText}>
+                              {pos.closeReason === "TP_TRIGGERED"
+                                ? "🎯 TP HIT"
+                                : pos.closeReason === "SL_TRIGGERED"
+                                ? "🛑 SL HIT"
+                                : pos.closeReason}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    )}
+
+                    <View style={styles.actionRow}>
+                      <Pressable
+                        onPress={() => onReversePerp(pos)}
+                        disabled={isClosing || reversingId === pos.id}
+                        style={[styles.actionBtn, styles.reverseBtn]}
+                      >
+                        {reversingId === pos.id ? (
+                          <ActivityIndicator color={colors.brand} size="small" />
+                        ) : (
+                          <Text style={styles.reverseBtnText}>
+                            ⟲ REVERSE ({pos.side === "LONG" ? "SHORT" : "LONG"})
+                          </Text>
+                        )}
+                      </Pressable>
+
+                      <Pressable
+                        onPress={() => onClosePerp(pos)}
+                        disabled={isClosing || reversingId === pos.id}
+                        style={[styles.actionBtn, styles.closeBtn]}
+                      >
+                        {isClosing ? (
+                          <ActivityIndicator color={colors.down} size="small" />
+                        ) : (
+                          <Text style={styles.closeBtnText}>✕ CLOSE</Text>
+                        )}
+                      </Pressable>
+
+                      <Pressable
+                        onPress={() => {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          setSharePos(pos);
+                        }}
+                        style={[styles.actionBtn, styles.shareBtn]}
+                      >
+                        <Text style={styles.shareBtnText}>↗ SHARE</Text>
+                      </Pressable>
+                    </View>
                   </View>
                 );
               })}
@@ -403,25 +492,38 @@ export default function PositionsScreen() {
                   body="Swipe UP/DOWN on TRADE tab to open a 60s market."
                 />
               ) : null}
-              {hunchPositions.map((h) => (
-                <View key={h.roundId} style={styles.posCard}>
-                  <View style={styles.posCardTop}>
-                    <View style={styles.posLeftHeader}>
-                      <View style={[styles.longBadge, { backgroundColor: "rgba(214,255,63,0.18)" }]}>
-                        <Text style={[styles.longBadgeText, { color: colors.brand }]}>
-                          {Number(h.yes) > 0 ? "UP" : "DOWN"}
+              {hunchPositions.map((h) => {
+                const localH = localHunches.find((lh) => lh.roundId === h.roundId);
+                return (
+                  <View key={h.roundId} style={styles.posCard}>
+                    <View style={styles.posCardTop}>
+                      <View style={styles.posLeftHeader}>
+                        <View style={[styles.longBadge, { backgroundColor: "rgba(214,255,63,0.18)" }]}>
+                          <Text style={[styles.longBadgeText, { color: colors.brand }]}>
+                            {Number(h.yes) > 0 ? "UP" : "DOWN"}
+                          </Text>
+                        </View>
+                        <Text style={styles.posSymbol}>ROUND #{h.roundId}</Text>
+                      </View>
+                      <View style={styles.oracleStatusRow}>
+                        <Text style={[styles.oracleStatusText, { color: colors.brand }]}>
+                          {h.status === "open" ? "OPEN" : "RESOLVED"}
                         </Text>
                       </View>
-                      <Text style={styles.posSymbol}>ROUND #{h.roundId}</Text>
                     </View>
-                    <View style={styles.oracleStatusRow}>
-                      <Text style={[styles.oracleStatusText, { color: colors.brand }]}>
-                        {h.status === "open" ? "OPEN" : "RESOLVED"}
-                      </Text>
-                    </View>
-                  </View>
 
-                  <View style={styles.posStatsGrid}>
+                    {localH?.hedgedPerpId && (
+                      <View style={styles.hedgePillRow}>
+                        <View style={styles.hedgePill}>
+                          <Text style={styles.hedgePillIcon}>⚡</Text>
+                          <Text style={styles.hedgePillText}>
+                            DELTA-HEDGED WITH PERPL ({localH.hedgeSide || "PERP"})
+                          </Text>
+                        </View>
+                      </View>
+                    )}
+
+                    <View style={styles.posStatsGrid}>
                     <View style={styles.posStatCol}>
                       <Text style={styles.posStatLabel}>YES SHARES</Text>
                       <Text style={styles.posStatVal}>{h.yes}</Text>
@@ -456,11 +558,32 @@ export default function PositionsScreen() {
                     </Pressable>
                   ) : null}
                 </View>
-              ))}
-            </View>
-          )}
+              );
+            })}
+          </View>
+        )}
         </ScrollView>
       </View>
+      <MarginModal
+        visible={showMarginModal}
+        onClose={() => setShowMarginModal(false)}
+        walletAddress={userAddress}
+        walletAUSD={totalCollateral !== "—" ? totalCollateral : "0.00"}
+        perplMarginAUSD={perplAccount?.onchainCollateralAUSD || (risk?.freeMarginAUSD != null ? risk.freeMarginAUSD.toFixed(2) : "0.00")}
+        getEthereumProvider={getEthereumProvider}
+        onSuccess={() => {
+          refreshPerpl();
+          refreshWallet();
+          if (userAddress) {
+            fetchPerplRisk(userAddress).then(setRisk).catch(() => {});
+          }
+        }}
+      />
+      <PnlShareModal
+        visible={sharePos !== null}
+        onClose={() => setSharePos(null)}
+        position={sharePos}
+      />
     </Screen>
   );
 }
@@ -648,6 +771,54 @@ const styles = StyleSheet.create({
   },
   posColor: {
     color: colors.up,
+  },
+  marginActionRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#1A1E29",
+  },
+  depositMarginBtn: {
+    flex: 2,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: "rgba(214,255,63,0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(214,255,63,0.35)",
+    paddingVertical: 10,
+    borderRadius: radius.md,
+  },
+  depositMarginGlyph: {
+    color: colors.brand,
+    fontFamily: type.bold,
+    fontSize: 14,
+    lineHeight: 16,
+  },
+  depositMarginText: {
+    color: colors.brand,
+    fontFamily: type.bold,
+    fontSize: 11,
+    letterSpacing: 0.8,
+  },
+  withdrawMarginBtn: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#161A23",
+    borderWidth: 1,
+    borderColor: "#222735",
+    paddingVertical: 10,
+    borderRadius: radius.md,
+  },
+  withdrawMarginText: {
+    color: colors.muted,
+    fontFamily: type.bold,
+    fontSize: 11,
+    letterSpacing: 0.8,
   },
   claimHeroCard: {
     backgroundColor: "#13171F",
@@ -933,6 +1104,100 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "bold",
   },
+  hedgePillRow: {
+    marginBottom: 8,
+  },
+  hedgePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(214,255,63,0.1)",
+    borderWidth: 1,
+    borderColor: "rgba(214,255,63,0.3)",
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    alignSelf: "flex-start",
+  },
+  hedgePillIcon: {
+    fontSize: 10,
+  },
+  hedgePillText: {
+    color: colors.brand,
+    fontFamily: type.data,
+    fontSize: 9,
+    fontWeight: "bold",
+  },
+  posGuardsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginBottom: 10,
+  },
+  posGuardBadgeTP: {
+    backgroundColor: "rgba(46,229,157,0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(46,229,157,0.35)",
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+  },
+  posGuardBadgeTPText: {
+    color: colors.up,
+    fontFamily: type.data,
+    fontSize: 10,
+    fontWeight: "bold",
+  },
+  posGuardBadgeSL: {
+    backgroundColor: "rgba(255,77,106,0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(255,77,106,0.35)",
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+  },
+  posGuardBadgeSLText: {
+    color: colors.down,
+    fontFamily: type.data,
+    fontSize: 10,
+    fontWeight: "bold",
+  },
+  posReasonBadge: {
+    backgroundColor: "#1F2533",
+    borderWidth: 1,
+    borderColor: "#2B3245",
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+  },
+  posReasonBadgeText: {
+    color: colors.ink,
+    fontFamily: type.data,
+    fontSize: 10,
+    fontWeight: "600",
+  },
+  actionRow: {
+    flexDirection: "row",
+    gap: space.xs,
+  },
+  actionBtn: {
+    flex: 1,
+    borderWidth: 1,
+    paddingVertical: 9,
+    borderRadius: radius.pill,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  reverseBtn: {
+    borderColor: "rgba(214,255,63,0.35)",
+    backgroundColor: "rgba(214,255,63,0.06)",
+  },
+  reverseBtnText: {
+    color: colors.brand,
+    fontFamily: type.bold,
+    fontSize: 10,
+    letterSpacing: 0.5,
+  },
   closeBtn: {
     borderWidth: 1,
     borderColor: "rgba(255,77,106,0.4)",
@@ -944,7 +1209,22 @@ const styles = StyleSheet.create({
   closeBtnText: {
     color: colors.down,
     fontFamily: type.bold,
-    fontSize: 11,
+    fontSize: 10,
+    letterSpacing: 0.6,
+  },
+  shareBtn: {
+    borderWidth: 1,
+    borderColor: "rgba(214,255,63,0.35)",
+    backgroundColor: "rgba(214,255,63,0.12)",
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    borderRadius: radius.pill,
+    alignItems: "center",
+  },
+  shareBtnText: {
+    color: colors.brand,
+    fontFamily: type.bold,
+    fontSize: 10,
     letterSpacing: 0.6,
   },
 });

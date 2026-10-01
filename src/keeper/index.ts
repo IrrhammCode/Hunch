@@ -15,6 +15,7 @@ import { enabledMarkets, symbolForFeed, type MarketMeta } from "../shared/market
 import { pullPythOnchain, waitForReceipt } from "../shared/pythPull";
 import { fetchPriceUpdateAt } from "../shared/hermes";
 import { isRateLimitError, sleep } from "../shared/rpcRetry";
+import { checkAndExecutePerplGuards } from "../api/perpl";
 
 loadEnv();
 
@@ -211,6 +212,16 @@ async function tick() {
     }
     // spacing between markets — public RPC 15 req/s
     await sleep(400);
+  }
+
+  // Perpl TP / SL Guard protection check
+  try {
+    const guardsExecuted = await checkAndExecutePerplGuards();
+    if (guardsExecuted.length > 0) {
+      console.log(`[keeper] perpl guards triggered: ${guardsExecuted.length} position(s) closed`);
+    }
+  } catch (e: any) {
+    console.error("[keeper] perpl guard check error:", formatErr(e));
   }
 }
 

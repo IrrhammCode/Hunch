@@ -24,10 +24,11 @@ Hunch is a one-gesture mobile arena + perps terminal:
 
 1. **Login** with **Mera passkey** (Agora) or Privy email OTP → wallet on Monad testnet.
 2. **Fund** official **Agora AUSD** + MON via faucet (`requestFunds`).
-3. **Swipe UP/DOWN** on live 60s markets **or** place **Perpl** perps (BTC/ETH/SOL/MON).
-4. Wallet signs on-chain txs (approve/commit or Perpl deposit/order path).
-5. Keeper pulls **Pyth**, relays `executeBuy`; Perpl orders go through signed trade API.
-6. Claim/redeem on BOOK; proof on MonadVision.
+3. **Swipe UP/DOWN** on live 60s markets **or** place **Perpl** perps (BTC/ETH/SOL/MON) with 200x leverage.
+4. **Hedge-My-Hunch**: Protect 60-second binary positions with 1-tap automated opposite-delta perps on Perpl.
+5. **Advanced Perpl Execution**: 1-tap close & 1-tap reverse position, in-app Agora AUSD margin deposit/withdraw, and automated offchain TP/SL guard keeper.
+6. **Risk & Social**: Real-time Liquidation Health Gauge and viral cyberpunk PnL share cards for social brag sharing.
+7. **Settlement**: Pyth oracle settles 60s markets; Perpl signed WebSocket orders execute IOC matching; claim/redeem with proof on MonadVision.
 
 No mock balances, no demo login — real API + real chain only.
 
@@ -49,8 +50,9 @@ Monad testnet (chainId **10143**) is the settlement layer for every round.
 
 | Sponsor | What we use |
 |---|---|
-| **Agora** | Official Agora AUSD Testnet (`0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC`) as collateral + Agora Faucet (`0xd236c18D274E54FAccC3dd9DDA4b27965a73ee6C`) + **Mera passkey** auth (bounty path). |
-| **Perpl** | Exchange `0x1964C32f0bE608E7D29302AFF5E61268E72080cc` — live testnet markets via API; trade-scope keys + on-chain `createAccount`. |
+| **Agora ($10,000 Bounty)** | Official Agora AUSD Testnet (`0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC`) as collateral + Agora Faucet (`0xd236c18D274E54FAccC3dd9DDA4b27965a73ee6C`) + **Mera passkey** auth. |
+| **Perpl ($8,000 Bounties)** | Exchange `0x1964C32f0bE608E7D29302AFF5E61268E72080cc` — live testnet markets via API + signed WebSocket (`mt: 22`); 1-tap close & reverse, in-app margin manager, automated TP/SL guard keeper, and liquidation risk engine (see [PERPL_FEATURES.md](PERPL_FEATURES.md)). |
+| **Metropolis Track 01 ($30,000)** | Onchain Finance & Trading differentiator: "Hedge-My-Hunch" unifying binary options and perpetual futures into an atomic delta-hedged mobile derivative. |
 | **Quicknode** | Dedicated Monad testnet RPC (`*.monad-testnet.quiknode.pro`) for API, keeper, Hardhat, and phone wallet. |
 | **Privy** | Email OTP + embedded wallet as alternate login / Track 01 path. |
 | **Pyth** | Hermes + on-chain feeds for 60s settlement (BTC/ETH/SOL). |

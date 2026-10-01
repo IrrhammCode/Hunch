@@ -30,6 +30,11 @@
     "perpl:account": "ts-node scripts/perplAccount.ts",
     "perpl:order": "ts-node scripts/perplOrder.ts",
     "perpl:bot": "ts-node scripts/perplBot.ts",
+    "test:perpl:close": "ts-node scripts/testPerplClose.ts",
+    "test:perpl:deposit": "ts-node scripts/testPerplDeposit.ts",
+    "test:perpl:guards": "ts-node scripts/testPerplGuards.ts",
+    "test:perpl:hedge": "ts-node scripts/testPerplHedge.ts",
+    "keeper:perpl": "ts-node scripts/perplGuardKeeper.ts",
     "sim:tx": "ts-node scripts/tenderlySimulate.ts",
     "clean": "hardhat clean"
   },

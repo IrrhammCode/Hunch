@@ -52,6 +52,14 @@ export function PerpTradingTicket() {
   const [marginAUSD, setMarginAUSD] = useState<string>("50");
   const [submitting, setSubmitting] = useState(false);
 
+  // TP / SL Guard protection state
+  const [tpEnabled, setTpEnabled] = useState(false);
+  const [slEnabled, setSlEnabled] = useState(false);
+  const [tpPresetPct, setTpPresetPct] = useState<number>(50); // +50% ROI
+  const [slPresetPct, setSlPresetPct] = useState<number>(25); // -25% max loss
+  const [customTpPrice, setCustomTpPrice] = useState<string>("");
+  const [customSlPrice, setCustomSlPrice] = useState<string>("");
+
   const activeMarket = useMemo(() => {
     return markets.find((m) => m.symbol.toUpperCase() === selectedSymbol.toUpperCase()) || markets[0];
   }, [markets, selectedSymbol]);
@@ -68,6 +76,32 @@ export function PerpTradingTicket() {
       ? Math.max(0, currentPrice * (1 - dropFraction))
       : currentPrice * (1 + dropFraction);
   }, [currentPrice, leverage, side]);
+
+  const targetTpPrice = useMemo(() => {
+    if (!currentPrice || leverage <= 0) return 0;
+    if (customTpPrice) {
+      const p = parseFloat(customTpPrice);
+      if (p > 0) return p;
+    }
+    const deltaFraction = (tpPresetPct / 100) / leverage;
+    const target = side === "LONG"
+      ? currentPrice * (1 + deltaFraction)
+      : Math.max(0, currentPrice * (1 - deltaFraction));
+    return Number(target.toFixed(activeMarket?.priceDecimals || 1));
+  }, [currentPrice, leverage, side, tpPresetPct, customTpPrice, activeMarket]);
+
+  const targetSlPrice = useMemo(() => {
+    if (!currentPrice || leverage <= 0) return 0;
+    if (customSlPrice) {
+      const p = parseFloat(customSlPrice);
+      if (p > 0) return p;
+    }
+    const deltaFraction = (slPresetPct / 100) / leverage;
+    const target = side === "LONG"
+      ? Math.max(0, currentPrice * (1 - deltaFraction))
+      : currentPrice * (1 + deltaFraction);
+    return Number(target.toFixed(activeMarket?.priceDecimals || 1));
+  }, [currentPrice, leverage, side, slPresetPct, customSlPrice, activeMarket]);
 
   const handleTrade = async () => {
     if (!activeMarket) {
@@ -87,6 +121,9 @@ export function PerpTradingTicket() {
     setSubmitting(true);
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
+    const finalTp = tpEnabled && targetTpPrice > 0 ? targetTpPrice : undefined;
+    const finalSl = slEnabled && targetSlPrice > 0 ? targetSlPrice : undefined;
+
     try {
       const res = await placePerplOrder({
         trader: userAddress,
@@ -94,11 +131,17 @@ export function PerpTradingTicket() {
         side,
         marginAUSD: marginNum,
         leverage,
+        tpPrice: finalTp,
+        slPrice: finalSl,
       });
 
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      const guardStr = [
+        finalTp ? `TP $${finalTp}` : null,
+        finalSl ? `SL $${finalSl}` : null,
+      ].filter(Boolean).join(" · ");
       toast.show("Order Executed", {
-        body: `${side} ${activeMarket.symbol} · ${leverage}x ($${positionSizeAUSD.toLocaleString()} AUSD)`,
+        body: `${side} ${activeMarket.symbol} · ${leverage}x ($${positionSizeAUSD.toLocaleString()} AUSD)${guardStr ? ` · ${guardStr}` : ""}`,
         tone: "success",
       });
 
@@ -336,6 +379,135 @@ export function PerpTradingTicket() {
         </View>
       </View>
 
+      {/* TAKE PROFIT & STOP LOSS (TP/SL) GUARD SECTION */}
+      <View style={styles.guardSection}>
+        <View style={styles.guardSectionHeader}>
+          <Text style={styles.guardShieldIcon}>🛡️</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.guardSectionTitle}>TAKE PROFIT & STOP LOSS</Text>
+            <Text style={styles.guardSectionSub}>Perpl signed WebSocket keeper automation</Text>
+          </View>
+        </View>
+
+        {/* Take Profit (TP) */}
+        <View style={[styles.guardBox, tpEnabled && styles.guardBoxActive]}>
+          <View style={styles.guardRowTop}>
+            <Pressable
+              onPress={() => {
+                setTpEnabled(!tpEnabled);
+                Haptics.selectionAsync();
+              }}
+              style={styles.toggleRow}
+            >
+              <View style={[styles.checkbox, tpEnabled && styles.checkboxActive]}>
+                {tpEnabled && <Text style={styles.checkmark}>✓</Text>}
+              </View>
+              <Text style={styles.guardLabel}>TAKE PROFIT (TP)</Text>
+            </Pressable>
+            {tpEnabled && (
+              <Text style={styles.guardCalculatedPrice}>
+                Target: ${targetTpPrice > 0 ? targetTpPrice.toLocaleString(undefined, { maximumFractionDigits: activeMarket?.priceDecimals || 1 }) : "—"}
+              </Text>
+            )}
+          </View>
+
+          {tpEnabled && (
+            <View style={styles.guardOptions}>
+              <View style={styles.presetChips}>
+                {[25, 50, 100].map((pct) => (
+                  <Pressable
+                    key={pct}
+                    onPress={() => {
+                      setTpPresetPct(pct);
+                      setCustomTpPrice("");
+                      Haptics.selectionAsync();
+                    }}
+                    style={[
+                      styles.guardChip,
+                      tpPresetPct === pct && !customTpPrice && styles.guardChipActive,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.guardChipText,
+                        tpPresetPct === pct && !customTpPrice && styles.guardChipTextActive,
+                      ]}
+                    >
+                      +{pct}%
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+              <View style={styles.guardEstRow}>
+                <Text style={styles.guardEstLabel}>Est. Profit:</Text>
+                <Text style={styles.guardEstProfit}>
+                  +${((marginNum * (tpPresetPct || 50)) / 100).toFixed(2)} AUSD
+                </Text>
+              </View>
+            </View>
+          )}
+        </View>
+
+        {/* Stop Loss (SL) */}
+        <View style={[styles.guardBox, slEnabled && styles.guardBoxActiveSL]}>
+          <View style={styles.guardRowTop}>
+            <Pressable
+              onPress={() => {
+                setSlEnabled(!slEnabled);
+                Haptics.selectionAsync();
+              }}
+              style={styles.toggleRow}
+            >
+              <View style={[styles.checkbox, slEnabled && styles.checkboxActiveSL]}>
+                {slEnabled && <Text style={styles.checkmark}>✓</Text>}
+              </View>
+              <Text style={styles.guardLabel}>STOP LOSS (SL)</Text>
+            </Pressable>
+            {slEnabled && (
+              <Text style={[styles.guardCalculatedPrice, { color: colors.down }]}>
+                Stop: ${targetSlPrice > 0 ? targetSlPrice.toLocaleString(undefined, { maximumFractionDigits: activeMarket?.priceDecimals || 1 }) : "—"}
+              </Text>
+            )}
+          </View>
+
+          {slEnabled && (
+            <View style={styles.guardOptions}>
+              <View style={styles.presetChips}>
+                {[15, 25, 50].map((pct) => (
+                  <Pressable
+                    key={pct}
+                    onPress={() => {
+                      setSlPresetPct(pct);
+                      setCustomSlPrice("");
+                      Haptics.selectionAsync();
+                    }}
+                    style={[
+                      styles.guardChip,
+                      slPresetPct === pct && !customSlPrice && styles.guardChipActiveSL,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.guardChipText,
+                        slPresetPct === pct && !customSlPrice && styles.guardChipTextActiveSL,
+                      ]}
+                    >
+                      -{pct}%
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+              <View style={styles.guardEstRow}>
+                <Text style={styles.guardEstLabel}>Max Loss:</Text>
+                <Text style={styles.guardEstLoss}>
+                  -${((marginNum * (slPresetPct || 25)) / 100).toFixed(2)} AUSD
+                </Text>
+              </View>
+            </View>
+          )}
+        </View>
+      </View>
+
       {/* Order Execution Specs Summary */}
       <View style={styles.specsCard}>
         <View style={styles.specRow}>
@@ -348,6 +520,22 @@ export function PerpTradingTicket() {
             ${estLiqPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })} (-10.0%)
           </Text>
         </View>
+        {tpEnabled && (
+          <View style={styles.specRow}>
+            <Text style={styles.specLabel}>TP TARGET</Text>
+            <Text style={[styles.specVal, { color: colors.up }]}>
+              ${targetTpPrice.toLocaleString()} (+{tpPresetPct}%)
+            </Text>
+          </View>
+        )}
+        {slEnabled && (
+          <View style={styles.specRow}>
+            <Text style={styles.specLabel}>SL STOP</Text>
+            <Text style={[styles.specVal, { color: colors.down }]}>
+              ${targetSlPrice.toLocaleString()} (-{slPresetPct}%)
+            </Text>
+          </View>
+        )}
         <View style={styles.specRow}>
           <Text style={styles.specLabel}>FEES</Text>
           <Text style={styles.specVal} numberOfLines={1}>Exchange + gas</Text>
@@ -815,5 +1003,159 @@ const styles = StyleSheet.create({
     fontFamily: type.bold,
     fontSize: 14,
     letterSpacing: 0.8,
+  },
+  guardSection: {
+    backgroundColor: "#10131A",
+    borderRadius: radius.lg,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "#1E2330",
+    gap: 10,
+  },
+  guardSectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 2,
+  },
+  guardShieldIcon: {
+    fontSize: 16,
+  },
+  guardSectionTitle: {
+    color: colors.ink,
+    fontFamily: type.bold,
+    fontSize: 11,
+    letterSpacing: 0.8,
+  },
+  guardSectionSub: {
+    color: colors.muted,
+    fontFamily: type.data,
+    fontSize: 9,
+  },
+  guardBox: {
+    backgroundColor: "#161A23",
+    borderRadius: radius.md,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: "#222735",
+    gap: 8,
+  },
+  guardBoxActive: {
+    borderColor: "rgba(46,229,157,0.4)",
+    backgroundColor: "#111A18",
+  },
+  guardBoxActiveSL: {
+    borderColor: "rgba(255,77,106,0.4)",
+    backgroundColor: "#1C1418",
+  },
+  guardRowTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  toggleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  checkbox: {
+    width: 18,
+    height: 18,
+    borderRadius: 4,
+    borderWidth: 1.5,
+    borderColor: colors.muted,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "transparent",
+  },
+  checkboxActive: {
+    borderColor: colors.up,
+    backgroundColor: colors.up,
+  },
+  checkboxActiveSL: {
+    borderColor: colors.down,
+    backgroundColor: colors.down,
+  },
+  checkmark: {
+    color: "#000000",
+    fontSize: 11,
+    fontWeight: "bold",
+    lineHeight: 13,
+  },
+  guardLabel: {
+    color: colors.ink,
+    fontFamily: type.bold,
+    fontSize: 11,
+    letterSpacing: 0.6,
+  },
+  guardCalculatedPrice: {
+    color: colors.up,
+    fontFamily: type.data,
+    fontSize: 11,
+    fontWeight: "bold",
+  },
+  guardOptions: {
+    gap: 8,
+    paddingTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255,255,255,0.06)",
+  },
+  presetChips: {
+    flexDirection: "row",
+    gap: 6,
+  },
+  guardChip: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 6,
+    borderRadius: radius.sm,
+    backgroundColor: "#1F2533",
+    borderWidth: 1,
+    borderColor: "#2B3245",
+  },
+  guardChipActive: {
+    backgroundColor: "rgba(46,229,157,0.15)",
+    borderColor: colors.up,
+  },
+  guardChipActiveSL: {
+    backgroundColor: "rgba(255,77,106,0.15)",
+    borderColor: colors.down,
+  },
+  guardChipText: {
+    color: colors.muted,
+    fontFamily: type.data,
+    fontSize: 11,
+    fontWeight: "600",
+  },
+  guardChipTextActive: {
+    color: colors.up,
+    fontWeight: "bold",
+  },
+  guardChipTextActiveSL: {
+    color: colors.down,
+    fontWeight: "bold",
+  },
+  guardEstRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  guardEstLabel: {
+    color: colors.muted,
+    fontFamily: type.data,
+    fontSize: 10,
+  },
+  guardEstProfit: {
+    color: colors.up,
+    fontFamily: type.data,
+    fontSize: 11,
+    fontWeight: "bold",
+  },
+  guardEstLoss: {
+    color: colors.down,
+    fontFamily: type.data,
+    fontSize: 11,
+    fontWeight: "bold",
   },
 });

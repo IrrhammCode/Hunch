@@ -13,6 +13,8 @@ import {
   mockWallet,
   mockZerion,
   mockHash,
+  closeMockPosition,
+  reverseMockPosition,
   MOCK_ADDRESS_CHECKSUM,
 } from "@/src/mock/fixtures";
 
@@ -402,6 +404,12 @@ export type PerplPosition = {
   openedAt: number;
   status: "OPEN" | "CLOSED";
   realizedPnL?: number;
+  realizedPnLAUSD?: number;
+  closedAt?: number;
+  closedPrice?: number;
+  tpPrice?: number;
+  slPrice?: number;
+  closeReason?: string;
 };
 
 export type PerplAccount = {
@@ -466,6 +474,8 @@ export function placePerplOrder(params: {
   marginAUSD: number;
   leverage: number;
   accountId?: number;
+  tpPrice?: number;
+  slPrice?: number;
 }) {
   if (USE_MOCK) {
     const mk = mockPerplMarkets().markets.find(
@@ -486,6 +496,8 @@ export function placePerplOrder(params: {
       unrealizedPnLAUSD: 0,
       openedAt: Date.now(),
       status: "OPEN",
+      tpPrice: params.tpPrice,
+      slPrice: params.slPrice,
     };
     return Promise.resolve({
       success: true,
@@ -502,6 +514,28 @@ export function placePerplOrder(params: {
   }>("/v1/perpl/order", params);
 }
 
+export function updatePerplPositionGuards(
+  positionId: string,
+  trader: string,
+  guards: { tpPrice?: number | null; slPrice?: number | null }
+) {
+  if (USE_MOCK) {
+    return Promise.resolve({
+      success: true,
+      position: {
+        id: positionId,
+        tpPrice: guards.tpPrice ?? undefined,
+        slPrice: guards.slPrice ?? undefined,
+      } as any,
+    });
+  }
+  return post<{ success: boolean; position: PerplPosition }>("/v1/perpl/position/guards", {
+    positionId,
+    trader,
+    ...guards,
+  });
+}
+
 export function linkPerplAccount(address: string, accountId: number) {
   if (USE_MOCK) return Promise.resolve({ address: address.toLowerCase(), accountId });
   return post<{ address: string; accountId: number }>("/v1/perpl/account-link", {
@@ -510,30 +544,90 @@ export function linkPerplAccount(address: string, accountId: number) {
   });
 }
 
-export function closePerplPosition(positionId: string, trader: string) {
+export function closePerplPosition(
+  positionId: string,
+  trader: string,
+  fallback?: Partial<PerplPosition>,
+) {
   if (USE_MOCK) {
+    const mockPos = closeMockPosition(positionId);
     return Promise.resolve({
       success: true,
-      position: {
+      position: mockPos || {
         id: positionId,
         trader,
-        symbol: "BTC",
-        side: "LONG" as const,
-        size: 0,
-        sizeAUSD: 0,
-        entryPrice: 0,
-        leverage: 1,
-        marginAUSD: 0,
+        symbol: fallback?.symbol || "BTC",
+        side: fallback?.side || "LONG",
+        size: fallback?.size || 0,
+        sizeAUSD: fallback?.sizeAUSD || 0,
+        entryPrice: fallback?.entryPrice || 0,
+        leverage: fallback?.leverage || 1,
+        marginAUSD: fallback?.marginAUSD || 0,
         liquidationPrice: 0,
         openedAt: Date.now(),
         status: "CLOSED" as const,
       },
-      realizedPnL: 4.2,
+      realizedPnL: mockPos?.realizedPnLAUSD ?? 5.5,
     });
   }
   return post<{ success: boolean; position: PerplPosition; realizedPnL: number }>("/v1/perpl/order/close", {
     positionId,
     trader,
+    ...fallback,
+  });
+}
+
+export function reversePerplPosition(
+  positionId: string,
+  trader: string,
+  fallback?: Partial<PerplPosition>,
+) {
+  if (USE_MOCK) {
+    const reversed = reverseMockPosition(positionId);
+    const prevSide = fallback?.side || "LONG";
+    const nextSide = prevSide === "LONG" ? "SHORT" : "LONG";
+    return Promise.resolve({
+      success: true,
+      closedPosition: {
+        id: positionId,
+        trader,
+        symbol: fallback?.symbol || "BTC",
+        side: prevSide,
+        size: fallback?.size || 0,
+        sizeAUSD: fallback?.sizeAUSD || 0,
+        entryPrice: fallback?.entryPrice || 0,
+        leverage: fallback?.leverage || 1,
+        marginAUSD: fallback?.marginAUSD || 0,
+        liquidationPrice: 0,
+        openedAt: Date.now(),
+        status: "CLOSED" as const,
+      },
+      newPosition: reversed || {
+        id: `rev_${Date.now()}`,
+        trader,
+        symbol: fallback?.symbol || "BTC",
+        side: nextSide,
+        size: fallback?.size || 0.0025,
+        sizeAUSD: fallback?.sizeAUSD || 20,
+        entryPrice: fallback?.entryPrice || 83000,
+        leverage: fallback?.leverage || 10,
+        marginAUSD: fallback?.marginAUSD || 20,
+        liquidationPrice: 0,
+        openedAt: Date.now(),
+        status: "OPEN" as const,
+      },
+      realizedPnL: 4.8,
+    });
+  }
+  return post<{
+    success: boolean;
+    closedPosition: PerplPosition;
+    newPosition: PerplPosition;
+    realizedPnL: number;
+  }>("/v1/perpl/order/reverse", {
+    positionId,
+    trader,
+    ...fallback,
   });
 }
 
@@ -545,11 +639,92 @@ export function fetchPerplDepositCalldata(amountAUSD: number, address: string) {
       token: "0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC",
       amountAUSD,
       minAccountOpenAUSD: 100,
+      accountId: 644,
+      action: "deposit",
       approve: { to: "0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC", data: "0x", value: "0" },
       deposit: { to: "0x1964C32f0bE608E7D29302AFF5E61268E72080cc", data: "0x", value: "0" },
     });
   }
   return post<any>("/v1/perpl/tx/deposit", { amountAUSD, address });
+}
+
+export function fetchPerplWithdrawCalldata(amountAUSD: number, address: string) {
+  if (USE_MOCK) {
+    return Promise.resolve({
+      chainId: 10143,
+      exchange: "0x1964C32f0bE608E7D29302AFF5E61268E72080cc",
+      amountAUSD,
+      accountId: 644,
+      withdraw: { to: "0x1964C32f0bE608E7D29302AFF5E61268E72080cc", data: "0x", value: "0" },
+    });
+  }
+  return post<any>("/v1/perpl/tx/withdraw", { amountAUSD, address });
+}
+
+export function relayDepositMargin(amountAUSD: number, address: string) {
+  if (USE_MOCK) {
+    return Promise.resolve({
+      success: true,
+      txHash: "0xmockRelayedDeposit" + Date.now().toString(16),
+      action: "deposit",
+      accountId: 644,
+      amountAUSD,
+      address,
+    });
+  }
+  return post<{
+    success: boolean;
+    txHash: string;
+    action: string;
+    accountId?: number;
+    amountAUSD: number;
+    address: string;
+  }>("/v1/perpl/margin/deposit", { amountAUSD, address });
+}
+
+export function executeHedgeForHunch(params: {
+  trader: string;
+  symbol: string;
+  hunchSide: "UP" | "DOWN";
+  hunchAmountAUSD: number;
+  hedgeRatio?: number;
+  leverage?: number;
+}) {
+  if (USE_MOCK) {
+    const oppSide = params.hunchSide === "UP" ? "SHORT" : "LONG";
+    const hedgeMargin = Math.max(5, Number((params.hunchAmountAUSD * (params.hedgeRatio || 0.5)).toFixed(2)));
+    return Promise.resolve({
+      success: true,
+      hunchSide: params.hunchSide,
+      perpSide: oppSide,
+      hedgeRatio: params.hedgeRatio || 0.5,
+      hedgeMarginAUSD: hedgeMargin,
+      position: {
+        id: `hedge_${Date.now()}`,
+        trader: params.trader,
+        symbol: params.symbol,
+        side: oppSide,
+        size: 0.001,
+        sizeAUSD: hedgeMargin * 2,
+        entryPrice: 84000,
+        leverage: 2,
+        marginAUSD: hedgeMargin,
+        liquidationPrice: 0,
+        openedAt: Date.now(),
+        status: "OPEN" as const,
+      },
+    });
+  }
+  return post<{
+    success: boolean;
+    hunchSide: string;
+    perpSide: "LONG" | "SHORT";
+    hedgeRatio: number;
+    hedgeMarginAUSD: number;
+    position: PerplPosition;
+    market: any;
+    perpl: any;
+  }>("/v1/perpl/hedge/hunch", params);
 }
 
 export function mockTradeResult(side: string, amountAUSD: string, symbol: string) {

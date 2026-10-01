@@ -4,15 +4,18 @@ Perpetual Futures (via **Perpl DEX**) + 60-Second Instant Hunches with **Agora A
 
 **Bounties & Tracks:**
 - **Best Mobile Trading App on Monad (Agora Onchain Trading Bounty)** — $10,000
+- **Perpl API & Automation Bounty** — $5,000
+- **Perpl Analytics & Risk Bounty** — $3,000
 - **Metropolis Track 01 (Onchain Finance & Trading)** — $10,000
 - **Privy Embedded Wallets Bounty** — $5,000
 - **Pyth Oracle Integration**
 
 **Product:**
-1. **Perpetual Futures (Perpl DEX)**: Long & Short leverage trading on BTC, ETH, SOL, MON using official Agora AUSD collateral on Monad Testnet.
+1. **Perpetual Futures (Perpl DEX)**: Long & Short leverage trading on BTC, ETH, SOL, MON using official Agora AUSD collateral on Monad Testnet, with 1-tap close/reverse, in-app margin deposit/withdraw, and automated TP/SL guards.
 2. **60-Second Instant Hunches**: Flagship UP/DOWN short-horizon binary markets with swipe gestures (CPMM + Pyth settlement).
-3. **Unified Portfolio**: Real-time margin tracking, unrealized PnL, and 1-tap claim for winning hunch payouts.
-4. **Non-Custodial Mobile Auth**: Privy email OTP with embedded EOA created on Monad Testnet.
+3. **Hedge-My-Hunch Cross-Product**: Protect short-horizon binary exposure by auto-opening delta-hedged perpetual futures on Perpl.
+4. **Unified Portfolio & Risk Engine**: Liquidation health gauge, real-time margin tracking, unrealized PnL, viral PnL share cards, and 1-tap claim for winning hunch payouts.
+5. **Non-Custodial Mobile Auth**: Privy email OTP with embedded EOA created on Monad Testnet.
 
 ## App Preview & Interface
 
@@ -30,6 +33,7 @@ Perpetual Futures (via **Perpl DEX**) + 60-Second Instant Hunches with **Agora A
 
 | | Link |
 |---|---|
+| **Perpl Features & Architecture** | [PERPL_FEATURES.md](PERPL_FEATURES.md) — 1-tap close/reverse, margin modal, TP/SL keeper, Hedge-My-Hunch |
 | Judge try path | [mobile/DEMO.md](mobile/DEMO.md) |
 | Full write-up | [SUBMIT.md](SUBMIT.md) |
 | Form fields | [SUBMISSION_FORM.md](SUBMISSION_FORM.md) |

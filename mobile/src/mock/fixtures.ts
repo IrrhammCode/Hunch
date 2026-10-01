@@ -192,19 +192,11 @@ export function mockWallet(address?: string) {
   };
 }
 
-export function mockPerplAccount(address: string) {
-  return {
-    address,
-    exchange: "0x1964C32f0bE608E7D29302AFF5E61268E72080cc",
-    collateralToken: "0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC",
-    accountId: 644,
-    authConfigured: true,
-    execution: "mock-design" as const,
-    marginUsedAUSD: 80,
-    unrealizedPnLAUSD: 12.4,
-    openPositionsCount: 2,
-    onchainCollateralAUSD: "2450",
-    positions: [
+let mockPerpPositionsState: any[] | null = null;
+
+export function getMockPerpPositions(address: string) {
+  if (!mockPerpPositionsState) {
+    mockPerpPositionsState = [
       {
         id: "mock_perp_btc",
         trader: address,
@@ -239,7 +231,52 @@ export function mockPerplAccount(address: string) {
         openedAt: Date.now() - 7200_000,
         status: "OPEN" as const,
       },
-    ],
+    ];
+  }
+  return mockPerpPositionsState;
+}
+
+export function closeMockPosition(id: string) {
+  const list = getMockPerpPositions("");
+  const pos = list.find((p) => p.id === id);
+  if (pos) {
+    pos.status = "CLOSED";
+    pos.closedAt = Date.now();
+    pos.realizedPnLAUSD = pos.unrealizedPnLAUSD ?? 5.5;
+  }
+  mockPerpPositionsState = list.filter((p) => p.id !== id);
+  return pos;
+}
+
+export function reverseMockPosition(id: string) {
+  const list = getMockPerpPositions("");
+  const pos = list.find((p) => p.id === id);
+  if (pos) {
+    pos.side = pos.side === "LONG" ? "SHORT" : "LONG";
+    pos.entryPrice = pos.markPrice || pos.entryPrice;
+    pos.unrealizedPnLAUSD = 0;
+    pos.unrealizedPnLPct = 0;
+    pos.openedAt = Date.now();
+  }
+  return pos;
+}
+
+export function mockPerplAccount(address: string) {
+  const positions = getMockPerpPositions(address).filter((p) => p.status === "OPEN");
+  const marginUsed = positions.reduce((acc, p) => acc + (p.marginAUSD || 0), 0);
+  const uPnl = positions.reduce((acc, p) => acc + (p.unrealizedPnLAUSD || 0), 0);
+  return {
+    address,
+    exchange: "0x1964C32f0bE608E7D29302AFF5E61268E72080cc",
+    collateralToken: "0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC",
+    accountId: 644,
+    authConfigured: true,
+    execution: "mock-design" as const,
+    marginUsedAUSD: marginUsed,
+    unrealizedPnLAUSD: Number(uPnl.toFixed(2)),
+    openPositionsCount: positions.length,
+    onchainCollateralAUSD: "2450",
+    positions,
   };
 }
 

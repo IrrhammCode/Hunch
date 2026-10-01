@@ -41,6 +41,7 @@ import { addHunch, listHunches, settleRound } from "@/src/hunchBook";
 import { useWallet } from "@/src/wallet/WalletContext";
 import { placeWalletTrade } from "@/src/wallet/privyTrade";
 import { PerpTradingTicket } from "@/src/perpl/PerpTradingTicket";
+import { placePerplOrder } from "@/src/perpl/perplClient";
 import { colors, radius, space, type } from "@/src/theme";
 
 const AMOUNTS = ["5", "10", "25"] as const;
@@ -74,6 +75,8 @@ export default function HunchScreen() {
   const [endsAt, setEndsAt] = useState<number | null>(null);
   const [nowMs, setNowMs] = useState(Date.now());
   const [amount, setAmount] = useState<string>("10");
+  const [hedgeEnabled, setHedgeEnabled] = useState(false);
+  const [hedgeRatio, setHedgeRatio] = useState<number>(0.5);
   const [quoteLine, setQuoteLine] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const settledRef = useRef<Set<string>>(new Set());
@@ -274,6 +277,23 @@ export default function HunchScreen() {
           `${getSelectedMarket().symbol} ${side} · R${roundId}${result.funded ? " · funded" : ""}`,
         );
 
+        let hedgeResult: any = null;
+        if (hedgeEnabled && user?.address) {
+          const oppSide = side === "UP" ? "SHORT" : "LONG";
+          const hedgeMargin = Math.max(5, Number((Number(amount) * hedgeRatio).toFixed(2)));
+          try {
+            hedgeResult = await placePerplOrder({
+              trader: user.address,
+              symbol: getSelectedMarket().symbol,
+              side: oppSide,
+              marginAUSD: hedgeMargin,
+              leverage: 2,
+            });
+          } catch (hErr: any) {
+            console.warn("Hedge auto-open note:", hErr?.message || hErr);
+          }
+        }
+
         await addHunch({
           roundId,
           side,
@@ -281,10 +301,16 @@ export default function HunchScreen() {
           yes,
           no,
           tx: hash,
+          hedgedPerpId: hedgeResult?.position?.id,
+          hedgeSide: side === "UP" ? "SHORT" : "LONG",
+          hedgeMarginAUSD: hedgeEnabled ? Math.max(5, Number((Number(amount) * hedgeRatio).toFixed(2))) : undefined,
         });
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        toast.show(`${side} filled`, {
-          body: `${amount} AUSD · round ${roundId} · ${process.env.EXPO_PUBLIC_USE_MOCK !== "0" ? "MOCK" : "onchain"}`,
+        const hedgeNotice = hedgeResult?.position
+          ? ` · Protected by ${hedgeResult.position.side} Perp ($${hedgeResult.position.marginAUSD} AUSD 2x)`
+          : "";
+        toast.show(`${side} filled${hedgeResult?.position ? " + Hedged" : ""}`, {
+          body: `${amount} AUSD · round ${roundId}${hedgeNotice}`,
           tone: "success",
           actionLabel: "View tx",
           onAction: () => {
@@ -308,6 +334,8 @@ export default function HunchScreen() {
       round,
       remainingSec,
       amount,
+      hedgeEnabled,
+      hedgeRatio,
       refresh,
       refreshWallet,
       tx,
@@ -594,6 +622,73 @@ export default function HunchScreen() {
                 </View>
               </Animated.View>
             </GestureDetector>
+
+            {/* HEDGE-MY-HUNCH CROSS-PRODUCT CARD */}
+            <View style={[styles.hedgeCard, hedgeEnabled && styles.hedgeCardActive]}>
+              <Pressable
+                onPress={() => {
+                  setHedgeEnabled(!hedgeEnabled);
+                  Haptics.selectionAsync();
+                }}
+                style={styles.hedgeToggleRow}
+              >
+                <View style={[styles.hedgeCheckbox, hedgeEnabled && styles.hedgeCheckboxActive]}>
+                  {hedgeEnabled && <Text style={styles.hedgeCheckmark}>✓</Text>}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                    <Text style={styles.hedgeTitle}>⚡ HEDGE ON PERPL</Text>
+                    <View style={styles.hedgeBountyBadge}>
+                      <Text style={styles.hedgeBountyBadgeText}>DELTA HEDGE</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.hedgeSubtitle}>
+                    Auto-opens opposite Perpl perp to protect your 60s prediction
+                  </Text>
+                </View>
+              </Pressable>
+
+              {hedgeEnabled && (
+                <View style={styles.hedgeControls}>
+                  <View style={styles.hedgeRatioRow}>
+                    <Text style={styles.hedgeRatioLabel}>Hedge Ratio:</Text>
+                    <View style={styles.hedgeChips}>
+                      {[
+                        { label: "25%", val: 0.25 },
+                        { label: "50%", val: 0.5 },
+                        { label: "100%", val: 1.0 },
+                      ].map((chip) => (
+                        <Pressable
+                          key={chip.label}
+                          onPress={() => {
+                            setHedgeRatio(chip.val);
+                            Haptics.selectionAsync();
+                          }}
+                          style={[
+                            styles.hedgeChip,
+                            hedgeRatio === chip.val && styles.hedgeChipActive,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.hedgeChipText,
+                              hedgeRatio === chip.val && styles.hedgeChipTextActive,
+                            ]}
+                          >
+                            {chip.label}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  </View>
+                  <View style={styles.hedgeCalcNote}>
+                    <Text style={styles.hedgeCalcText}>
+                      Auto-protect: ${Math.max(5, Number((Number(amount) * hedgeRatio).toFixed(2)))} AUSD margin @ 2x Perpl futures
+                    </Text>
+                  </View>
+                </View>
+              )}
+            </View>
 
             {/* Dual Big Action Buttons */}
             <View style={styles.dualActionRow}>
@@ -1080,5 +1175,123 @@ const styles = StyleSheet.create({
     fontFamily: type.medium,
     fontSize: 13,
     marginTop: 14,
+  },
+  hedgeCard: {
+    backgroundColor: "#11141C",
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: "#1E2433",
+    padding: 12,
+    gap: 8,
+  },
+  hedgeCardActive: {
+    borderColor: "rgba(214,255,63,0.4)",
+    backgroundColor: "#131818",
+  },
+  hedgeHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  hedgeToggleRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    flex: 1,
+  },
+  hedgeCheckbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 5,
+    borderWidth: 1.5,
+    borderColor: colors.muted,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 2,
+    backgroundColor: "transparent",
+  },
+  hedgeCheckboxActive: {
+    borderColor: colors.brand,
+    backgroundColor: colors.brand,
+  },
+  hedgeCheckmark: {
+    color: "#000000",
+    fontSize: 12,
+    fontWeight: "bold",
+    lineHeight: 14,
+  },
+  hedgeTitle: {
+    color: colors.ink,
+    fontFamily: type.bold,
+    fontSize: 12,
+    letterSpacing: 0.8,
+  },
+  hedgeBountyBadge: {
+    backgroundColor: "rgba(214,255,63,0.15)",
+    paddingVertical: 1,
+    paddingHorizontal: 6,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: "rgba(214,255,63,0.3)",
+  },
+  hedgeBountyBadgeText: {
+    color: colors.brand,
+    fontFamily: type.data,
+    fontSize: 8,
+    fontWeight: "bold",
+  },
+  hedgeSubtitle: {
+    color: colors.muted,
+    fontFamily: type.data,
+    fontSize: 10,
+    marginTop: 2,
+  },
+  hedgeControls: {
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255,255,255,0.06)",
+    gap: 6,
+  },
+  hedgeRatioRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  hedgeRatioLabel: {
+    color: colors.muted,
+    fontFamily: type.data,
+    fontSize: 11,
+  },
+  hedgeChips: {
+    flexDirection: "row",
+    gap: 6,
+  },
+  hedgeChip: {
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: radius.sm,
+    backgroundColor: "#1C2230",
+    borderWidth: 1,
+    borderColor: "#283045",
+  },
+  hedgeChipActive: {
+    backgroundColor: "rgba(214,255,63,0.15)",
+    borderColor: colors.brand,
+  },
+  hedgeChipText: {
+    color: colors.muted,
+    fontFamily: type.data,
+    fontSize: 10,
+    fontWeight: "bold",
+  },
+  hedgeChipTextActive: {
+    color: colors.brand,
+  },
+  hedgeCalcNote: {
+    marginTop: 2,
+  },
+  hedgeCalcText: {
+    color: colors.brand,
+    fontFamily: type.data,
+    fontSize: 10,
   },
 });

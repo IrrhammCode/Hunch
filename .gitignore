@@ -14,4 +14,5 @@ mobile/ios/Pods
 mobile/android/.gradle
 *.log
 .DS_Store
+dwwa.txt
 

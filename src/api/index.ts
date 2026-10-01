@@ -33,9 +33,15 @@ import {
   getPerplMarket,
   getUserPerplAccount,
   buildPerplDepositCalldata,
+  buildPerplWithdrawCalldata,
+  relayPerplDeposit,
   placePerplOrder,
   closePerplPosition,
+  reversePerplPosition,
   linkPerplAccount,
+  updatePerplPositionGuards,
+  checkAndExecutePerplGuards,
+  executeHedgeForHunch,
 } from "./perpl";
 import { buildPerplRisk } from "./perplRisk";
 import { PERPL_TESTNET } from "../shared/perpl";
@@ -132,6 +138,29 @@ app.post("/v1/perpl/tx/deposit", async (c) => {
   }
 });
 
+app.post("/v1/perpl/tx/withdraw", async (c) => {
+  try {
+    const body = await c.req.json();
+    const { amountAUSD, address } = body;
+    const calldata = await buildPerplWithdrawCalldata(Number(amountAUSD), address);
+    return c.json(calldata);
+  } catch (e: any) {
+    return c.json({ error: e.message || String(e) }, 400);
+  }
+});
+
+app.post("/v1/perpl/margin/deposit", async (c) => {
+  try {
+    const body = await c.req.json();
+    const { amountAUSD, address } = body;
+    if (!amountAUSD || !address) return c.json({ error: "amountAUSD and address required" }, 400);
+    const result = await relayPerplDeposit(Number(amountAUSD), address);
+    return c.json(result);
+  } catch (e: any) {
+    return c.json({ error: e.message || String(e) }, 400);
+  }
+});
+
 app.post("/v1/perpl/order", async (c) => {
   try {
     const body = await c.req.json();
@@ -145,8 +174,64 @@ app.post("/v1/perpl/order", async (c) => {
 app.post("/v1/perpl/order/close", async (c) => {
   try {
     const body = await c.req.json();
-    const { positionId, trader } = body;
-    const result = await closePerplPosition(positionId, trader);
+    const { positionId, trader, ...fallback } = body;
+    if (!positionId || !trader) return c.json({ error: "positionId and trader required" }, 400);
+    const result = await closePerplPosition(positionId, trader, fallback);
+    return c.json(result);
+  } catch (e: any) {
+    return c.json({ error: e.message || String(e) }, 400);
+  }
+});
+
+app.post("/v1/perpl/order/reverse", async (c) => {
+  try {
+    const body = await c.req.json();
+    const { positionId, trader, ...fallback } = body;
+    if (!positionId || !trader) return c.json({ error: "positionId and trader required" }, 400);
+    const result = await reversePerplPosition(positionId, trader, fallback);
+    return c.json(result);
+  } catch (e: any) {
+    return c.json({ error: e.message || String(e) }, 400);
+  }
+});
+
+/** Update TP / SL guards for an open position */
+app.post("/v1/perpl/position/guards", async (c) => {
+  try {
+    const body = await c.req.json();
+    const { positionId, trader, tpPrice, slPrice } = body;
+    if (!positionId || !trader) return c.json({ error: "positionId and trader required" }, 400);
+    const result = await updatePerplPositionGuards(positionId, trader, { tpPrice, slPrice });
+    return c.json(result);
+  } catch (e: any) {
+    return c.json({ error: e.message || String(e) }, 400);
+  }
+});
+
+/** Trigger TP / SL keeper evaluation tick */
+app.post("/v1/perpl/guards/check", async (c) => {
+  try {
+    const executed = await checkAndExecutePerplGuards();
+    return c.json({ success: true, count: executed.length, executed });
+  } catch (e: any) {
+    return c.json({ error: e.message || String(e) }, 500);
+  }
+});
+
+app.get("/v1/perpl/guards/check", async (c) => {
+  try {
+    const executed = await checkAndExecutePerplGuards();
+    return c.json({ success: true, count: executed.length, executed });
+  } catch (e: any) {
+    return c.json({ error: e.message || String(e) }, 500);
+  }
+});
+
+/** Hedge-My-Hunch cross-product order execution */
+app.post("/v1/perpl/hedge/hunch", async (c) => {
+  try {
+    const body = await c.req.json();
+    const result = await executeHedgeForHunch(body);
     return c.json(result);
   } catch (e: any) {
     return c.json({ error: e.message || String(e) }, 400);

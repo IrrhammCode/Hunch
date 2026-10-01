@@ -7,6 +7,10 @@ import {
   executeTrade,
   fetchCommitCalldata,
   fetchRedeemCalldata,
+  fetchPerplDepositCalldata,
+  fetchPerplWithdrawCalldata,
+  relayDepositMargin,
+  linkPerplAccount,
   fetchWallet,
   walletFaucet,
   type ExecuteTradeResult,
@@ -28,7 +32,11 @@ async function waitForTx(provider: any, hash: string, attempts = 40) {
       const receipt = await rpc(provider, "eth_getTransactionReceipt", [hash]);
       if (receipt) {
         if (receipt.status === "0x0") throw new Error(`tx reverted: ${hash}`);
-        return receipt as { transactionHash: string; blockNumber: string };
+        return receipt as {
+          transactionHash: string;
+          blockNumber: string;
+          logs?: Array<{ address?: string; data?: string; topics?: string[] }>;
+        };
       }
     } catch (e) {
       if (i === attempts - 1) throw e;
@@ -192,6 +200,106 @@ export async function getWalletSnapshot(address: string): Promise<WalletSnapshot
 
 export async function fundWallet(address: string) {
   return walletFaucet(address, "1000");
+}
+
+export async function depositPerplMargin(params: {
+  provider: any;
+  address: string;
+  amountAUSD: number;
+}): Promise<{
+  depositTx: string;
+  approveTx?: string;
+  amountAUSD: number;
+  accountId?: number;
+}> {
+  const { provider, address, amountAUSD } = params;
+
+  if (process.env.EXPO_PUBLIC_USE_MOCK !== "0" || provider?.isMock) {
+    return {
+      depositTx: "0xmockDeposit" + Date.now().toString(16),
+      amountAUSD,
+      accountId: 644,
+    };
+  }
+
+  await ensureChain(provider);
+
+  try {
+    const calldata = await fetchPerplDepositCalldata(amountAUSD, address);
+    let approveTx: string | undefined;
+
+    if (calldata.approve?.to && calldata.approve?.data && calldata.approve.data !== "0x") {
+      try {
+        const appReceipt = await sendTx(provider, address, calldata.approve);
+        approveTx = appReceipt.transactionHash;
+      } catch (appErr) {
+        console.warn("[deposit] approve skipped or allowance exists", appErr);
+      }
+    }
+
+    const depReceipt = await sendTx(provider, address, calldata.deposit);
+
+    let discoveredAccountId: number | undefined = calldata.accountId;
+    if (!discoveredAccountId && depReceipt.logs) {
+      for (const log of depReceipt.logs) {
+        if (log.address?.toLowerCase() === calldata.exchange?.toLowerCase() && log.data && log.data.length >= 130) {
+          try {
+            const idWord = "0x" + log.data.slice(66, 130);
+            const n = Number(BigInt(idWord));
+            if (n > 0 && n < 1e9) discoveredAccountId = n;
+          } catch {
+            /* skip */
+          }
+        }
+      }
+    }
+
+    if (discoveredAccountId) {
+      try {
+        await linkPerplAccount(address, discoveredAccountId);
+      } catch {
+        /* skip */
+      }
+    }
+
+    return {
+      approveTx,
+      depositTx: depReceipt.transactionHash,
+      amountAUSD,
+      accountId: discoveredAccountId,
+    };
+  } catch (err: any) {
+    // If client direct tx encounters issue, fallback to relayed margin deposit
+    const relayRes = await relayDepositMargin(amountAUSD, address);
+    return {
+      depositTx: relayRes.txHash,
+      amountAUSD,
+      accountId: relayRes.accountId,
+    };
+  }
+}
+
+export async function withdrawPerplMargin(params: {
+  provider: any;
+  address: string;
+  amountAUSD: number;
+}): Promise<{ tx: string; amountAUSD: number }> {
+  const { provider, address, amountAUSD } = params;
+
+  if (process.env.EXPO_PUBLIC_USE_MOCK !== "0" || provider?.isMock) {
+    return {
+      tx: "0xmockWithdraw" + Date.now().toString(16),
+      amountAUSD,
+    };
+  }
+
+  await ensureChain(provider);
+  const calldata = await fetchPerplWithdrawCalldata(amountAUSD, address);
+  const receipt = await sendTx(provider, address, calldata.withdraw);
+  return {
+    tx: receipt.transactionHash,
+    amountAUSD,
+  };
 }
 
 /** @deprecated alias */

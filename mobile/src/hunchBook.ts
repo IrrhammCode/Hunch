@@ -14,6 +14,9 @@ export type HunchEntry = {
   tx: string;
   status: "open" | "won" | "lost";
   at: number;
+  hedgedPerpId?: string;
+  hedgeSide?: "LONG" | "SHORT";
+  hedgeMarginAUSD?: number;
 };
 
 async function readRaw(): Promise<HunchEntry[]> {
