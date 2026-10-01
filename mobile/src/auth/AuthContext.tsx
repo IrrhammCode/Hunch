@@ -6,7 +6,6 @@ import React, {
   useMemo,
   useState,
 } from "react";
-import { USE_MOCK } from "../config/chain";
 import {
   clearMeraSession,
   ensureMeraLogin,
@@ -15,8 +14,6 @@ import {
   unlockMeraFromStored,
   type MeraRuntime,
 } from "./mera";
-import { createMockProvider } from "../mock/provider";
-import { MOCK_ADDRESS_CHECKSUM } from "../mock/fixtures";
 
 export type SessionUser = {
   id: string;
@@ -63,50 +60,7 @@ function meraUserFromRuntime(runtime: MeraRuntime): SessionUser {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  if (USE_MOCK) return <MockAuthProvider>{children}</MockAuthProvider>;
   return <MeraOnlyAuthProvider>{children}</MeraOnlyAuthProvider>;
-}
-
-const MOCK_USER: SessionUser = {
-  id: "mock:hunch",
-  email: "design@hunch.mock",
-  displayName: "Design Trader",
-  address: MOCK_ADDRESS_CHECKSUM,
-  mera: true,
-};
-
-function MockAuthProvider({ children }: { children: React.ReactNode }) {
-  // Start signed-in for design flow; Sign Out must clear user so login stays visible.
-  const [user, setUser] = useState<SessionUser | null>(MOCK_USER);
-  const provider = useMemo(() => createMockProvider(), []);
-
-  const login = useCallback(async () => {
-    setUser(MOCK_USER);
-  }, []);
-
-  const logout = useCallback(async () => {
-    setUser(null);
-  }, []);
-
-  const value = useMemo<AuthContextValue>(
-    () => ({
-      user,
-      ready: true,
-      privyMode: false,
-      meraAvailable: false,
-      isNativePasskey: false,
-      missingAuthConfig: false,
-      authMethod: user ? "mock" : null,
-      mockMode: true,
-      loginWithMera: login,
-      loginWithFaceId: login,
-      logout,
-      getEthereumProvider: async () => provider,
-    }),
-    [user, provider, login, logout],
-  );
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 function MeraOnlyAuthProvider({ children }: { children: React.ReactNode }) {

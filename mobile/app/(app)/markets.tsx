@@ -13,17 +13,16 @@ const Haptics = {
 import {
   fetchMarketBoard,
   fetchPerplMarkets,
+  fetchPriceHistory,
   type MarketBoard,
   type MarketBoardRow,
   type PerplMarket,
 } from "@/src/api/client";
 import { Screen } from "@/src/components/Screen";
-import { MockBanner } from "@/src/components/MockBanner";
 import { PriceChart } from "@/src/components/PriceChart";
 import { Icon } from "@/src/components/Icon";
 import { TokenLogo } from "@/src/components/TokenLogo";
 import { getSelectedMarket, setSelectedMarket } from "@/src/market/selection";
-import { mockMarketBoard, mockPerplMarkets, mockSeries } from "@/src/mock/fixtures";
 import { colors, monoStyle, radius, space, type } from "@/src/theme";
 
 type FilterTab = "all" | "blitz" | "perps";
@@ -51,6 +50,7 @@ export default function MarketsScreen() {
   const insets = useSafeAreaInsets();
   const [board, setBoard] = useState<MarketBoard | null>(null);
   const [perplMarkets, setPerplMarkets] = useState<PerplMarket[]>([]);
+  const [btcChartPoints, setBtcChartPoints] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterTab>("all");
   const [loading, setLoading] = useState(true);
@@ -59,21 +59,17 @@ export default function MarketsScreen() {
   const load = useCallback(async () => {
     try {
       setLoading(true);
-      const { USE_MOCK } = await import("@/src/config/chain");
-      if (USE_MOCK) {
-        setBoard(mockMarketBoard() as any);
-        setPerplMarkets(mockPerplMarkets().markets as any);
-        setErr(null);
-        setLoading(false);
-        return;
-      }
-      const [b, p] = await Promise.allSettled([
+      const [b, p, btcHist] = await Promise.allSettled([
         fetchMarketBoard("monad"),
         fetchPerplMarkets(),
+        fetchPriceHistory("BTC", 1, 48),
       ]);
 
       if (b.status === "fulfilled") setBoard(b.value);
       if (p.status === "fulfilled") setPerplMarkets(p.value.markets);
+      if (btcHist.status === "fulfilled" && btcHist.value.bars?.length) {
+        setBtcChartPoints(btcHist.value.bars);
+      }
       setErr(null);
     } catch (e: any) {
       setErr(e.message || "Failed to load markets");
@@ -171,7 +167,6 @@ export default function MarketsScreen() {
             <Text style={styles.networkText}>MONAD TESTNET</Text>
           </View>
         </View>
-        <MockBanner />
 
         {/* Header */}
         <View style={styles.header}>
@@ -285,7 +280,7 @@ export default function MarketsScreen() {
               </View>
                 <Text style={monoStyle(11, colors.brand)}>OPEN →</Text>
               </View>
-              <PriceChart points={mockSeries("BTC", 48)} width={W - 44} height={150} symbol="BTC" />
+              <PriceChart points={btcChartPoints} width={W - 44} height={150} symbol="BTC" />
             </Pressable>
           )}
 

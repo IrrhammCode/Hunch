@@ -12,7 +12,6 @@ import {
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/src/auth/AuthContext";
-import { MockBanner } from "@/src/components/MockBanner";
 import { Screen } from "@/src/components/Screen";
 import { PrimaryButton } from "@/src/components/ui";
 import { Icon } from "@/src/components/Icon";
@@ -78,8 +77,6 @@ export default function SignupScreen() {
           showsVerticalScrollIndicator={false}
           bounces={false}
         >
-          <MockBanner />
-
           <Animated.View entering={FadeInUp.duration(280)} style={styles.hero}>
             <Text style={styles.eyebrow}>CREATE ACCOUNT</Text>
             <Text style={styles.headline}>One passkey{"\n"}is your wallet</Text>

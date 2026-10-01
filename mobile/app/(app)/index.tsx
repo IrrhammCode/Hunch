@@ -31,7 +31,6 @@ import {
 import { useAuth } from "@/src/auth/AuthContext";
 import { BrandMark } from "@/src/components/BrandMark";
 import { Screen } from "@/src/components/Screen";
-import { MockBanner } from "@/src/components/MockBanner";
 import { Icon } from "@/src/components/Icon";
 import { useToast } from "@/src/components/Toast";
 import { AmountChip, BalanceChip, PrimaryButton } from "@/src/components/ui";
@@ -88,35 +87,6 @@ export default function HunchScreen() {
     try {
       const sel = getSelectedMarket();
       const next = await fetchCurrentRound(sel.symbol);
-      // Mock: keep round perpetually open so design never hits empty state
-      if (process.env.EXPO_PUBLIC_USE_MOCK !== "0") {
-        const mockRound = {
-          ...next,
-          round: {
-            ...(next.round || {
-              roundId: "1842",
-              market: "0xMockMarketBTC1842",
-              strike: "8124050000000",
-              expo: 8,
-              startTime: Math.floor(Date.now() / 1000),
-              expiry: Math.floor(Date.now() / 1000) + 60,
-            }),
-            status: "open" as const,
-          },
-          spot: next.spot || { yes: "0.56", no: "0.44" },
-          timeRemaining:
-            endsAt && endsAt > Date.now()
-              ? Math.max(1, (endsAt - Date.now()) / 1000)
-              : 45,
-        };
-        setData(mockRound as CurrentRoundResponse);
-        setErr(null);
-        if (!endsAt || endsAt < Date.now() + 5000) {
-          setEndsAt(Date.now() + 45 * 1000);
-        }
-        setLoading(false);
-        return;
-      }
       setData(next);
       setErr(null);
 
@@ -202,7 +172,7 @@ export default function HunchScreen() {
   const remainingSec = remainingSecRaw;
   const remainingDisplay = open ? formatCountdown(remainingSec) : "—";
   const strikeLabel = round ? formatStrike(round.strike, round.expo) : "—";
-  const canTrade = open && (remainingSec >= 12 || process.env.EXPO_PUBLIC_USE_MOCK !== "0") && !busy;
+  const canTrade = open && remainingSec >= 12 && !busy;
 
   useEffect(() => {
     if (!open || !round?.market) {
@@ -240,12 +210,12 @@ export default function HunchScreen() {
         toast.show("No live round", { body: "Keeper is opening the next market." });
         return;
       }
-      if (remainingSec < 12 && !(process.env.EXPO_PUBLIC_USE_MOCK !== "0")) {
+      if (remainingSec < 12) {
         toast.show("Too late", { body: "Under 12s left — wait for next round." });
         return;
       }
       if (!user?.address) {
-        toast.error("Wallet not ready", "Sign in (mock auto or Privy/Mera) to trade.");
+        toast.error("Wallet not ready", "Sign in with Face ID / Passkey to trade.");
         return;
       }
 
@@ -438,7 +408,6 @@ export default function HunchScreen() {
             <Text style={styles.plusIcon}>+</Text>
           </View>
         </View>
-        <MockBanner />
 
         {/* Trade Mode Segmenter */}
         <View style={styles.modeSegment}>

@@ -14,9 +14,6 @@ import {
   fetchMarketBoard,
   type MarketBoardRow,
 } from "@/src/api/client";
-import { MockBanner } from "@/src/components/MockBanner";
-import { mockMarketBoard } from "@/src/mock/fixtures";
-import { USE_MOCK } from "@/src/config/chain";
 import { useAuth } from "@/src/auth/AuthContext";
 import { Screen } from "@/src/components/Screen";
 import { useToast } from "@/src/components/Toast";
@@ -45,12 +42,6 @@ export default function OptionsExchangeScreen() {
 
   const load = useCallback(async () => {
     try {
-      if (USE_MOCK) {
-        const board = mockMarketBoard() as any;
-        setRows(board.markets);
-        setErr(null);
-        return;
-      }
       const board = await fetchMarketBoard("monad");
       setRows(board.markets.filter((m) => m.chain === "monad"));
       setErr(null);
@@ -150,7 +141,6 @@ export default function OptionsExchangeScreen() {
   return (
     <Screen>
       <View style={[styles.wrap, { paddingTop: insets.top + 16 }]}>
-        <MockBanner />
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
             <Text style={styles.title}>EXCHANGE</Text>

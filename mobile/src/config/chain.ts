@@ -51,12 +51,11 @@ export const PRIVY_CLIENT_ID_OK = false;
 export const HAS_PRIVY = false;
 
 /**
- * FULL MOCK MODE — ON by default until Tenderly + live keys are ready.
- * EXPO_PUBLIC_USE_MOCK=0 → real API / Mera / Perpl.
+ * 100% LIVE REAL MODE — Real API / Mera Passkey / Perpl DEX on Monad Testnet.
  */
-export const USE_MOCK = process.env.EXPO_PUBLIC_USE_MOCK !== "0";
+export const USE_MOCK = false;
 
-export const REAL_TRADING = !USE_MOCK;
+export const REAL_TRADING = true;
 
 export const CHAIN_ID = monadTestnet.id;
 

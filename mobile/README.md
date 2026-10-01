@@ -4,14 +4,13 @@ Swipe UP or DOWN on 60-second onchain markets on Monad.
 
 **Track 01 · Agora Mobile · Privy · Pyth** · Bundle ID `com.hunch123.app`
 
-## Real auth only
+## 100% Real Live Mode
 
-**Current default: FULL MOCK design mode** (`EXPO_PUBLIC_USE_MOCK=1`) until Tenderly + live keys are ready.
+**Current default: 100% LIVE REAL MODE** (`EXPO_PUBLIC_USE_MOCK=0`). Real API, real Monad testnet, real Mera passkey, Agora AUSD, and Perpl DEX.
 
 | Env | Value | Meaning |
 |---|---|---|
-| `EXPO_PUBLIC_USE_MOCK` | `1` | Fixtures · mock wallet · fake fills · **MOCK banner** in UI |
-| `EXPO_PUBLIC_USE_MOCK` | `0` | Real API / Mera / Privy / Perpl / Quicknode |
+| `EXPO_PUBLIC_USE_MOCK` | `0` | Real API / Mera Passkey / Perpl DEX / Monad Testnet |
 
 Restart Metro after changing `.env`.
 

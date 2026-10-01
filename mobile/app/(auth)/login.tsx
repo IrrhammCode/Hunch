@@ -12,7 +12,6 @@ import {
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/src/auth/AuthContext";
-import { MockBanner } from "@/src/components/MockBanner";
 import { BrandMark } from "@/src/components/BrandMark";
 import { Screen } from "@/src/components/Screen";
 import { PrimaryButton } from "@/src/components/ui";
@@ -74,10 +73,6 @@ export default function LoginScreen() {
               60s UP/DOWN + Perpl perps. Passkey wallet only.
             </Text>
           </Animated.View>
-
-          <View style={styles.block}>
-            <MockBanner />
-          </View>
 
           {!isNativePasskey ? (
             <View style={styles.previewNotice}>

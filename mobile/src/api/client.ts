@@ -18,8 +18,8 @@ import {
   MOCK_ADDRESS_CHECKSUM,
 } from "@/src/mock/fixtures";
 
-// Hard-default: mock when flag is anything but explicit "0"
-const MOCK = USE_MOCK || process.env.EXPO_PUBLIC_USE_MOCK !== "0";
+// Hard-default: 100% real mode
+const MOCK = false;
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8787";
 

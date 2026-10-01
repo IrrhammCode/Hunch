@@ -130,19 +130,6 @@ export async function placeWalletTrade(params: {
 }): Promise<PrivyTradeResult> {
   const { provider, address, side, amountAUSD, symbol, market } = params;
 
-  // FULL MOCK design mode — labeled fake fill, no chain
-  if (process.env.EXPO_PUBLIC_USE_MOCK !== "0" || provider?.isMock) {
-    const { mockTradeFill } = await import("../mock/fixtures");
-    const result = mockTradeFill(side, amountAUSD, symbol || "BTC") as any;
-    return {
-      ...result,
-      trader: address || result.trader,
-      intentId: "mock-1",
-      funded: true,
-      commitTx: result.executeTx,
-    };
-  }
-
   if (!address || !/^0x[a-fA-F0-9]{40}$/.test(address)) {
     throw new Error("Wallet required — sign in with Face ID / Mera passkey first.");
   }
@@ -221,14 +208,6 @@ export async function depositPerplMargin(params: {
   accountId?: number;
 }> {
   const { provider, address, amountAUSD } = params;
-
-  if (process.env.EXPO_PUBLIC_USE_MOCK !== "0" || provider?.isMock) {
-    return {
-      depositTx: "0xmockDeposit" + Date.now().toString(16),
-      amountAUSD,
-      accountId: 644,
-    };
-  }
 
   await ensureChain(provider);
 
@@ -353,18 +332,6 @@ export async function sendOnchainTransfer(
   const numAmount = parseFloat(cleanAmount);
   if (isNaN(numAmount) || numAmount <= 0) {
     throw new Error("Transfer amount must be greater than 0.");
-  }
-
-  // MOCK MODE
-  if (process.env.EXPO_PUBLIC_USE_MOCK !== "0" || provider?.isMock) {
-    await new Promise((r) => setTimeout(r, 600));
-    return {
-      txHash: "0xmockTransfer" + Date.now().toString(16),
-      from,
-      to,
-      amount: cleanAmount,
-      token,
-    };
   }
 
   await ensureChain(provider);

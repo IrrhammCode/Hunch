@@ -12,7 +12,6 @@ import { Linking, Pressable, ScrollView, StyleSheet, Text, View, ActivityIndicat
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/src/auth/AuthContext";
 import { Screen } from "@/src/components/Screen"
-import { MockBanner } from "@/src/components/MockBanner";
 import { EmptyState } from "@/src/components/ui";
 import { Icon } from "@/src/components/Icon";
 import { useToast } from "@/src/components/Toast";
@@ -187,7 +186,6 @@ export default function PositionsScreen() {
             <Text style={{ color: colors.brand, fontSize: 13, fontWeight: "700", marginLeft: 4 }}>+</Text>
           </Pressable>
         </View>
-        <MockBanner />
 
         <ScrollView
           style={{ flex: 1, width: "100%", alignSelf: "stretch" }}
