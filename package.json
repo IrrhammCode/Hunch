@@ -4,6 +4,8 @@
   "private": true,
   "description": "Hunch — 60-second binary hunches on Monad",
   "scripts": {
+    "build": "npm --prefix mobile run build",
+    "build:mobile": "npm --prefix mobile run build",
     "compile": "hardhat compile",
     "test": "hardhat test",
     "test:e2e": "hardhat test test/e2e/Hunch.e2e.ts",
