@@ -387,7 +387,6 @@ export default function PositionsScreen() {
                     {pos.id.startsWith("hedge_") && (
                       <View style={styles.hedgePillRow}>
                         <View style={styles.hedgePill}>
-                          <Text style={styles.hedgePillIcon}>⚡</Text>
                           <Text style={styles.hedgePillText}>
                             PROTECTIVE HEDGE FOR 60s HUNCH
                           </Text>
@@ -421,14 +420,14 @@ export default function PositionsScreen() {
                         {pos.tpPrice != null && (
                           <View style={styles.posGuardBadgeTP}>
                             <Text style={styles.posGuardBadgeTPText}>
-                              🎯 TP ${pos.tpPrice.toLocaleString()}
+                              TP ${pos.tpPrice.toLocaleString()}
                             </Text>
                           </View>
                         )}
                         {pos.slPrice != null && (
                           <View style={styles.posGuardBadgeSL}>
                             <Text style={styles.posGuardBadgeSLText}>
-                              🛑 SL ${pos.slPrice.toLocaleString()}
+                              SL ${pos.slPrice.toLocaleString()}
                             </Text>
                           </View>
                         )}
@@ -436,9 +435,9 @@ export default function PositionsScreen() {
                           <View style={styles.posReasonBadge}>
                             <Text style={styles.posReasonBadgeText}>
                               {pos.closeReason === "TP_TRIGGERED"
-                                ? "🎯 TP HIT"
+                                ? "TP HIT"
                                 : pos.closeReason === "SL_TRIGGERED"
-                                ? "🛑 SL HIT"
+                                ? "SL HIT"
                                 : pos.closeReason}
                             </Text>
                           </View>
@@ -522,7 +521,6 @@ export default function PositionsScreen() {
                     {localH?.hedgedPerpId && (
                       <View style={styles.hedgePillRow}>
                         <View style={styles.hedgePill}>
-                          <Text style={styles.hedgePillIcon}>⚡</Text>
                           <Text style={styles.hedgePillText}>
                             DELTA-HEDGED WITH PERPL ({localH.hedgeSide || "PERP"})
                           </Text>

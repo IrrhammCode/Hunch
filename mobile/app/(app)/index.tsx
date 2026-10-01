@@ -637,7 +637,7 @@ export default function HunchScreen() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                    <Text style={styles.hedgeTitle}>⚡ HEDGE ON PERPL</Text>
+                    <Text style={styles.hedgeTitle}>HEDGE ON PERPL</Text>
                     <View style={styles.hedgeBountyBadge}>
                       <Text style={styles.hedgeBountyBadgeText}>DELTA HEDGE</Text>
                     </View>

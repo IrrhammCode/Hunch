@@ -21,8 +21,14 @@ import { MERA_RP_ID } from "@/src/auth/mera";
 import { colors, radius, space, type } from "@/src/theme";
 
 export default function LoginScreen() {
-  const { user, meraAvailable, missingAuthConfig, loginWithMera, loginWithFaceId } =
-    useAuth();
+  const {
+    user,
+    meraAvailable,
+    isNativePasskey,
+    missingAuthConfig,
+    loginWithMera,
+    loginWithFaceId,
+  } = useAuth();
   const insets = useSafeAreaInsets();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -72,6 +78,15 @@ export default function LoginScreen() {
           <View style={styles.block}>
             <MockBanner />
           </View>
+
+          {!isNativePasskey ? (
+            <View style={styles.previewNotice}>
+              <Icon name="information-circle-outline" size={16} color={colors.brand} />
+              <Text style={styles.previewNoticeBody}>
+                Preview mode: Passkeys simulated for Web / Expo Go — using Monad testnet wallet.
+              </Text>
+            </View>
+          ) : null}
 
           {missingAuthConfig && !meraAvailable ? (
             <View style={styles.notice}>
@@ -177,6 +192,23 @@ const styles = StyleSheet.create({
     maxWidth: 260,
   },
   block: { gap: 8 },
+  previewNotice: {
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255, 179, 0, 0.35)",
+    backgroundColor: "rgba(255, 179, 0, 0.08)",
+    borderRadius: radius.sm,
+    padding: 12,
+  },
+  previewNoticeBody: {
+    color: colors.muted,
+    fontFamily: type.body,
+    fontSize: 12,
+    flex: 1,
+    lineHeight: 17,
+  },
   notice: {
     flexDirection: "row",
     gap: 8,

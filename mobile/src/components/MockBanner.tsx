@@ -16,16 +16,16 @@ export function MockBanner() {
 
 const styles = StyleSheet.create({
   bar: {
-    backgroundColor: "rgba(214,255,63,0.16)",
-    borderWidth: 1,
-    borderColor: "rgba(214,255,63,0.45)",
+    backgroundColor: "#18240D",
+    borderWidth: 1.5,
+    borderColor: "#D6FF3F",
     borderRadius: 8,
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 7,
   },
   text: {
-    color: colors.brand,
-    fontFamily: type.data,
+    color: "#D6FF3F",
+    fontFamily: type.bold,
     fontSize: 10,
     letterSpacing: 0.6,
     textAlign: "center",

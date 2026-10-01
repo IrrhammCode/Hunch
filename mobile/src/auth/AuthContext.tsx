@@ -10,6 +10,7 @@ import { USE_MOCK } from "../config/chain";
 import {
   clearMeraSession,
   ensureMeraLogin,
+  isNativePasskeySupported,
   meraNativeReady,
   unlockMeraFromStored,
   type MeraRuntime,
@@ -33,9 +34,11 @@ type AuthContextValue = {
   ready: boolean;
   /** Always false — Privy removed. Kept for call-site compatibility. */
   privyMode: boolean;
-  /** True when native passkey stack is available (dev client / TestFlight). */
+  /** True when passkey stack is available to use. */
   meraAvailable: boolean;
-  /** Setup hint when passkeys cannot run (Expo Go / web). */
+  /** True when native hardware passkey/Face ID is present. */
+  isNativePasskey: boolean;
+  /** Setup hint when passkeys cannot run. */
   missingAuthConfig: boolean;
   authMethod: AuthMethod;
   mockMode: boolean;
@@ -91,6 +94,7 @@ function MockAuthProvider({ children }: { children: React.ReactNode }) {
       ready: true,
       privyMode: false,
       meraAvailable: false,
+      isNativePasskey: false,
       missingAuthConfig: false,
       authMethod: user ? "mock" : null,
       mockMode: true,
@@ -142,13 +146,16 @@ function MeraOnlyAuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   }, []);
 
+  const isNative = isNativePasskeySupported();
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
       ready,
       privyMode: false,
-      meraAvailable: meraNativeReady(),
-      missingAuthConfig: !meraNativeReady(),
+      meraAvailable: true,
+      isNativePasskey: isNative,
+      missingAuthConfig: false,
       authMethod: user?.mera ? "mera" : null,
       mockMode: false,
       loginWithMera,
@@ -159,7 +166,7 @@ function MeraOnlyAuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error("Sign in with passkey first");
       },
     }),
-    [user, ready, loginWithMera, logout, meraRuntime],
+    [user, ready, loginWithMera, logout, meraRuntime, isNative],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

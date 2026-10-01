@@ -40,7 +40,7 @@ export function PnlShareModal({ visible, onClose, position }: PnlShareModalProps
     await haptic("medium");
     const sign = isProfitable ? "+" : "";
     const text = [
-      `🔥 Hunch DEX Terminal · Monad Testnet`,
+      `Hunch DEX Terminal · Monad Testnet`,
       `${position.symbol} ${position.side} ${position.leverage}X`,
       `PnL: ${sign}${pnlPct.toFixed(1)}% (${sign}$${pnlAUSD.toFixed(2)} AUSD)`,
       `Entry: $${position.entryPrice.toLocaleString()} → Mark: $${currentPrice.toLocaleString()}`,
@@ -147,7 +147,6 @@ export function PnlShareModal({ visible, onClose, position }: PnlShareModalProps
             {/* Verification Footer */}
             <View style={styles.cardFooter}>
               <View style={styles.footerTag}>
-                <Text style={styles.footerTagIcon}>⚡</Text>
                 <Text style={styles.footerTagText}>AGORA AUSD · PERPL PROTOCOL</Text>
               </View>
               <Text style={styles.hunchUrl}>hunch.trade</Text>
@@ -157,7 +156,6 @@ export function PnlShareModal({ visible, onClose, position }: PnlShareModalProps
           {/* Action Row */}
           <View style={styles.actionRow}>
             <Pressable onPress={handleCopy} style={styles.copyBtn}>
-              <Text style={styles.copyBtnIcon}>📋</Text>
               <Text style={styles.copyBtnText}>COPY PnL SUMMARY</Text>
             </Pressable>
             <Pressable onPress={onClose} style={styles.closeBtn}>

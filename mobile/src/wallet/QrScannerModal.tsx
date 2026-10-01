@@ -200,7 +200,6 @@ export function QrScannerModal({
                   >
                     <View style={[styles.presetDot, { backgroundColor: p.color }]} />
                     <Text style={styles.presetText}>{p.label}</Text>
-                    <Text style={styles.presetScanIcon}>⚡</Text>
                   </Pressable>
                 ))}
               </View>

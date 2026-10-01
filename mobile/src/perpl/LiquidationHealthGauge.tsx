@@ -69,7 +69,6 @@ export function LiquidationHealthGauge({ risk, onDepositPress }: LiquidationHeal
       {/* Top Header */}
       <View style={styles.topRow}>
         <View style={styles.titleWrap}>
-          <Text style={styles.titleIcon}>🛡️</Text>
           <Text style={styles.title}>LIQUIDATION HEALTH GAUGE</Text>
         </View>
         <View style={[styles.statusBadge, { borderColor: getStatusColor() }]}>
@@ -138,7 +137,7 @@ export function LiquidationHealthGauge({ risk, onDepositPress }: LiquidationHeal
       {positions.length > 0 && (
         <View style={styles.simulatorWrap}>
           <View style={styles.simulatorHeader}>
-            <Text style={styles.simulatorTitle}>⚡ SCENARIO SHOCK SIMULATOR</Text>
+            <Text style={styles.simulatorTitle}>SCENARIO SHOCK SIMULATOR</Text>
             {shockPct != null && (
               <Pressable
                 onPress={() => {
@@ -209,7 +208,9 @@ export function LiquidationHealthGauge({ risk, onDepositPress }: LiquidationHeal
       {/* Warning Alert Banner (if any warning from Perpl risk engine) */}
       {risk?.warnings && risk.warnings.length > 0 && (
         <View style={styles.warningBox}>
-          <Text style={styles.warningIcon}>⚠️</Text>
+          <View style={styles.warningBadge}>
+            <Text style={styles.warningBadgeText}>WARNING</Text>
+          </View>
           <Text style={styles.warningText} numberOfLines={2}>
             {risk.warnings[0]}
           </Text>
@@ -337,33 +338,42 @@ const styles = StyleSheet.create({
   warningBox: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255,77,106,0.08)",
-    borderWidth: 1,
-    borderColor: "rgba(255,77,106,0.3)",
-    paddingVertical: 6,
+    backgroundColor: "#240B10",
+    borderWidth: 1.5,
+    borderColor: "#FF4D6A",
+    paddingVertical: 8,
     paddingHorizontal: 10,
     borderRadius: radius.md,
-    gap: 6,
+    gap: 8,
   },
-  warningIcon: {
-    fontSize: 12,
+  warningBadge: {
+    backgroundColor: "#3E121C",
+    borderColor: "#FF4D6A",
+    borderWidth: 1,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  warningBadgeText: {
+    color: "#FF4D6A",
+    fontFamily: type.bold,
+    fontSize: 9,
+    letterSpacing: 0.5,
   },
   warningText: {
     flex: 1,
-    color: colors.down,
-    fontFamily: type.data,
-    fontSize: 10,
+    color: "#FFCCD4",
+    fontFamily: type.bold,
+    fontSize: 11,
   },
   addMarginBtn: {
-    backgroundColor: "rgba(214,255,63,0.15)",
-    borderWidth: 1,
-    borderColor: "rgba(214,255,63,0.35)",
-    paddingVertical: 3,
-    paddingHorizontal: 7,
+    backgroundColor: "#D6FF3F",
+    paddingVertical: 4,
+    paddingHorizontal: 8,
     borderRadius: radius.sm,
   },
   addMarginBtnText: {
-    color: colors.brand,
+    color: "#0A0B0D",
     fontFamily: type.bold,
     fontSize: 9,
   },

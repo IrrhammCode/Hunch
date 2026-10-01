@@ -386,7 +386,9 @@ export function PerpTradingTicket() {
       {/* TAKE PROFIT & STOP LOSS (TP/SL) GUARD SECTION */}
       <View style={styles.guardSection}>
         <View style={styles.guardSectionHeader}>
-          <Text style={styles.guardShieldIcon}>🛡️</Text>
+          <View style={styles.guardShieldBadge}>
+            <Text style={styles.guardShieldBadgeText}>AUTO</Text>
+          </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.guardSectionTitle}>TAKE PROFIT & STOP LOSS</Text>
             <Text style={styles.guardSectionSub}>Perpl signed WebSocket keeper automation</Text>
@@ -1022,8 +1024,19 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 2,
   },
-  guardShieldIcon: {
-    fontSize: 16,
+  guardShieldBadge: {
+    backgroundColor: "#1B2232",
+    borderColor: "#836EF9",
+    borderWidth: 1,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  guardShieldBadgeText: {
+    color: "#836EF9",
+    fontFamily: type.bold,
+    fontSize: 9,
+    letterSpacing: 0.6,
   },
   guardSectionTitle: {
     color: colors.ink,
