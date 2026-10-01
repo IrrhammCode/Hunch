@@ -112,3 +112,87 @@ export async function buildPerplRisk(address: string): Promise<PerplRiskReport> 
     })),
   };
 }
+
+export type StressScenario = {
+  shockPct: number;
+  projectedPnLAUSD: number;
+  projectedCollateralAUSD: number;
+  projectedFreeMarginAUSD: number;
+  projectedUtilizationPct: number;
+  survives: boolean;
+  liquidatedPositionsCount: number;
+};
+
+export type StressTestReport = {
+  address: string;
+  currentCollateralAUSD: number;
+  currentMarginUsedAUSD: number;
+  maxSurvivableDropPct: number;
+  maxSurvivablePumpPct: number;
+  scenarios: StressScenario[];
+};
+
+export async function stressTestPerplPortfolio(address: string): Promise<StressTestReport> {
+  const risk = await buildPerplRisk(address);
+  const openPositions = risk.positions.filter((p) => p.status === "OPEN");
+  const baseCollateral = risk.collateralAUSD;
+  const baseMarginUsed = risk.marginUsedAUSD;
+
+  const shockPercentages = [-25, -20, -15, -10, -5, 5, 10, 15, 20, 25];
+  const scenarios: StressScenario[] = shockPercentages.map((shockPct) => {
+    let shockPnL = 0;
+    let liquidatedCount = 0;
+
+    for (const p of openPositions) {
+      const mark = p.markPrice ?? p.entryPrice;
+      const shockedPrice = mark * (1 + shockPct / 100);
+      const delta = shockedPrice - p.entryPrice;
+      const pnl = p.side === "LONG" ? delta * (p.size || 0) : -delta * (p.size || 0);
+      shockPnL += pnl;
+
+      if (p.liquidationPrice > 0) {
+        if (p.side === "LONG" && shockedPrice <= p.liquidationPrice) liquidatedCount++;
+        if (p.side === "SHORT" && shockedPrice >= p.liquidationPrice) liquidatedCount++;
+      }
+    }
+
+    const projCollateral = Math.max(0, baseCollateral + shockPnL);
+    const projFree = Math.max(0, projCollateral - baseMarginUsed);
+    const projUtil = projCollateral > 0 ? Math.min(100, (baseMarginUsed / projCollateral) * 100) : 100;
+    const survives = liquidatedCount === 0 && projCollateral >= baseMarginUsed * 0.2;
+
+    return {
+      shockPct,
+      projectedPnLAUSD: Number(shockPnL.toFixed(2)),
+      projectedCollateralAUSD: Number(projCollateral.toFixed(2)),
+      projectedFreeMarginAUSD: Number(projFree.toFixed(2)),
+      projectedUtilizationPct: Number(projUtil.toFixed(1)),
+      survives,
+      liquidatedPositionsCount: liquidatedCount,
+    };
+  });
+
+  let maxDrop = -100;
+  let maxPump = 100;
+
+  for (const p of openPositions) {
+    if (p.liquidationPrice > 0 && (p.markPrice ?? 0) > 0) {
+      const mark = p.markPrice!;
+      const movePct = ((p.liquidationPrice - mark) / mark) * 100;
+      if (p.side === "LONG" && movePct < 0) {
+        maxDrop = Math.max(maxDrop, movePct);
+      } else if (p.side === "SHORT" && movePct > 0) {
+        maxPump = Math.min(maxPump, movePct);
+      }
+    }
+  }
+
+  return {
+    address: address.toLowerCase(),
+    currentCollateralAUSD: baseCollateral,
+    currentMarginUsedAUSD: baseMarginUsed,
+    maxSurvivableDropPct: maxDrop === -100 ? -50 : Number(maxDrop.toFixed(1)),
+    maxSurvivablePumpPct: maxPump === 100 ? 50 : Number(maxPump.toFixed(1)),
+    scenarios,
+  };
+}

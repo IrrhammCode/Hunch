@@ -26,6 +26,30 @@ export function LiquidationHealthGauge({ risk, onDepositPress }: LiquidationHeal
     return min === null ? p.liqDistancePct : Math.min(min, p.liqDistancePct);
   }, null);
 
+  // Interactive scenario shock state
+  const [shockPct, setShockPct] = React.useState<number | null>(null);
+
+  const simulatedImpact = React.useMemo(() => {
+    if (shockPct == null || positions.length === 0) return null;
+    let projPnl = 0;
+    for (const p of positions) {
+      const mark = p.markPrice ?? p.entryPrice;
+      const shockedPrice = mark * (1 + shockPct / 100);
+      const delta = shockedPrice - p.entryPrice;
+      const pnl = p.side === "LONG" ? delta * (p.size || 0) : -delta * (p.size || 0);
+      projPnl += pnl;
+    }
+    const projCollat = Math.max(0, collateral + projPnl);
+    const projUtil = projCollat > 0 ? Math.min(100, Math.round((marginUsed / projCollat) * 100)) : 100;
+    const isLiquidated = projCollat < marginUsed * 0.2;
+    return {
+      projPnl,
+      projCollat,
+      projUtil,
+      isLiquidated,
+    };
+  }, [shockPct, positions, collateral, marginUsed]);
+
   const getStatusColor = () => {
     if (level === "HIGH" || utilizationPct > 80) return colors.down;
     if (level === "MEDIUM" || utilizationPct > 50) return "#FFD13B";
@@ -109,6 +133,78 @@ export function LiquidationHealthGauge({ risk, onDepositPress }: LiquidationHeal
           </Text>
         </View>
       </View>
+
+      {/* Interactive Scenario Shock Simulator */}
+      {positions.length > 0 && (
+        <View style={styles.simulatorWrap}>
+          <View style={styles.simulatorHeader}>
+            <Text style={styles.simulatorTitle}>⚡ SCENARIO SHOCK SIMULATOR</Text>
+            {shockPct != null && (
+              <Pressable
+                onPress={() => {
+                  haptic("selection");
+                  setShockPct(null);
+                }}
+              >
+                <Text style={styles.resetText}>RESET</Text>
+              </Pressable>
+            )}
+          </View>
+
+          <View style={styles.chipsRow}>
+            {[-10, -5, 5, 10].map((pct) => (
+              <Pressable
+                key={pct}
+                onPress={() => {
+                  haptic("selection");
+                  setShockPct(shockPct === pct ? null : pct);
+                }}
+                style={[
+                  styles.shockChip,
+                  shockPct === pct && styles.shockChipActive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.shockChipText,
+                    pct < 0 ? { color: colors.down } : { color: colors.up },
+                    shockPct === pct && { fontWeight: "bold" },
+                  ]}
+                >
+                  {pct > 0 ? `+${pct}%` : `${pct}%`}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+
+          {simulatedImpact && (
+            <View style={styles.impactCard}>
+              <View style={styles.impactRow}>
+                <Text style={styles.impactLabel}>PROJECTED PnL</Text>
+                <Text
+                  style={[
+                    styles.impactVal,
+                    { color: simulatedImpact.projPnl >= 0 ? colors.up : colors.down },
+                  ]}
+                >
+                  {simulatedImpact.projPnl >= 0 ? "+" : ""}${simulatedImpact.projPnl.toFixed(2)} AUSD
+                </Text>
+              </View>
+              <View style={styles.impactRow}>
+                <Text style={styles.impactLabel}>PROJ. UTILIZATION</Text>
+                <Text
+                  style={[
+                    styles.impactVal,
+                    { color: simulatedImpact.projUtil > 80 ? colors.down : colors.brand },
+                  ]}
+                >
+                  {simulatedImpact.projUtil}% ({simulatedImpact.isLiquidated ? "AT RISK" : "SAFE"})
+                </Text>
+              </View>
+            </View>
+          )}
+        </View>
+      )}
 
       {/* Warning Alert Banner (if any warning from Perpl risk engine) */}
       {risk?.warnings && risk.warnings.length > 0 && (
@@ -270,5 +366,75 @@ const styles = StyleSheet.create({
     color: colors.brand,
     fontFamily: type.bold,
     fontSize: 9,
+  },
+  simulatorWrap: {
+    backgroundColor: "#141822",
+    borderRadius: radius.md,
+    padding: 10,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: "#1E2433",
+  },
+  simulatorHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  simulatorTitle: {
+    color: colors.muted,
+    fontFamily: type.bold,
+    fontSize: 9,
+    letterSpacing: 0.6,
+  },
+  resetText: {
+    color: colors.brand,
+    fontFamily: type.bold,
+    fontSize: 9,
+  },
+  chipsRow: {
+    flexDirection: "row",
+    gap: 6,
+  },
+  shockChip: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 5,
+    borderRadius: radius.sm,
+    backgroundColor: "#1B2130",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.06)",
+  },
+  shockChipActive: {
+    borderColor: colors.brand,
+    backgroundColor: "rgba(214,255,63,0.15)",
+  },
+  shockChipText: {
+    fontFamily: type.data,
+    fontSize: 10,
+    fontWeight: "600",
+  },
+  impactCard: {
+    backgroundColor: "#0D1017",
+    borderRadius: radius.sm,
+    padding: 8,
+    gap: 5,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.04)",
+  },
+  impactRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  impactLabel: {
+    color: colors.muted,
+    fontFamily: type.bold,
+    fontSize: 8,
+  },
+  impactVal: {
+    fontFamily: type.data,
+    fontSize: 10,
+    fontWeight: "bold",
   },
 });
