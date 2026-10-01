@@ -4,6 +4,7 @@
  */
 import { loadEnv } from "../shared/chain";
 import { feedIdFor, marketBySymbol, MARKETS } from "../shared/markets";
+import { getPerplMarkets } from "../shared/perpl";
 import { HERMES } from "../../config/addresses";
 
 const SYMBOL_MAP: Record<string, string> = {
@@ -12,6 +13,19 @@ const SYMBOL_MAP: Record<string, string> = {
   SOL: "Crypto.SOL/USD",
   MON: "Crypto.MON/USD",
 };
+
+const priceCache: Record<
+  string,
+  {
+    symbol: string;
+    price: number;
+    conf: number;
+    expo: number;
+    publishTime: number;
+    feedId: string;
+    cachedAt: number;
+  }
+> = {};
 
 function hermesBases(): string[] {
   loadEnv();
@@ -62,6 +76,12 @@ export async function fetchLatestPrice(symbol: string) {
   const s = normalizeSymbol(symbol);
   const feed = marketBySymbol(s)?.feedId || feedIdFor(s);
   const id = feed.startsWith("0x") ? feed.slice(2) : feed;
+
+  // Short in-memory cache to prevent sub-second rate-limiting across rapid sequential calls
+  if (priceCache[s] && Date.now() - priceCache[s].cachedAt < 2500) {
+    return priceCache[s];
+  }
+
   let p: any = null;
   try {
     const json = await hermesGet(`/v2/updates/price/latest?ids[]=${id}&encoding=hex`);
@@ -69,10 +89,26 @@ export async function fetchLatestPrice(symbol: string) {
   } catch {
     p = null;
   }
-  if (!p) {
-    // Fallback: CoinGecko simple price (chart source already used for history)
-    const cgId = CG_IDS[s] || (s === "MON" ? "monad" : undefined);
-    if (cgId) {
+
+  if (p) {
+    const price = Number(p.price) * Math.pow(10, Number(p.expo));
+    const result = {
+      symbol: s,
+      price,
+      conf: Number(p.conf) * Math.pow(10, Number(p.expo)),
+      expo: Number(p.expo),
+      publishTime: Number(p.publish_time),
+      feedId: feed,
+      cachedAt: Date.now(),
+    };
+    priceCache[s] = result;
+    return result;
+  }
+
+  // Fallback 1: CoinGecko simple price
+  const cgId = CG_IDS[s] || (s === "MON" ? "monad" : undefined);
+  if (cgId) {
+    try {
       const res = await fetch(
         `https://api.coingecko.com/api/v3/simple/price?ids=${cgId}&vs_currencies=usd`,
       );
@@ -80,28 +116,51 @@ export async function fetchLatestPrice(symbol: string) {
         const j = (await res.json()) as any;
         const usd = j?.[cgId]?.usd;
         if (typeof usd === "number") {
-          return {
+          const result = {
             symbol: s,
             price: usd,
             conf: usd * 0.0001,
             expo: -8,
             publishTime: Math.floor(Date.now() / 1000),
             feedId: feed,
+            cachedAt: Date.now(),
           };
+          priceCache[s] = result;
+          return result;
         }
       }
+    } catch {
+      /* continue to Fallback 2 */
     }
-    throw new Error("Pyth latest empty");
   }
-  const price = Number(p.price) * Math.pow(10, Number(p.expo));
-  return {
-    symbol: s,
-    price,
-    conf: Number(p.conf) * Math.pow(10, Number(p.expo)),
-    expo: Number(p.expo),
-    publishTime: Number(p.publish_time),
-    feedId: feed,
-  };
+
+  // Fallback 2: Perpl DEX live mark price (onchain/CLOB market state)
+  try {
+    const perplMarkets = await getPerplMarkets();
+    const pm = perplMarkets.find((m) => m.symbol.toUpperCase() === s);
+    if (pm && pm.markPrice > 0) {
+      const result = {
+        symbol: s,
+        price: pm.markPrice,
+        conf: pm.markPrice * 0.0001,
+        expo: -8,
+        publishTime: Math.floor(Date.now() / 1000),
+        feedId: feed,
+        cachedAt: Date.now(),
+      };
+      priceCache[s] = result;
+      return result;
+    }
+  } catch {
+    /* continue to cached fallback */
+  }
+
+  // Fallback 3: Return last valid cached price if available
+  if (priceCache[s]) {
+    return priceCache[s];
+  }
+
+  throw new Error("Pyth latest empty");
 }
 
 export type PriceBar = { t: number; o: number; h: number; l: number; c: number; v: number };

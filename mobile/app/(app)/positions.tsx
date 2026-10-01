@@ -174,11 +174,18 @@ export default function PositionsScreen() {
               <Text style={styles.appSub}>DEX TERMINAL</Text>
             </View>
           </View>
-          <View style={styles.topRightPill}>
+          <Pressable
+            onPress={() => {
+              Haptics.selectionAsync();
+              setShowMarginModal(true);
+            }}
+            style={styles.topRightPill}
+          >
             <View style={styles.greenPulse} />
             <Text style={styles.pillLabel}>AUSD TESTNET</Text>
             <Text style={styles.pillVal}>${totalCollateral}</Text>
-          </View>
+            <Text style={{ color: colors.brand, fontSize: 13, fontWeight: "700", marginLeft: 4 }}>+</Text>
+          </Pressable>
         </View>
         <MockBanner />
 

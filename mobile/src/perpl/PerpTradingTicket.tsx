@@ -143,6 +143,10 @@ export function PerpTradingTicket() {
       toast.show("Order Executed", {
         body: `${side} ${activeMarket.symbol} · ${leverage}x ($${positionSizeAUSD.toLocaleString()} AUSD)${guardStr ? ` · ${guardStr}` : ""}`,
         tone: "success",
+        actionLabel: "View in Portfolio",
+        onAction: () => {
+          router.push("/(app)/positions");
+        },
       });
 
       refreshWallet();

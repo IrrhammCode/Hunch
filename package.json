@@ -34,6 +34,7 @@
     "test:perpl:deposit": "ts-node scripts/testPerplDeposit.ts",
     "test:perpl:guards": "ts-node scripts/testPerplGuards.ts",
     "test:perpl:hedge": "ts-node scripts/testPerplHedge.ts",
+    "test:master": "ts-node scripts/testMasterE2E.ts",
     "keeper:perpl": "ts-node scripts/perplGuardKeeper.ts",
     "sim:tx": "ts-node scripts/tenderlySimulate.ts",
     "clean": "hardhat clean"
