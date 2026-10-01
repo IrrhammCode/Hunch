@@ -101,7 +101,8 @@ export default function PositionsScreen() {
     setClosingId(pos.id);
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
-      const res = await closePerplPosition(pos.id, userAddress, {
+      const traderAddr = userAddress || pos.trader;
+      const res = await closePerplPosition(pos.id, traderAddr, {
         symbol: pos.symbol,
         side: pos.side,
         size: pos.size,
@@ -128,7 +129,8 @@ export default function PositionsScreen() {
     setReversingId(pos.id);
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
-      const res = await reversePerplPosition(pos.id, userAddress, {
+      const traderAddr = userAddress || pos.trader;
+      const res = await reversePerplPosition(pos.id, traderAddr, {
         symbol: pos.symbol,
         side: pos.side,
         size: pos.size,
@@ -450,11 +452,9 @@ export default function PositionsScreen() {
                         style={[styles.actionBtn, styles.reverseBtn]}
                       >
                         {reversingId === pos.id ? (
-                          <ActivityIndicator color={colors.brand} size="small" />
+                          <ActivityIndicator color="#D6FF3F" size="small" />
                         ) : (
-                          <Text style={styles.reverseBtnText}>
-                            ⟲ REVERSE ({pos.side === "LONG" ? "SHORT" : "LONG"})
-                          </Text>
+                          <Text style={styles.reverseBtnText}>REVERSE</Text>
                         )}
                       </Pressable>
 
@@ -464,9 +464,9 @@ export default function PositionsScreen() {
                         style={[styles.actionBtn, styles.closeBtn]}
                       >
                         {isClosing ? (
-                          <ActivityIndicator color={colors.down} size="small" />
+                          <ActivityIndicator color="#FFFFFF" size="small" />
                         ) : (
-                          <Text style={styles.closeBtnText}>✕ CLOSE</Text>
+                          <Text style={styles.closeBtnText}>CLOSE</Text>
                         )}
                       </Pressable>
 
@@ -477,7 +477,7 @@ export default function PositionsScreen() {
                         }}
                         style={[styles.actionBtn, styles.shareBtn]}
                       >
-                        <Text style={styles.shareBtnText}>↗ SHARE</Text>
+                        <Text style={styles.shareBtnText}>SHARE</Text>
                       </Pressable>
                     </View>
                   </View>
@@ -551,12 +551,12 @@ export default function PositionsScreen() {
                     <Pressable
                       onPress={() => onRedeemHunch(h.roundId, h.market)}
                       disabled={busyId === h.roundId}
-                      style={styles.closeBtn}
+                      style={styles.claimBtn}
                     >
                       {busyId === h.roundId ? (
-                        <ActivityIndicator color={colors.brand} size="small" />
+                        <ActivityIndicator color="#D6FF3F" size="small" />
                       ) : (
-                        <Text style={styles.closeBtnText}>CLAIM ONCHAIN</Text>
+                        <Text style={styles.claimBtnText}>CLAIM ONCHAIN</Text>
                       )}
                     </Pressable>
                   ) : null}
@@ -1181,53 +1181,72 @@ const styles = StyleSheet.create({
   },
   actionRow: {
     flexDirection: "row",
-    gap: space.xs,
+    gap: 8,
+    marginTop: 8,
   },
   actionBtn: {
     flex: 1,
-    borderWidth: 1,
-    paddingVertical: 9,
-    borderRadius: radius.pill,
+    borderWidth: 1.5,
+    paddingVertical: 12,
+    borderRadius: radius.md,
     alignItems: "center",
     justifyContent: "center",
   },
   reverseBtn: {
-    borderColor: "rgba(214,255,63,0.35)",
-    backgroundColor: "rgba(214,255,63,0.06)",
+    borderColor: "#D6FF3F",
+    backgroundColor: "#182012",
   },
   reverseBtnText: {
-    color: colors.brand,
+    color: "#D6FF3F",
     fontFamily: type.bold,
-    fontSize: 10,
-    letterSpacing: 0.5,
+    fontSize: 12,
+    letterSpacing: 0.8,
   },
   closeBtn: {
-    borderWidth: 1,
-    borderColor: "rgba(255,77,106,0.4)",
-    backgroundColor: "rgba(255,77,106,0.08)",
-    paddingVertical: 9,
-    borderRadius: radius.pill,
+    flex: 1.2,
+    borderWidth: 1.5,
+    borderColor: "#FF4D6A",
+    backgroundColor: "#2B0F16",
+    paddingVertical: 12,
+    borderRadius: radius.md,
     alignItems: "center",
+    justifyContent: "center",
   },
   closeBtnText: {
-    color: colors.down,
+    color: "#FFFFFF",
     fontFamily: type.bold,
-    fontSize: 10,
-    letterSpacing: 0.6,
+    fontSize: 12,
+    letterSpacing: 0.8,
   },
   shareBtn: {
-    borderWidth: 1,
-    borderColor: "rgba(214,255,63,0.35)",
-    backgroundColor: "rgba(214,255,63,0.12)",
-    paddingVertical: 9,
-    paddingHorizontal: 12,
-    borderRadius: radius.pill,
+    borderWidth: 1.5,
+    borderColor: "#3B82F6",
+    backgroundColor: "#141C2B",
+    paddingVertical: 12,
+    borderRadius: radius.md,
     alignItems: "center",
+    justifyContent: "center",
   },
   shareBtnText: {
-    color: colors.brand,
+    color: "#60A5FA",
     fontFamily: type.bold,
-    fontSize: 10,
-    letterSpacing: 0.6,
+    fontSize: 12,
+    letterSpacing: 0.8,
+  },
+  claimBtn: {
+    marginTop: 8,
+    borderWidth: 1.5,
+    borderColor: "#D6FF3F",
+    backgroundColor: "#182012",
+    paddingVertical: 12,
+    borderRadius: radius.md,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  claimBtnText: {
+    color: "#D6FF3F",
+    fontFamily: type.bold,
+    fontSize: 12,
+    letterSpacing: 0.8,
   },
 });
