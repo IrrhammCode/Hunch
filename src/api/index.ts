@@ -48,6 +48,13 @@ import { PERPL_TESTNET } from "../shared/perpl";
 
 loadEnv();
 
+process.on("uncaughtException", (err) => {
+  console.error("[api] uncaughtException:", err?.message || err);
+});
+process.on("unhandledRejection", (err: any) => {
+  console.error("[api] unhandledRejection:", err?.message || err);
+});
+
 const app = new Hono();
 app.use("*", cors());
 
