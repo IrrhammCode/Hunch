@@ -65,6 +65,8 @@
     "web": "expo start --web",
     "eas:dev": "eas build --profile development --platform ios",
     "eas:preview": "eas build --profile preview --platform ios",
+    "eas:build": "eas build --profile production --platform ios",
+    "eas:submit": "eas submit --profile production --platform ios",
     "eas:dev:android": "eas build --profile development --platform android",
     "eas:preview:android": "eas build --profile preview --platform android",
     "typecheck": "tsc --noEmit -p ."
