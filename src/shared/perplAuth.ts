@@ -11,6 +11,7 @@
  */
 import { createHash, randomBytes } from "crypto";
 import * as ed from "@noble/ed25519";
+import WebSocket from "ws";
 import { loadEnv } from "./chain";
 
 export function perplEnv() {
@@ -94,12 +95,10 @@ export async function placePerplOrderWs(input: PerplWsOrderInput): Promise<{
     );
   }
 
-  const WebSocketImpl =
-    (globalThis as any).WebSocket || (await import("ws")).default;
   const url = `${e.wsUrl}/ws/v1/trading`;
 
   return new Promise((resolve, reject) => {
-    const ws = new WebSocketImpl(url);
+    const ws = new WebSocket(url);
     const timeout = setTimeout(() => {
       try {
         ws.close();
@@ -240,6 +239,7 @@ export async function placePerplOrderWs(input: PerplWsOrderInput): Promise<{
 
     ws.onerror = (err: any) => {
       clearTimeout(timeout);
+      console.error("[perpl-ws] error:", err?.message || err);
       reject(new Error(err?.message || "Perpl WS error"));
     };
   });

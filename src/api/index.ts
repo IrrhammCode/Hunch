@@ -95,6 +95,38 @@ app.get("/v1/config", (c) => {
   });
 });
 
+// Transparent forwarder if running in a geoblocked region (e.g. US dyno -> EU dyno)
+const PERPL_FORWARD_URL = process.env.PERPL_FORWARD_URL?.replace(/\/+$/, "");
+if (PERPL_FORWARD_URL) {
+  console.log(`[api] Forwarding all /v1/perpl/* requests to ${PERPL_FORWARD_URL}`);
+  app.all("/v1/perpl/*", async (c) => {
+    try {
+      const url = new URL(c.req.url);
+      const targetUrl = `${PERPL_FORWARD_URL}${url.pathname}${url.search}`;
+      const headers = new Headers(c.req.raw.headers);
+      headers.delete("host");
+      const init: RequestInit = {
+        method: c.req.method,
+        headers,
+      };
+      if (c.req.method !== "GET" && c.req.method !== "HEAD") {
+        init.body = await c.req.raw.arrayBuffer();
+      }
+      const res = await fetch(targetUrl, init);
+      const resHeaders = new Headers(res.headers);
+      resHeaders.delete("content-encoding");
+      resHeaders.delete("transfer-encoding");
+      return new Response(res.body, {
+        status: res.status,
+        headers: resHeaders,
+      });
+    } catch (err: any) {
+      console.error("[api] Perpl proxy forward error:", err?.message || err);
+      return c.json({ error: `Proxy error: ${err?.message || err}` }, 502);
+    }
+  });
+}
+
 /** Perpl Perpetuals Routes (Agora Onchain Trading Bounty) */
 app.get("/v1/perpl/markets", async (c) => {
   try {
