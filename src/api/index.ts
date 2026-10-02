@@ -751,7 +751,7 @@ app.post("/v1/directory/register", async (c) => {
   }
 });
 
-const port = Number(process.env.API_PORT || 8787);
+const port = Number(process.env.PORT || process.env.API_PORT || 8787);
 const hostname = process.env.API_HOST || "0.0.0.0";
 console.log(`[api] http://localhost:${port} (bound ${hostname})`);
 console.log("[api] perks", perkStatus());

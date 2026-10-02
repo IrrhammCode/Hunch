@@ -41,6 +41,7 @@
     "test:agora": "ts-node scripts/testAgoraBounty.ts",
     "keeper:perpl": "ts-node scripts/perplGuardKeeper.ts",
     "sim:tx": "ts-node scripts/tenderlySimulate.ts",
+    "start": "ts-node src/api/index.ts",
     "clean": "hardhat clean"
   },
   "devDependencies": {
@@ -52,16 +53,16 @@
     "@types/node": "^22.10.2",
     "@types/ws": "^8.18.1",
     "chai": "^4.5.0",
-    "ethers": "^6.13.4",
-    "hardhat": "^2.22.17",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.7.2"
+    "hardhat": "^2.22.17"
   },
   "dependencies": {
     "@hono/node-server": "^1.19.17",
     "@noble/ed25519": "^3.2.0",
     "@openzeppelin/contracts": "^5.1.0",
+    "ethers": "^6.13.4",
     "hono": "^4.13.8",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.2",
     "ws": "^8.21.3"
   }
 }
