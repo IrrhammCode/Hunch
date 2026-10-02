@@ -1,109 +1,95 @@
-"""Generate Hunch brand icons/splash — dark bg + lime UP/DOWN swipe mark."""
+"""Generate Hunch brand icons & transparent assets — Electric Lime theme (#D6FF3F)."""
 from pathlib import Path
+from PIL import Image
+import numpy as np
 
-from PIL import Image, ImageDraw
-
-BG = (10, 11, 13, 255)  # #0A0B0D
-LIME = (214, 255, 63, 255)  # #D6FF3F
-INK = (242, 241, 236, 255)
-
+SOURCE_IMAGE = Path(__file__).resolve().parent / "hunch_lime_source.png"
 OUT = Path(__file__).resolve().parent.parent / "mobile" / "assets" / "images"
 OUT.mkdir(parents=True, exist_ok=True)
+BG_COLOR = (10, 11, 13)  # #0A0B0D
 
 
-def draw_mark(size: int, bg=None, mark=LIME, pad_ratio=0.18):
-    """Chevron pair: UP above, DOWN below — swipe/speed silhouette."""
-    img = Image.new("RGBA", (size, size), bg if bg is not None else BG)
-    d = ImageDraw.Draw(img)
-    pad = size * pad_ratio
-    # usable square
-    x0, y0 = pad, pad
-    x1, y1 = size - pad, size - pad
-    w = x1 - x0
-    h = y1 - y0
-    cx = size / 2
-    stroke = max(2, int(size * 0.085))
-    # UP chevron (top half)
-    up_y = y0 + h * 0.32
-    up_h = h * 0.28
-    d.line(
-        [(cx - w * 0.32, up_y + up_h), (cx, up_y), (cx + w * 0.32, up_y + up_h)],
-        fill=mark,
-        width=stroke,
-        joint="curve",
+def extract_transparent_emblem(img_path: Path) -> Image.Image:
+    """Extract transparent RGBA emblem using precision dehalo alpha matte."""
+    img = Image.open(img_path).convert("RGB")
+    arr = np.array(img, dtype=float)
+    max_c = arr.max(axis=2)
+
+    low_thresh = 18.0
+    high_thresh = 120.0
+    norm = np.clip((max_c - low_thresh) / (high_thresh - low_thresh), 0.0, 1.0)
+    alpha = norm * norm * (3 - 2 * norm)
+
+    alpha_safe = np.maximum(alpha, 0.15)[:, :, None]
+    unpremul = arr / alpha_safe
+    clean_rgb = np.clip(unpremul, 0, 255)
+
+    rgba = np.zeros((1024, 1024, 4), dtype=np.uint8)
+    rgba[:, :, :3] = clean_rgb.astype(np.uint8)
+    rgba[:, :, 3] = (alpha * 255.0).astype(np.uint8)
+    return Image.fromarray(rgba, "RGBA")
+
+
+def build_all_assets():
+    if not SOURCE_IMAGE.exists():
+        fallback = OUT / "hunch-logo-transparent.png"
+        if fallback.exists():
+            master_transparent = Image.open(fallback).convert("RGBA")
+        else:
+            raise FileNotFoundError(f"Source image not found: {SOURCE_IMAGE}")
+    else:
+        master_transparent = extract_transparent_emblem(SOURCE_IMAGE)
+
+    # 1. Master transparent logo (1024x1024)
+    master_transparent.save(OUT / "hunch-logo-transparent.png", "PNG")
+
+    # 2. iOS App Store Icon (1024x1024 solid RGB, NO alpha)
+    icon_canvas = Image.new("RGBA", (1024, 1024), (*BG_COLOR, 255))
+    emblem_78 = master_transparent.resize(
+        (int(1024 * 0.80), int(1024 * 0.80)), Image.Resampling.LANCZOS
     )
-    # center slash bar (speed)
-    mid_y = y0 + h * 0.52
-    d.line(
-        [(cx - w * 0.22, mid_y), (cx + w * 0.22, mid_y)],
-        fill=mark,
-        width=max(2, stroke - 1),
+    ox = (1024 - emblem_78.width) // 2
+    oy = (1024 - emblem_78.height) // 2
+    icon_canvas.alpha_composite(emblem_78, (ox, oy))
+    icon_rgb = icon_canvas.convert("RGB")
+    icon_rgb.save(OUT / "icon.png", "PNG")
+
+    # 3. 512 Icon
+    icon_rgb.resize((512, 512), Image.Resampling.LANCZOS).save(OUT / "icon-512.png", "PNG")
+
+    # 4. Android adaptive foreground (transparent safe-zone ~62%)
+    fg_canvas = Image.new("RGBA", (1024, 1024), (0, 0, 0, 0))
+    emblem_62 = master_transparent.resize(
+        (int(1024 * 0.62), int(1024 * 0.62)), Image.Resampling.LANCZOS
     )
-    # DOWN chevron (bottom half)
-    dn_y = y0 + h * 0.70
-    dn_h = h * 0.28
-    d.line(
-        [(cx - w * 0.32, dn_y), (cx, dn_y + dn_h), (cx + w * 0.32, dn_y)],
-        fill=mark,
-        width=stroke,
-        joint="curve",
+    fox = (1024 - emblem_62.width) // 2
+    foy = (1024 - emblem_62.height) // 2
+    fg_canvas.alpha_composite(emblem_62, (fox, foy))
+    fg_canvas.save(OUT / "android-icon-foreground.png", "PNG")
+
+    # 5. Android background
+    Image.new("RGBA", (1024, 1024), (*BG_COLOR, 255)).save(OUT / "android-icon-background.png", "PNG")
+
+    # 6. Android monochrome
+    mono_arr = np.zeros((1024, 1024, 4), dtype=np.uint8)
+    mono_arr[:, :, :3] = 240
+    mono_arr[:, :, 3] = np.array(fg_canvas)[:, :, 3]
+    Image.fromarray(mono_arr, "RGBA").save(OUT / "android-icon-monochrome.png", "PNG")
+
+    # 7. Splash icon (transparent)
+    splash_canvas = Image.new("RGBA", (1024, 1024), (0, 0, 0, 0))
+    emblem_splash = master_transparent.resize(
+        (int(1024 * 0.48), int(1024 * 0.48)), Image.Resampling.LANCZOS
     )
-    return img
+    sox = (1024 - emblem_splash.width) // 2
+    soy = (1024 - emblem_splash.height) // 2
+    splash_canvas.alpha_composite(emblem_splash, (sox, soy))
+    splash_canvas.save(OUT / "splash-icon.png", "PNG")
 
-
-def save_icon(path: Path, size: int):
-    draw_mark(size).save(path, "PNG")
-    print(f"wrote {path} {size}x{size}")
-
-
-def save_splash(path: Path, size: int = 1024):
-    """Full-bleed dark splash with centered mark + tiny wordmark."""
-    img = Image.new("RGBA", (size, size), BG)
-    # soft top wash
-    d = ImageDraw.Draw(img)
-    for i in range(int(size * 0.45)):
-        a = int(18 * (1 - i / (size * 0.45)))
-        d.line([(0, i), (size, i)], fill=(14, 17, 12, a))
-    mark = draw_mark(int(size * 0.42), bg=None, mark=LIME, pad_ratio=0.12)
-    mw = mark.width
-    img.alpha_composite(mark, ((size - mw) // 2, int(size * 0.28)))
-    # tiny tagline bar as pure geometry (no font dependency issues at splash)
-    tag_w = int(size * 0.28)
-    tag_h = max(3, int(size * 0.008))
-    tag_y = int(size * 0.72)
-    d = ImageDraw.Draw(img)
-    d.rounded_rectangle(
-        [(size - tag_w) // 2, tag_y, (size + tag_w) // 2, tag_y + tag_h],
-        radius=tag_h // 2,
-        fill=(139, 142, 151, 180),
-    )
-    img.save(path, "PNG")
-    print(f"wrote {path} {size}x{size}")
-
-
-def save_adaptive_foreground(path: Path, size: int = 1024):
-    """Foreground with more padding for Android adaptive safe zone (~66%)."""
-    draw_mark(size, bg=(0, 0, 0, 0), mark=LIME, pad_ratio=0.28).save(path, "PNG")
-    print(f"wrote {path} {size}x{size} (transparent fg)")
-
-
-def save_adaptive_background(path: Path, size: int = 1024):
-    Image.new("RGBA", (size, size), BG).save(path, "PNG")
-    print(f"wrote {path} {size}x{size}")
-
-
-def save_monochrome(path: Path, size: int = 1024):
-    draw_mark(size, bg=(0, 0, 0, 0), mark=(242, 241, 236, 255), pad_ratio=0.28).save(path, "PNG")
-    print(f"wrote {path} {size}x{size}")
+    # 8. Favicon
+    master_transparent.resize((48, 48), Image.Resampling.LANCZOS).save(OUT / "favicon.png", "PNG")
+    print("All Hunch brand assets updated successfully!")
 
 
 if __name__ == "__main__":
-    save_icon(OUT / "icon.png", 1024)
-    save_icon(OUT / "favicon.png", 48)
-    save_splash(OUT / "splash-icon.png", 1024)
-    save_adaptive_foreground(OUT / "android-icon-foreground.png", 1024)
-    save_adaptive_background(OUT / "android-icon-background.png", 1024)
-    save_monochrome(OUT / "android-icon-monochrome.png", 1024)
-    # also a 512 marketing/PFP-ish square
-    save_icon(OUT / "icon-512.png", 512)
-    print("done")
+    build_all_assets()
