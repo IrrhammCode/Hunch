@@ -19,9 +19,16 @@ import { checkAndExecutePerplGuards } from "../api/perpl";
 
 loadEnv();
 
+process.on("uncaughtException", (err) => {
+  console.error("[keeper uncaughtException]", err?.message || err);
+});
+process.on("unhandledRejection", (reason) => {
+  console.error("[keeper unhandledRejection]", (reason as any)?.message || reason);
+});
+
 const SEED = () => ethers.parseUnits(process.env.SEED_AUSD || "1000", 6);
 const POLL_MS = Number(process.env.KEEPER_POLL_MS || 10000);
-const MIN_MON = ethers.parseEther(process.env.KEEPER_MIN_MON || "0.5");
+const MIN_MON = ethers.parseEther(process.env.KEEPER_MIN_MON || "0.0005");
 
 function formatErr(e: any): string {
   const parts = [
@@ -43,9 +50,13 @@ async function ensureFreshPyth(feedId: string) {
     const px = await pyth.getPriceNoOlderThan(feedId, 90);
     console.log("[keeper] pyth", symbolForFeed(feedId), px.price.toString(), "t", px.publishTime.toString());
   } catch {
-    console.log("[keeper] pulling Pyth", symbolForFeed(feedId), "…");
-    const pulled = await pullPythOnchain(pyth, feedId, wallet);
-    console.log("[keeper] pyth pull", symbolForFeed(feedId), pulled.txHash);
+    try {
+      console.log("[keeper] pulling Pyth", symbolForFeed(feedId), "…");
+      const pulled = await pullPythOnchain(pyth, feedId, wallet);
+      console.log("[keeper] pyth pull", symbolForFeed(feedId), pulled.txHash);
+    } catch (e: any) {
+      console.warn("[keeper] pyth pull skipped:", formatErr(e));
+    }
   }
 }
 
@@ -70,7 +81,13 @@ async function openRoundForMarket(meta: MarketMeta) {
     if (assets < seedNeed) {
       throw new Error(`Vault underfunded for ${meta.symbol}: ${assets} < ${seedNeed}`);
     }
-    const tx = await vault.seedRound(meta.feedId, { gasLimit: 3_500_000n });
+    let gasLimit = 350_000n;
+    try {
+      gasLimit = ((await vault.seedRound.estimateGas(meta.feedId)) * 12n) / 10n;
+    } catch {
+      /* keep fallback */
+    }
+    const tx = await vault.seedRound(meta.feedId, { gasLimit });
     try {
       await waitForReceipt(wallet.provider!, tx.hash);
     } catch (e) {
@@ -99,7 +116,7 @@ async function openRoundForMarket(meta: MarketMeta) {
   const est = await factory.createAndOpen.estimateGas(meta.feedId, seed, [], { value: 0 });
   const tx = await factory.createAndOpen(meta.feedId, seed, [], {
     value: 0,
-    gasLimit: est + 500_000n,
+    gasLimit: (est * 12n) / 10n,
   });
   await waitForReceipt(wallet.provider!, tx.hash);
   const roundId = await factory.latestRoundByFeed(meta.feedId);
@@ -120,11 +137,11 @@ async function resolveRound(marketAddr: string, feedId: string) {
     throw new Error(`publishTime ${update.publishTime} outside window for ${symbolForFeed(feedId)}`);
   }
   const fee = await pyth.getUpdateFee(update.binaryUpdates);
-  let gasLimit = 3_000_000n;
+  let gasLimit = 350_000n;
   try {
-    gasLimit = (await market.resolve.estimateGas(update.binaryUpdates, { value: fee + 1n })) + 300_000n;
+    gasLimit = ((await market.resolve.estimateGas(update.binaryUpdates, { value: fee + 1n })) * 12n) / 10n;
   } catch {
-    /* keep */
+    /* keep fallback */
   }
   const tx = await market.resolve(update.binaryUpdates, { value: fee + 1n, gasLimit });
   await waitForReceipt(wallet.provider!, tx.hash);
@@ -144,12 +161,18 @@ async function claimResidual(marketAddr: string) {
   try {
     if (dep.vault) {
       const vault = vaultContract(wallet, dep);
-      const tx = await vault.claimResidual(marketAddr, { gasLimit: 800_000n });
+      let gasLimit = 150_000n;
+      try {
+        gasLimit = ((await vault.claimResidual.estimateGas(marketAddr)) * 12n) / 10n;
+      } catch {
+        /* keep fallback */
+      }
+      const tx = await vault.claimResidual(marketAddr, { gasLimit });
       await waitForReceipt(wallet.provider!, tx.hash);
       console.log("[keeper] vault residual", marketAddr, tx.hash);
       return;
     }
-    const tx = await market.claimResidual({ gasLimit: 500_000n });
+    const tx = await market.claimResidual({ gasLimit: 200_000n });
     await waitForReceipt(wallet.provider!, tx.hash);
   } catch (e: any) {
     console.log("[keeper] residual skip:", formatErr(e));

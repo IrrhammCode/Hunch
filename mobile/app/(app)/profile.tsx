@@ -8,7 +8,16 @@ const Haptics = {
   ImpactFeedbackStyle: { Medium: "medium", Light: "light" },
   NotificationFeedbackType: { Success: 0, Warning: 1, Error: 2 },
 };
-import { Pressable, ScrollView, StyleSheet, Text, View, ActivityIndicator } from "react-native";
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  ActivityIndicator,
+  Modal,
+  TextInput,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/src/auth/AuthContext";
 import { fetchZerionPortfolio } from "@/src/api/client";
@@ -23,6 +32,11 @@ import { SendModal } from "@/src/wallet/SendModal";
 import { AgoraHubCard } from "@/src/wallet/AgoraHubCard";
 import { usePerplAccount } from "@/src/perpl/perplClient";
 import { MarginModal } from "@/src/perpl/MarginModal";
+import {
+  syncDirectory,
+  registerUserHandle,
+  resolveUserInput,
+} from "@/src/wallet/userDirectory";
 import { colors, radius, space, type, monoStyle } from "@/src/theme";
 
 function shortAddr(a: string) {
@@ -42,6 +56,11 @@ export default function ProfileScreen() {
   const [showSendModal, setShowSendModal] = useState(false);
   const [showMarginModal, setShowMarginModal] = useState(false);
   const [sendToken, setSendToken] = useState<"AUSD" | "MON">("AUSD");
+  const [userHandle, setUserHandle] = useState<string>("@trader");
+  const [isVerified, setIsVerified] = useState<boolean>(false);
+  const [showHandleModal, setShowHandleModal] = useState(false);
+  const [inputHandle, setInputHandle] = useState("");
+  const [savingHandle, setSavingHandle] = useState(false);
 
   const userAddr = user?.address || me?.address || "";
   const { account: perplAccount, refresh: refreshPerpl } = usePerplAccount(userAddr);
@@ -50,6 +69,25 @@ export default function ProfileScreen() {
     useCallback(() => {
       refresh();
       refreshPerpl();
+
+      // Resolve user handle from global directory
+      (async () => {
+        const addr = user?.address || me?.address;
+        if (!addr) return;
+        try {
+          await syncDirectory();
+          const resolved = resolveUserInput(addr);
+          if (resolved.profile) {
+            setUserHandle(resolved.profile.handle);
+            setIsVerified(resolved.profile.verified);
+          } else {
+            setUserHandle(`@trader_${addr.slice(2, 6).toLowerCase()}`);
+          }
+        } catch {
+          /* ignore */
+        }
+      })();
+
       (async () => {
         const addr = user?.address || me?.address;
         if (!addr) return;
@@ -119,6 +157,32 @@ export default function ProfileScreen() {
     }
   };
 
+  const onSaveHandle = async () => {
+    if (!address) return;
+    const clean = inputHandle.trim().replace(/^@/, "").toLowerCase();
+    if (clean.length < 3) {
+      toast.error("Invalid Handle", "Handle must be at least 3 characters.");
+      return;
+    }
+    setSavingHandle(true);
+    try {
+      const updated = await registerUserHandle({
+        handle: `@${clean}`,
+        address,
+        name: user?.displayName || clean,
+      });
+      setUserHandle(updated.handle);
+      setIsVerified(updated.verified);
+      setShowHandleModal(false);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      toast.success("Handle Registered", `Your onchain identity is now ${updated.handle}`);
+    } catch (e: any) {
+      toast.error("Registration Failed", e?.message || "Could not claim handle");
+    } finally {
+      setSavingHandle(false);
+    }
+  };
+
   return (
     <Screen>
       <View style={[styles.wrap, { paddingTop: insets.top + 8 }]}>
@@ -158,9 +222,29 @@ export default function ProfileScreen() {
               <View style={styles.onlineBadgeDot} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.userName} numberOfLines={1}>
-                {user?.displayName || "Trader"}
-              </Text>
+              <View style={styles.userTitleRow}>
+                <Text style={styles.userName} numberOfLines={1}>
+                  {user?.displayName || "Trader"}
+                </Text>
+                {isVerified ? (
+                  <View style={styles.verifiedBadge}>
+                    <Icon name="checkmark-circle" size={14} color={colors.up} />
+                  </View>
+                ) : null}
+              </View>
+              <Pressable
+                onPress={() => {
+                  setInputHandle(userHandle.replace(/^@/, ""));
+                  setShowHandleModal(true);
+                }}
+                style={styles.handleBadgeRow}
+              >
+                <Text style={styles.userHandleText}>{userHandle}</Text>
+                <View style={styles.handleEditPill}>
+                  <Icon name="pencil" size={10} color={colors.brand} />
+                  <Text style={styles.handleEditHint}>CLAIM</Text>
+                </View>
+              </Pressable>
               <Text style={styles.userEmail} numberOfLines={1}>{email}</Text>
             </View>
             <View style={styles.onlineStatusCol}>
@@ -401,7 +485,7 @@ export default function ProfileScreen() {
           visible={showReceiveModal}
           onClose={() => setShowReceiveModal(false)}
           walletAddress={address || ""}
-          userHandle={user?.displayName || "trader"}
+          userHandle={userHandle}
         />
 
         <SendModal
@@ -430,6 +514,71 @@ export default function ProfileScreen() {
             refreshPerpl();
           }}
         />
+
+        {/* CLAIM ONCHAIN HANDLE MODAL */}
+        <Modal
+          visible={showHandleModal}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowHandleModal(false)}
+        >
+          <View style={styles.modalBackdrop}>
+            <View style={styles.handleModalCard}>
+              <View style={styles.handleModalHeader}>
+                <Text style={styles.handleModalTitle}>CLAIM TRADER HANDLE</Text>
+                <Pressable
+                  onPress={() => setShowHandleModal(false)}
+                  style={styles.modalCloseBtn}
+                >
+                  <Icon name="close" size={18} color={colors.muted} />
+                </Pressable>
+              </View>
+              <Text style={styles.handleModalDesc}>
+                Register a custom @handle on Monad Testnet so other traders can send you AUSD and MON directly.
+              </Text>
+
+              <View style={styles.handleInputWrap}>
+                <Text style={styles.handleAtPrefix}>@</Text>
+                <TextInput
+                  value={inputHandle}
+                  onChangeText={(t) =>
+                    setInputHandle(t.replace(/[^a-zA-Z0-9_]/g, "").toLowerCase())
+                  }
+                  placeholder="your_handle"
+                  placeholderTextColor="#555"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  maxLength={24}
+                  style={styles.handleTextInput}
+                />
+              </View>
+
+              <View style={styles.handleModalActions}>
+                <Pressable
+                  onPress={() => setShowHandleModal(false)}
+                  style={styles.handleModalCancelBtn}
+                >
+                  <Text style={styles.handleModalCancelText}>Cancel</Text>
+                </Pressable>
+                <Pressable
+                  onPress={onSaveHandle}
+                  disabled={savingHandle || inputHandle.trim().length < 3}
+                  style={[
+                    styles.handleModalSaveBtn,
+                    (savingHandle || inputHandle.trim().length < 3) &&
+                      styles.handleModalSaveBtnDisabled,
+                  ]}
+                >
+                  {savingHandle ? (
+                    <ActivityIndicator size="small" color="#0A0B0D" />
+                  ) : (
+                    <Text style={styles.handleModalSaveText}>CLAIM HANDLE</Text>
+                  )}
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </View>
     </Screen>
   );
@@ -587,6 +736,132 @@ const styles = StyleSheet.create({
     fontFamily: type.data,
     fontSize: 11,
     marginTop: 2,
+  },
+  handleBadgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 3,
+    marginBottom: 2,
+  },
+  userHandleText: {
+    color: colors.brand,
+    fontFamily: type.data,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  handleEditPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    backgroundColor: "rgba(214, 255, 63, 0.12)",
+    paddingVertical: 1,
+    paddingHorizontal: 6,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: "rgba(214, 255, 63, 0.3)",
+  },
+  handleEditHint: {
+    color: colors.brand,
+    fontFamily: type.bold,
+    fontSize: 9,
+    letterSpacing: 0.5,
+  },
+  verifiedBadge: {
+    marginLeft: 2,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.75)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  handleModalCard: {
+    width: "100%",
+    maxWidth: 380,
+    backgroundColor: "#12141A",
+    borderRadius: radius.lg,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  handleModalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  handleModalTitle: {
+    color: colors.ink,
+    fontFamily: type.bold,
+    fontSize: 16,
+    letterSpacing: 0.5,
+  },
+  modalCloseBtn: {
+    padding: 4,
+  },
+  handleModalDesc: {
+    color: colors.muted,
+    fontFamily: type.body,
+    fontSize: 12,
+    lineHeight: 18,
+    marginBottom: 16,
+  },
+  handleInputWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#0A0B0D",
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    paddingHorizontal: 12,
+    marginBottom: 20,
+  },
+  handleAtPrefix: {
+    color: colors.brand,
+    fontFamily: type.data,
+    fontSize: 16,
+    fontWeight: "700",
+    marginRight: 4,
+  },
+  handleTextInput: {
+    flex: 1,
+    color: colors.ink,
+    fontFamily: type.data,
+    fontSize: 14,
+    paddingVertical: 12,
+  },
+  handleModalActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 10,
+  },
+  handleModalCancelBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: radius.sm,
+    backgroundColor: "#1A1D26",
+  },
+  handleModalCancelText: {
+    color: colors.muted,
+    fontFamily: type.bold,
+    fontSize: 12,
+  },
+  handleModalSaveBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: radius.sm,
+    backgroundColor: colors.brand,
+  },
+  handleModalSaveBtnDisabled: {
+    opacity: 0.5,
+  },
+  handleModalSaveText: {
+    color: "#0A0B0D",
+    fontFamily: type.bold,
+    fontSize: 12,
+    letterSpacing: 0.5,
   },
   onlineStatusCol: {
     alignItems: "flex-end",

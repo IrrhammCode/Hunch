@@ -1,4 +1,4 @@
-import { USE_MOCK } from "@/src/config/chain";
+import { USE_MOCK } from "../config/chain";
 import {
   mockCurrentRound,
   mockFaucet,
@@ -16,7 +16,7 @@ import {
   closeMockPosition,
   reverseMockPosition,
   MOCK_ADDRESS_CHECKSUM,
-} from "@/src/mock/fixtures";
+} from "../mock/fixtures";
 
 // Hard-default: 100% real mode
 const MOCK = false;
@@ -122,12 +122,13 @@ export function fetchCurrentRound(symbol?: string) {
 export function fetchRound(id: string) {
   if (USE_MOCK) {
     return Promise.resolve({
-      round: { roundId: id, status: "open" as const, yesWins: undefined },
+      round: { roundId: id, market: "0x0000000000000000000000000000000000000000", status: "open" as const, yesWins: undefined },
     });
   }
   return get<{
     round: {
       roundId: string;
+      market?: string;
       status: "open" | "resolved";
       yesWins?: boolean;
     } | null;
@@ -479,7 +480,7 @@ export function placePerplOrder(params: {
 }) {
   if (USE_MOCK) {
     const mk = mockPerplMarkets().markets.find(
-      (m) => m.symbol === params.symbol,
+      (m: any) => m.symbol === params.symbol,
     ) || mockPerplMarkets().markets[0]!;
     const position: PerplPosition = {
       id: `mock_${Date.now()}`,
@@ -729,6 +730,43 @@ export function executeHedgeForHunch(params: {
 
 export function mockTradeResult(side: string, amountAUSD: string, symbol: string) {
   return mockTradeFill(side, amountAUSD, symbol);
+}
+
+export type DirectoryProfile = {
+  handle: string;
+  name: string;
+  address: string;
+  verified: boolean;
+  avatarColor: string;
+  bio?: string;
+};
+
+export async function fetchDirectory(query?: string): Promise<DirectoryProfile[]> {
+  const q = query ? `?q=${encodeURIComponent(query)}` : "";
+  const res = await get<{ directory: DirectoryProfile[] }>(`/v1/directory${q}`);
+  return res.directory || [];
+}
+
+export async function resolveRemoteDirectoryProfile(query: string): Promise<DirectoryProfile | null> {
+  try {
+    const res = await get<{ profile: DirectoryProfile }>(`/v1/directory/${encodeURIComponent(query)}`);
+    return res.profile || null;
+  } catch {
+    return null;
+  }
+}
+
+export async function registerDirectoryProfile(payload: {
+  handle: string;
+  address: string;
+  name?: string;
+  bio?: string;
+  avatarColor?: string;
+}): Promise<{ success: boolean; profile: DirectoryProfile; message?: string }> {
+  return await post<{ success: boolean; profile: DirectoryProfile; message?: string }>(
+    "/v1/directory/register",
+    payload,
+  );
 }
 
 export { API_URL, USE_MOCK, mockHash };

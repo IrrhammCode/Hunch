@@ -7,7 +7,16 @@ const Haptics = {
   NotificationFeedbackType: { Success: 0, Warning: 1, Error: 2 },
 };
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Dimensions, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Dimensions,
+  Linking,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  ActivityIndicator,
+} from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   FadeIn,
@@ -38,7 +47,7 @@ import { explorerTx } from "@/src/config/chain";
 import { getSelectedMarket } from "@/src/market/selection";
 import { addHunch, listHunches, settleRound } from "@/src/hunchBook";
 import { useWallet } from "@/src/wallet/WalletContext";
-import { placeWalletTrade } from "@/src/wallet/privyTrade";
+import { placeWalletTrade, redeemWalletPosition } from "@/src/wallet/privyTrade";
 import { PerpTradingTicket } from "@/src/perpl/PerpTradingTicket";
 import { placePerplOrder } from "@/src/perpl/perplClient";
 import { colors, radius, space, type } from "@/src/theme";
@@ -71,6 +80,17 @@ export default function HunchScreen() {
   const [busy, setBusy] = useState(false);
   const [flash, setFlash] = useState<"up" | "down" | null>(null);
   const [lastResult, setLastResult] = useState<string | null>(null);
+  const [settlementBanner, setSettlementBanner] = useState<{
+    roundId: string;
+    yesWins: boolean;
+    outcomeText: string;
+    userResult?: {
+      side: "UP" | "DOWN";
+      won: boolean;
+    };
+    market?: string;
+  } | null>(null);
+  const [redeeming, setRedeeming] = useState(false);
   const [endsAt, setEndsAt] = useState<number | null>(null);
   const [nowMs, setNowMs] = useState(Date.now());
   const [amount, setAmount] = useState<string>("10");
@@ -96,6 +116,21 @@ export default function HunchScreen() {
         setEndsAt(null);
       }
 
+      // Check if current round just resolved
+      if (next.round?.status === "resolved" && typeof next.round.yesWins === "boolean") {
+        const symbol = sel.symbol;
+        const outcome = next.round.yesWins ? `${symbol} finished UP` : `${symbol} finished DOWN`;
+        setSettlementBanner((prev) => {
+          if (prev && prev.roundId === String(next.round?.roundId)) return prev;
+          return {
+            roundId: String(next.round?.roundId),
+            yesWins: Boolean(next.round?.yesWins),
+            outcomeText: outcome,
+            market: next.round?.market,
+          };
+        });
+      }
+
       const openHunches = (await listHunches()).filter((h) => h.status === "open");
       const ids = [...new Set(openHunches.map((h) => h.roundId))];
       for (const rid of ids) {
@@ -110,11 +145,22 @@ export default function HunchScreen() {
               await Haptics.notificationAsync(
                 won ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Error,
               );
-              const outcome = detail.round.yesWins ? "BTC finished UP" : "BTC finished DOWN";
+              const symbol = sel.symbol;
+              const outcome = detail.round.yesWins ? `${symbol} finished UP` : `${symbol} finished DOWN`;
               const line = settled.map((h) => `${h.side} → ${h.status.toUpperCase()}`).join("\n");
               setLastResult(line);
               setFlash(won ? "up" : "down");
               setTimeout(() => setFlash(null), 700);
+              setSettlementBanner({
+                roundId: rid,
+                yesWins: detail.round.yesWins,
+                outcomeText: outcome,
+                userResult: {
+                  side: settled[0]?.side === "UP" ? "UP" : "DOWN",
+                  won,
+                },
+                market: detail.round.market,
+              });
               if (won) toast.success("You won", `${outcome}\n${line}`);
               else toast.error("You lost", `${outcome}\n${line}`);
             }
@@ -198,6 +244,26 @@ export default function HunchScreen() {
       cancelled = true;
     };
   }, [open, round?.market, round?.roundId, amount, data?.spot?.yes]);
+
+  const onRedeemSettlement = async () => {
+    if (!settlementBanner?.market || !user?.address) return;
+    setRedeeming(true);
+    try {
+      const provider = await getEthereumProvider();
+      await redeemWalletPosition({
+        provider,
+        address: user.address,
+        market: settlementBanner.market,
+      });
+      await refreshWallet();
+      toast.success("Payout Redeemed", "Settlement AUSD transferred to your wallet.");
+      setSettlementBanner(null);
+    } catch (e: any) {
+      toast.error("Redeem Failed", e?.message || "Could not claim payout");
+    } finally {
+      setRedeeming(false);
+    }
+  };
 
   const onPick = useCallback(
     async (side: "UP" | "DOWN") => {
@@ -510,6 +576,68 @@ export default function HunchScreen() {
               <Text style={styles.swipeBullText}>UP →</Text>
             </View>
 
+            {/* SETTLEMENT OUTCOME OVERLAY BANNER */}
+            {settlementBanner ? (
+              <View
+                style={[
+                  styles.settlementCard,
+                  settlementBanner.yesWins ? styles.settlementCardUp : styles.settlementCardDown,
+                ]}
+              >
+                <View style={styles.settlementTopRow}>
+                  <View style={styles.settlementHeaderLeft}>
+                    <View
+                      style={[
+                        styles.settlementDot,
+                        settlementBanner.yesWins ? styles.greenDot : styles.redDot,
+                      ]}
+                    />
+                    <Text style={styles.settlementTag}>
+                      ROUND #{settlementBanner.roundId} SETTLED
+                    </Text>
+                  </View>
+                  <Pressable
+                    onPress={() => setSettlementBanner(null)}
+                    style={styles.settlementCloseBtn}
+                  >
+                    <Icon name="close" size={16} color={colors.muted} />
+                  </Pressable>
+                </View>
+
+                <View style={styles.settlementBodyRow}>
+                  <Text style={styles.settlementOutcomeTitle}>
+                    {settlementBanner.outcomeText}
+                  </Text>
+                  {settlementBanner.userResult ? (
+                    <Text
+                      style={[
+                        styles.settlementUserHunch,
+                        settlementBanner.userResult.won ? styles.userWonText : styles.userLostText,
+                      ]}
+                    >
+                      {settlementBanner.userResult.won
+                        ? `YOUR HUNCH: ${settlementBanner.userResult.side} WON`
+                        : `YOUR HUNCH: ${settlementBanner.userResult.side} MISSED`}
+                    </Text>
+                  ) : null}
+                </View>
+
+                {settlementBanner.userResult?.won && settlementBanner.market ? (
+                  <Pressable
+                    onPress={onRedeemSettlement}
+                    disabled={redeeming}
+                    style={styles.redeemActionBtn}
+                  >
+                    {redeeming ? (
+                      <ActivityIndicator size="small" color="#0A0B0D" />
+                    ) : (
+                      <Text style={styles.redeemActionText}>CLAIM / REDEEM PAYOUT</Text>
+                    )}
+                  </Pressable>
+                ) : null}
+              </View>
+            ) : null}
+
             {/* Hero swipe card */}
             <GestureDetector gesture={pan}>
               <Animated.View style={[styles.card, cardStyle]}>
@@ -533,13 +661,28 @@ export default function HunchScreen() {
                 <View style={styles.circleTimerWrap}>
                   <View style={styles.outerRing}>
                     <Animated.Text style={[styles.circleCountdownText, countdownStyle]}>
-                      {remainingDisplay}s
+                      {round?.status === "resolved"
+                        ? (round?.yesWins ? "UP" : "DOWN")
+                        : (open && remainingSec <= 0 ? "00.0s" : `${remainingDisplay}s`)}
                     </Animated.Text>
-                    <Text style={styles.circleSubText}>SECONDS LEFT</Text>
+                    <Text style={styles.circleSubText}>
+                      {round?.status === "resolved"
+                        ? "ROUND SETTLED"
+                        : (open && remainingSec <= 0 ? "SETTLING WITH ORACLE" : "SECONDS LEFT")}
+                    </Text>
                   </View>
-                  <View style={styles.locksInBadge}>
+                  <View
+                    style={[
+                      styles.locksInBadge,
+                      round?.status === "resolved"
+                        ? (round?.yesWins ? styles.badgeWon : styles.badgeLost)
+                        : (open && remainingSec <= 0 ? styles.badgeSettling : undefined),
+                    ]}
+                  >
                     <Text style={styles.locksInText}>
-                      OPEN
+                      {round?.status === "resolved"
+                        ? (round?.yesWins ? "UP WON" : "DOWN WON")
+                        : (open && remainingSec <= 0 ? "SETTLING" : "OPEN")}
                     </Text>
                   </View>
                 </View>
@@ -974,17 +1117,112 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   locksInBadge: {
-    backgroundColor: "rgba(255,77,106,0.18)",
+    backgroundColor: "rgba(214,255,63,0.15)",
     paddingVertical: 2,
     paddingHorizontal: 8,
     borderRadius: radius.pill,
     marginTop: 4,
   },
   locksInText: {
-    color: colors.down,
+    color: colors.brand,
     fontFamily: type.data,
     fontSize: 9,
     fontWeight: "bold",
+  },
+  badgeWon: {
+    backgroundColor: "rgba(46,229,157,0.2)",
+    borderColor: "rgba(46,229,157,0.4)",
+    borderWidth: 1,
+  },
+  badgeLost: {
+    backgroundColor: "rgba(255,77,106,0.2)",
+    borderColor: "rgba(255,77,106,0.4)",
+    borderWidth: 1,
+  },
+  badgeSettling: {
+    backgroundColor: "rgba(255,176,32,0.2)",
+    borderColor: "rgba(255,176,32,0.4)",
+    borderWidth: 1,
+  },
+  settlementCard: {
+    width: "100%",
+    backgroundColor: "#141720",
+    borderRadius: radius.md,
+    padding: 12,
+    borderWidth: 1.5,
+    marginBottom: 8,
+    gap: 6,
+  },
+  settlementCardUp: {
+    borderColor: colors.up,
+  },
+  settlementCardDown: {
+    borderColor: colors.down,
+  },
+  settlementTopRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  settlementHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  settlementDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  greenDot: {
+    backgroundColor: colors.up,
+  },
+  redDot: {
+    backgroundColor: colors.down,
+  },
+  settlementTag: {
+    color: colors.muted,
+    fontFamily: type.bold,
+    fontSize: 10,
+    letterSpacing: 0.8,
+  },
+  settlementCloseBtn: {
+    padding: 2,
+  },
+  settlementBodyRow: {
+    gap: 2,
+  },
+  settlementOutcomeTitle: {
+    color: colors.ink,
+    fontFamily: type.bold,
+    fontSize: 14,
+    letterSpacing: 0.5,
+  },
+  settlementUserHunch: {
+    fontFamily: type.data,
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  userWonText: {
+    color: colors.up,
+  },
+  userLostText: {
+    color: colors.down,
+  },
+  redeemActionBtn: {
+    marginTop: 4,
+    backgroundColor: colors.brand,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: radius.sm,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  redeemActionText: {
+    color: "#0A0B0D",
+    fontFamily: type.bold,
+    fontSize: 11,
+    letterSpacing: 0.8,
   },
   strikeRow: {
     flexDirection: "row",

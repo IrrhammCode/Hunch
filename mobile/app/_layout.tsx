@@ -13,6 +13,7 @@ import { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { AuthProvider } from "@/src/auth/AuthContext";
 import { BootScreen } from "@/src/components/BootScreen";
+import { NetworkStatusBanner } from "@/src/components/NetworkStatusBanner";
 import { ToastProvider } from "@/src/components/Toast";
 import { WalletProvider } from "@/src/wallet/WalletContext";
 import { colors } from "@/src/theme";
@@ -28,6 +29,7 @@ function AppShell() {
         <AuthProvider>
           <WalletProvider>
             <StatusBar style="light" />
+            <NetworkStatusBanner />
             <Stack
               screenOptions={{
                 headerShown: false,

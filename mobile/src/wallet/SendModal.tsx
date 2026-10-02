@@ -21,6 +21,7 @@ import {
   resolveUserInput,
   getRecentRecipients,
   saveRecentRecipient,
+  syncDirectory,
   type ContactProfile,
   type ParsedPaymentQr,
 } from "./userDirectory";
@@ -65,7 +66,12 @@ export function SendModal({
       setStepLabel(null);
       setResolvedProfile(null);
       setShowScanner(false);
-      getRecentRecipients().then(setContacts).catch(() => {});
+      syncDirectory()
+        .then(() => getRecentRecipients())
+        .then(setContacts)
+        .catch(() => {
+          getRecentRecipients().then(setContacts).catch(() => {});
+        });
     }
   }, [visible, initialToken]);
 

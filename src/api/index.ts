@@ -720,6 +720,37 @@ app.get("/v1/price/:symbol/history", async (c) => {
   }
 });
 
+/** Global User Directory Routes */
+import { getAllProfiles, registerProfile, resolveProfile } from "./directory";
+
+app.get("/v1/directory", (c) => {
+  const q = c.req.query("q");
+  return c.json({ directory: getAllProfiles(q) });
+});
+
+app.get("/v1/directory/:query", (c) => {
+  const query = c.req.param("query");
+  const profile = resolveProfile(query);
+  if (!profile) return c.json({ error: `Profile '${query}' not found` }, 404);
+  return c.json({ profile });
+});
+
+app.post("/v1/directory/register", async (c) => {
+  try {
+    const body = await c.req.json<{
+      handle: string;
+      address: string;
+      name?: string;
+      bio?: string;
+      avatarColor?: string;
+    }>();
+    const result = registerProfile(body);
+    return c.json(result);
+  } catch (e: any) {
+    return c.json({ error: e.message || String(e) }, 400);
+  }
+});
+
 const port = Number(process.env.API_PORT || 8787);
 const hostname = process.env.API_HOST || "0.0.0.0";
 console.log(`[api] http://localhost:${port} (bound ${hostname})`);

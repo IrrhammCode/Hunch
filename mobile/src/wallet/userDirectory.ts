@@ -90,6 +90,82 @@ export const VERIFIED_DIRECTORY: ContactProfile[] = [
   },
 ];
 
+import {
+  fetchDirectory,
+  registerDirectoryProfile,
+  resolveRemoteDirectoryProfile,
+} from "../api/client";
+
+const DYNAMIC_DIRECTORY_STORAGE_KEY = "hunch_dynamic_directory_v1";
+
+// In-memory cache starting with canonical directory
+let dynamicDirectoryCache: ContactProfile[] = [...VERIFIED_DIRECTORY];
+
+/**
+ * Sync directory with remote API server.
+ */
+export async function syncDirectory(query?: string): Promise<ContactProfile[]> {
+  try {
+    const remote = await fetchDirectory(query);
+    if (remote && remote.length > 0) {
+      const mergedMap = new Map<string, ContactProfile>();
+      for (const d of VERIFIED_DIRECTORY) mergedMap.set(d.address.toLowerCase(), d);
+      for (const r of remote) mergedMap.set(r.address.toLowerCase(), r);
+      dynamicDirectoryCache = Array.from(mergedMap.values());
+      await safeStorage.setItem(
+        DYNAMIC_DIRECTORY_STORAGE_KEY,
+        JSON.stringify(dynamicDirectoryCache),
+      );
+    }
+    return dynamicDirectoryCache;
+  } catch {
+    // If offline or network fails, try local storage
+    try {
+      const raw = await safeStorage.getItem(DYNAMIC_DIRECTORY_STORAGE_KEY);
+      if (raw) {
+        const stored = JSON.parse(raw);
+        if (Array.isArray(stored) && stored.length > 0) {
+          dynamicDirectoryCache = stored;
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+    return dynamicDirectoryCache;
+  }
+}
+
+/**
+ * Register a user's handle globally.
+ */
+export async function registerUserHandle(payload: {
+  handle: string;
+  address: string;
+  name?: string;
+  bio?: string;
+  avatarColor?: string;
+}): Promise<ContactProfile> {
+  const res = await registerDirectoryProfile(payload);
+  if (!res.success || !res.profile) {
+    throw new Error(res.message || "Failed to register handle");
+  }
+
+  // Update in-memory cache
+  const idx = dynamicDirectoryCache.findIndex(
+    (c) => c.address.toLowerCase() === res.profile.address.toLowerCase(),
+  );
+  if (idx >= 0) {
+    dynamicDirectoryCache[idx] = res.profile;
+  } else {
+    dynamicDirectoryCache.push(res.profile);
+  }
+  await safeStorage.setItem(
+    DYNAMIC_DIRECTORY_STORAGE_KEY,
+    JSON.stringify(dynamicDirectoryCache),
+  );
+  return res.profile;
+}
+
 const RECENT_RECIPIENTS_STORAGE_KEY = "hunch_recent_recipients_v1";
 
 export interface ParsedPaymentQr {
@@ -112,9 +188,11 @@ export function resolveUserInput(input: string): {
     return { address: "", profile: null, isValid: false };
   }
 
+  const dir = dynamicDirectoryCache.length > 0 ? dynamicDirectoryCache : VERIFIED_DIRECTORY;
+
   // 1. Direct handle match (@handle or handle)
   const normalizedHandle = clean.startsWith("@") ? clean.toLowerCase() : `@${clean.toLowerCase()}`;
-  const foundByHandle = VERIFIED_DIRECTORY.find(
+  const foundByHandle = dir.find(
     (c) => c.handle.toLowerCase() === normalizedHandle,
   );
   if (foundByHandle) {
@@ -128,7 +206,7 @@ export function resolveUserInput(input: string): {
   // 2. .mon or .eth name match
   if (clean.includes(".")) {
     const prefix = clean.split(".")[0].toLowerCase();
-    const foundByDomain = VERIFIED_DIRECTORY.find(
+    const foundByDomain = dir.find(
       (c) => c.handle.toLowerCase() === `@${prefix}`,
     );
     if (foundByDomain) {
@@ -143,7 +221,7 @@ export function resolveUserInput(input: string): {
   // 3. Raw 0x EVM address
   const isEvm = /^0x[a-fA-F0-9]{40}$/.test(clean);
   if (isEvm) {
-    const knownProfile = VERIFIED_DIRECTORY.find(
+    const knownProfile = dir.find(
       (c) => c.address.toLowerCase() === clean.toLowerCase(),
     );
     return {
@@ -154,6 +232,43 @@ export function resolveUserInput(input: string): {
   }
 
   return { address: clean, profile: null, isValid: false };
+}
+
+/**
+ * Async resolver with remote fallback if handle isn't cached locally.
+ */
+export async function resolveUserInputAsync(input: string): Promise<{
+  address: string;
+  profile: ContactProfile | null;
+  isValid: boolean;
+}> {
+  const local = resolveUserInput(input);
+  if (local.isValid && (local.profile || /^0x[a-fA-F0-9]{40}$/.test(local.address))) {
+    return local;
+  }
+
+  // Try remote resolve
+  try {
+    const remote = await resolveRemoteDirectoryProfile(input);
+    if (remote) {
+      // Cache it
+      const idx = dynamicDirectoryCache.findIndex(
+        (c) => c.address.toLowerCase() === remote.address.toLowerCase(),
+      );
+      if (idx >= 0) dynamicDirectoryCache[idx] = remote;
+      else dynamicDirectoryCache.push(remote);
+
+      return {
+        address: remote.address,
+        profile: remote,
+        isValid: true,
+      };
+    }
+  } catch {
+    /* ignore */
+  }
+
+  return local;
 }
 
 /**
@@ -295,10 +410,12 @@ export async function getRecentRecipients(): Promise<ContactProfile[]> {
     const result: ContactProfile[] = [];
     const seen = new Set<string>();
 
+    const pool = dynamicDirectoryCache.length > 0 ? dynamicDirectoryCache : VERIFIED_DIRECTORY;
+
     for (const r of recents) {
       if (seen.has(r.address.toLowerCase())) continue;
       seen.add(r.address.toLowerCase());
-      const known = VERIFIED_DIRECTORY.find(
+      const known = pool.find(
         (c) => c.address.toLowerCase() === r.address.toLowerCase(),
       );
       if (known) {
@@ -315,7 +432,7 @@ export async function getRecentRecipients(): Promise<ContactProfile[]> {
     }
 
     // Append standard directory
-    for (const d of VERIFIED_DIRECTORY) {
+    for (const d of pool) {
       if (!seen.has(d.address.toLowerCase())) {
         seen.add(d.address.toLowerCase());
         result.push(d);
@@ -324,6 +441,6 @@ export async function getRecentRecipients(): Promise<ContactProfile[]> {
 
     return result.slice(0, 8);
   } catch {
-    return VERIFIED_DIRECTORY.slice(0, 6);
+    return (dynamicDirectoryCache.length > 0 ? dynamicDirectoryCache : VERIFIED_DIRECTORY).slice(0, 6);
   }
 }
