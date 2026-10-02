@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useState, useMemo } from "react";
 import { useFocusEffect } from "expo-router";
 import { haptic as hapticFx } from "@/src/utils/clipboard";
 const Haptics = {
@@ -20,6 +20,7 @@ import { useWallet } from "@/src/wallet/WalletContext";
 import { redeemWalletPosition } from "@/src/wallet/privyTrade";
 import {
   usePerplAccount,
+  usePerplMarkets,
   closePerplPosition,
   reversePerplPosition,
   PerplPosition,
@@ -40,7 +41,18 @@ export default function PositionsScreen() {
   const toast = useToast();
 
   const userAddress = user?.address || me?.address || "";
-  const { account: perplAccount, refresh: refreshPerpl, loading: perplLoading } = usePerplAccount(userAddress);
+  const { account: perplAccount, refresh: refreshPerpl, loading: perplLoading } = usePerplAccount(userAddress, 3000);
+  const { markets: liveMarkets } = usePerplMarkets(2000);
+
+  const livePriceMap = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const m of liveMarkets) {
+      if (m?.symbol && typeof m.markPrice === "number") {
+        map.set(m.symbol.toUpperCase(), m.markPrice);
+      }
+    }
+    return map;
+  }, [liveMarkets]);
 
   const [tab, setTab] = useState<TabMode>("perps");
   const [perpSubTab, setPerpSubTab] = useState<"open" | "history">("open");
@@ -179,9 +191,15 @@ export default function PositionsScreen() {
 
   const totalCollateral = me?.ausd ? Number(me.ausd).toFixed(2) : "—";
   const openMargin = openPerps.reduce((s, p) => s + (p.marginAUSD || 0), 0);
-  const openPnL = openPerps.reduce((s, p) => s + (p.unrealizedPnLAUSD || 0), 0);
+  const openPnL = openPerps.reduce((s, p) => {
+    const mark = livePriceMap.get(p.symbol.toUpperCase()) ?? p.markPrice ?? p.entryPrice;
+    const delta = mark - p.entryPrice;
+    const pnl = p.side === "LONG" ? delta * p.size : -delta * p.size;
+    return s + pnl;
+  }, 0);
   const marginInUse = openMargin.toFixed(2);
   const unrealizedPnL = openPnL.toFixed(2);
+  const isOverallPositive = openPnL >= 0;
   const totalEquity =
     totalCollateral === "—"
       ? "—"
@@ -247,12 +265,41 @@ export default function PositionsScreen() {
             </View>
 
             <View style={styles.pnlPillRow}>
-              <View style={styles.pnlPill}>
-                <Text style={styles.pnlArrow}>↗</Text>
-                <Text style={styles.pnlPillText}>
-                  {unrealizedPnL !== "0.00"
-                    ? `${unrealizedPnL.startsWith("-") ? "" : "+"}$${unrealizedPnL} open PnL`
-                    : "No open Perpl PnL"}
+              <View
+                style={[
+                  styles.pnlPill,
+                  openPerps.length > 0
+                    ? isOverallPositive
+                      ? styles.pnlPillPos
+                      : styles.pnlPillNeg
+                    : null,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.pnlArrow,
+                    openPerps.length > 0
+                      ? isOverallPositive
+                        ? styles.posColor
+                        : styles.negColor
+                      : null,
+                  ]}
+                >
+                  {openPerps.length > 0 ? (isOverallPositive ? "▲" : "▼") : "↗"}
+                </Text>
+                <Text
+                  style={[
+                    styles.pnlPillText,
+                    openPerps.length > 0
+                      ? isOverallPositive
+                        ? styles.posColor
+                        : styles.negColor
+                      : null,
+                  ]}
+                >
+                  {openPerps.length > 0
+                    ? `${isOverallPositive ? "+" : ""}$${unrealizedPnL} (${openMargin > 0 ? ((openPnL / openMargin) * 100).toFixed(2) : "0.00"}% ROE)`
+                    : "No open Perpl positions"}
                 </Text>
               </View>
             </View>
@@ -268,8 +315,19 @@ export default function PositionsScreen() {
               </View>
               <View style={styles.metricItem}>
                 <Text style={styles.metricLabel}>UNREALIZED PnL</Text>
-                <Text style={[styles.metricVal, styles.posColor]}>
-                  {unrealizedPnL.startsWith("-") ? "" : "+"}${unrealizedPnL}
+                <Text
+                  style={[
+                    styles.metricVal,
+                    openPerps.length > 0
+                      ? isOverallPositive
+                        ? styles.posColor
+                        : styles.negColor
+                      : null,
+                  ]}
+                >
+                  {openPerps.length > 0
+                    ? `${isOverallPositive ? "+" : ""}$${unrealizedPnL}`
+                    : "$0.00"}
                 </Text>
               </View>
             </View>
@@ -425,6 +483,21 @@ export default function PositionsScreen() {
                 const isClosing = closingId === pos.id;
                 const isClosed = pos.status === "CLOSED" || optimisticClosedIds.has(pos.id);
 
+                const markPrice = isClosed
+                  ? (pos.closedPrice ?? pos.markPrice ?? pos.entryPrice)
+                  : (livePriceMap.get(pos.symbol.toUpperCase()) ?? pos.markPrice ?? pos.entryPrice);
+
+                const priceDelta = markPrice - pos.entryPrice;
+                const pnlValue = isClosed
+                  ? (pos.realizedPnLAUSD ?? 0)
+                  : (pos.side === "LONG" ? priceDelta * pos.size : -priceDelta * pos.size);
+
+                const pnlPct = isClosed
+                  ? (pos.marginAUSD > 0 ? (pnlValue / pos.marginAUSD) * 100 : 0)
+                  : (pos.marginAUSD > 0 ? (pnlValue / pos.marginAUSD) * 100 : 0);
+
+                const isPositive = pnlValue >= 0;
+
                 return (
                   <View key={pos.id} style={styles.posCard}>
                     <View style={styles.posCardTop}>
@@ -460,37 +533,76 @@ export default function PositionsScreen() {
                       </View>
                     )}
 
+                    {/* HERO LIVE PNL SECTION */}
+                    <View style={[styles.heroPnlBox, isPositive ? styles.heroPnlBoxPos : styles.heroPnlBoxNeg]}>
+                      <View style={styles.heroPnlLeft}>
+                        <View style={styles.heroPnlLabelRow}>
+                          <Text style={styles.heroPnlLabel}>
+                            {isClosed ? "REALIZED PnL" : "UNREALIZED PnL"}
+                          </Text>
+                          {!isClosed && (
+                            <View style={styles.liveTickBadge}>
+                              <View style={styles.greenPulseSmall} />
+                              <Text style={styles.liveTickText}>LIVE</Text>
+                            </View>
+                          )}
+                        </View>
+                        <View style={styles.heroPnlValueRow}>
+                          <Text style={[styles.heroPnlValue, isPositive ? styles.posColor : styles.negColor]}>
+                            {isPositive ? "+" : "-"}${Math.abs(pnlValue).toFixed(2)}
+                          </Text>
+                          <Text style={styles.heroPnlCurrency}> AUSD</Text>
+                        </View>
+                      </View>
+
+                      <View style={[styles.heroRoeBadge, isPositive ? styles.heroRoeBadgePos : styles.heroRoeBadgeNeg]}>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+                          <Text style={[styles.heroRoeArrow, isPositive ? styles.posColor : styles.negColor]}>
+                            {isPositive ? "▲" : "▼"}
+                          </Text>
+                          <Text style={[styles.heroRoeText, isPositive ? styles.posColor : styles.negColor]}>
+                            {isPositive ? "+" : ""}{pnlPct.toFixed(2)}%
+                          </Text>
+                        </View>
+                        <Text style={styles.heroRoeSub}>ROE</Text>
+                      </View>
+                    </View>
+
+                    {/* PRIMARY STATS GRID (Entry, Mark, Margin) */}
                     <View style={styles.posStatsGrid}>
                       <View style={styles.posStatCol}>
                         <Text style={styles.posStatLabel}>ENTRY PRICE</Text>
-                        <Text style={styles.posStatVal}>${pos.entryPrice.toLocaleString()}</Text>
+                        <Text style={styles.posStatVal}>${pos.entryPrice.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 2 })}</Text>
                       </View>
                       <View style={styles.posStatCol}>
                         <Text style={styles.posStatLabel}>{isClosed ? "CLOSED PRICE" : "MARK PRICE"}</Text>
-                        <Text style={styles.posStatVal}>
-                          ${(isClosed ? (pos.closedPrice ?? pos.markPrice ?? pos.entryPrice) : (pos.markPrice ?? pos.entryPrice)).toLocaleString()}
+                        <Text style={[styles.posStatVal, !isClosed && (isPositive ? styles.posColor : styles.negColor)]}>
+                          ${markPrice.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 2 })}
                         </Text>
                       </View>
-                      <View style={styles.posStatCol}>
+                      <View style={[styles.posStatCol, { alignItems: "flex-end" }]}>
                         <Text style={styles.posStatLabel}>MARGIN</Text>
                         <Text style={styles.posStatVal}>${pos.marginAUSD} AUSD</Text>
                       </View>
+                    </View>
+
+                    {/* SECONDARY STATS GRID (Size, Leverage, Liq Price) */}
+                    <View style={styles.posStatsSecondary}>
+                      <View style={styles.posStatCol}>
+                        <Text style={styles.posStatLabel}>POSITION SIZE</Text>
+                        <Text style={styles.posStatValSecondary}>
+                          {pos.size} {pos.symbol} <Text style={styles.posStatSubVal}>(${pos.sizeAUSD})</Text>
+                        </Text>
+                      </View>
+                      <View style={styles.posStatCol}>
+                        <Text style={styles.posStatLabel}>LEVERAGE</Text>
+                        <Text style={styles.posStatValSecondary}>{pos.leverage}x Cross</Text>
+                      </View>
                       <View style={[styles.posStatCol, { alignItems: "flex-end" }]}>
-                        <Text style={styles.posStatLabel}>{isClosed ? "REALIZED PnL" : "UNREALIZED PnL"}</Text>
-                        {isClosed ? (
-                          <Text
-                            style={[
-                              styles.posStatVal,
-                              (pos.realizedPnLAUSD ?? 0) >= 0 ? styles.posColor : styles.negColor,
-                            ]}
-                          >
-                            {(pos.realizedPnLAUSD ?? 0) >= 0 ? "+" : ""}${(pos.realizedPnLAUSD ?? 0).toFixed(2)}
-                          </Text>
-                        ) : (
-                          <Text style={[styles.posStatVal, (pos.unrealizedPnLAUSD ?? 0) >= 0 ? styles.posColor : styles.negColor]}>
-                            {(pos.unrealizedPnLAUSD ?? 0) >= 0 ? "+" : ""}${(pos.unrealizedPnLAUSD ?? 0).toFixed(2)} ({(pos.unrealizedPnLPct ?? 0).toFixed(1)}%)
-                          </Text>
-                        )}
+                        <Text style={styles.posStatLabel}>EST. LIQ PRICE</Text>
+                        <Text style={[styles.posStatValSecondary, { color: pos.liquidationPrice ? "#FFAA00" : colors.muted }]}>
+                          {pos.liquidationPrice ? `$${pos.liquidationPrice.toLocaleString()}` : "Safe (>50%)"}
+                        </Text>
                       </View>
                     </View>
 
@@ -556,7 +668,12 @@ export default function PositionsScreen() {
                       <Pressable
                         onPress={() => {
                           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                          setSharePos(pos);
+                          setSharePos({
+                            ...pos,
+                            markPrice,
+                            unrealizedPnLAUSD: pnlValue,
+                            unrealizedPnLPct: pnlPct,
+                          });
                         }}
                         style={[styles.actionBtn, styles.shareBtn, isClosed && { flex: 1 }]}
                       >
@@ -813,25 +930,31 @@ const styles = StyleSheet.create({
   pnlPill: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(46,229,157,0.12)",
+    backgroundColor: "#161922",
     alignSelf: "flex-start",
     paddingVertical: 4,
     paddingHorizontal: 8,
     borderRadius: 6,
     gap: 4,
     borderWidth: 1,
-    borderColor: "rgba(46,229,157,0.3)",
+    borderColor: "#252B3B",
+  },
+  pnlPillPos: {
+    backgroundColor: "rgba(46,229,157,0.12)",
+    borderColor: "rgba(46,229,157,0.35)",
+  },
+  pnlPillNeg: {
+    backgroundColor: "rgba(255,77,106,0.12)",
+    borderColor: "rgba(255,77,106,0.35)",
   },
   pnlArrow: {
-    color: colors.up,
     fontSize: 11,
     fontWeight: "bold",
   },
   pnlPillText: {
-    color: colors.up,
     fontFamily: type.data,
     fontSize: 11,
-    fontWeight: "600",
+    fontWeight: "700",
   },
   metricsGrid: {
     flexDirection: "row",
@@ -1223,16 +1346,136 @@ const styles = StyleSheet.create({
     fontFamily: type.data,
     fontSize: 9,
   },
+  heroPnlBox: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#0A0D14",
+    borderRadius: radius.md,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.06)",
+  },
+  heroPnlBoxPos: {
+    backgroundColor: "rgba(46,229,157,0.05)",
+    borderColor: "rgba(46,229,157,0.25)",
+  },
+  heroPnlBoxNeg: {
+    backgroundColor: "rgba(255,77,106,0.05)",
+    borderColor: "rgba(255,77,106,0.25)",
+  },
+  heroPnlLeft: {
+    gap: 3,
+  },
+  heroPnlLabelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  heroPnlLabel: {
+    color: colors.muted,
+    fontFamily: type.bold,
+    fontSize: 9,
+    letterSpacing: 0.8,
+  },
+  liveTickBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(46,229,157,0.12)",
+    paddingVertical: 1,
+    paddingHorizontal: 5,
+    borderRadius: 4,
+  },
+  greenPulseSmall: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: colors.brand,
+  },
+  liveTickText: {
+    color: colors.brand,
+    fontFamily: type.data,
+    fontSize: 8,
+    fontWeight: "bold",
+    letterSpacing: 0.5,
+  },
+  heroPnlValueRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: 2,
+    marginTop: 2,
+  },
+  heroPnlValue: {
+    fontFamily: type.bold,
+    fontSize: 22,
+    fontWeight: "800",
+    letterSpacing: -0.5,
+  },
+  heroPnlCurrency: {
+    color: colors.muted,
+    fontFamily: type.data,
+    fontSize: 11,
+    fontWeight: "600",
+  },
+  heroRoeBadge: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    minWidth: 84,
+  },
+  heroRoeBadgePos: {
+    backgroundColor: "rgba(46,229,157,0.14)",
+    borderColor: "rgba(46,229,157,0.38)",
+  },
+  heroRoeBadgeNeg: {
+    backgroundColor: "rgba(255,77,106,0.14)",
+    borderColor: "rgba(255,77,106,0.38)",
+  },
+  heroRoeArrow: {
+    fontSize: 9,
+    marginBottom: -1,
+  },
+  heroRoeText: {
+    fontFamily: type.bold,
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  heroRoeSub: {
+    color: colors.muted,
+    fontFamily: type.data,
+    fontSize: 8,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+    marginTop: 1,
+  },
   posStatsGrid: {
     flexDirection: "row",
     justifyContent: "space-between",
     backgroundColor: "#0C0E14",
     borderRadius: radius.md,
     padding: 10,
-    marginBottom: 12,
+    marginBottom: 8,
+  },
+  posStatsSecondary: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    backgroundColor: "rgba(255,255,255,0.02)",
+    borderRadius: radius.md,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.04)",
   },
   posStatCol: {
     gap: 2,
+    flex: 1,
   },
   posStatLabel: {
     color: colors.muted,
@@ -1245,6 +1488,17 @@ const styles = StyleSheet.create({
     fontFamily: type.data,
     fontSize: 11,
     fontWeight: "bold",
+  },
+  posStatValSecondary: {
+    color: "#D0D3DC",
+    fontFamily: type.data,
+    fontSize: 10,
+    fontWeight: "600",
+  },
+  posStatSubVal: {
+    color: colors.muted,
+    fontSize: 9,
+    fontWeight: "400",
   },
   hedgePillRow: {
     marginBottom: 8,
