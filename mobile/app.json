@@ -10,7 +10,9 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.hunch123.app",
-      "associatedDomains": ["webcredentials:accounts.hunch.app"],
+      "associatedDomains": [
+        "webcredentials:accounts.hunch.app"
+      ],
       "infoPlist": {
         "NSFaceIDUsageDescription": "Unlock Hunch and confirm hunches with Face ID.",
         "NSLocalNetworkUsageDescription": "Hunch talks to your local API on the same Wi‑Fi.",
@@ -56,8 +58,9 @@
       "router": {},
       "rpId": "accounts.hunch.app",
       "eas": {
-        "projectId": "8d33d3ed-4d5f-481f-8335-702e0c333dcb"
+        "projectId": "2507beef-f717-44c3-83d6-dd8c17b53797"
       }
-    }
+    },
+    "owner": "irrhammhmz"
   }
 }
