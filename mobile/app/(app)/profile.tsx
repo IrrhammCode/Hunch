@@ -140,18 +140,34 @@ export default function ProfileScreen() {
     setBusy(true);
     try {
       if (!user?.address) {
-        toast.error("Wallet not ready", "Sign in with Face ID / Mera passkey first.");
+        toast.error("Wallet not ready", "Sign in first to claim testnet tokens.");
         return;
       }
       const r = await fundWallet(user.address);
       await refresh();
-      toast.success(
-        "Funded AUSD",
-        `AUSD ${Number(r.ausd).toFixed(2)} · MON ${Number(r.mon).toFixed(3)}`,
-      );
+      if ((r as any).alreadyFunded) {
+        toast.show("Already Funded", {
+          body: `Balance: ${Number(r.ausd).toFixed(2)} AUSD · ${Number(r.mon).toFixed(3)} MON`,
+          tone: "neutral",
+        });
+      } else {
+        toast.success(
+          "Faucet Claimed!",
+          `${Number(r.ausd).toFixed(2)} AUSD · ${Number(r.mon).toFixed(3)} MON`,
+        );
+      }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (e) {
-      toast.error("Faucet failed", e instanceof Error ? e.message : String(e));
+      const msg = e instanceof Error ? e.message : String(e);
+      // Make error messages more user-friendly
+      if (msg.includes("cooldown")) {
+        toast.error("Cooldown Active", "Please wait 10 minutes between faucet claims.");
+      } else if (msg.includes("missing revert data") || msg.includes("unavailable")) {
+        toast.error("Faucet Unavailable", "Testnet faucet is temporarily empty. Please try again later.");
+      } else {
+        toast.error("Faucet Error", msg);
+      }
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
       setBusy(false);
     }

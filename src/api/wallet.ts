@@ -151,6 +151,7 @@ export async function faucetWallet(address: string, amountAUSD = "1000") {
   }
 
   let mintTx: string | undefined;
+  let ausdError: string | undefined;
   if (needMint) {
     const qty = ethers.parseUnits(String(capped), 6);
     try {
@@ -160,6 +161,7 @@ export async function faucetWallet(address: string, amountAUSD = "1000") {
       await waitForReceipt(provider, tx.hash);
       mintTx = tx.hash;
     } catch (e) {
+      console.warn("[faucet] Agora faucet contract failed:", (e as any)?.shortMessage || (e as any)?.message || e);
       try {
         const hotBal = await ausd.balanceOf(wallet.address);
         if (hotBal >= qty) {
@@ -167,20 +169,39 @@ export async function faucetWallet(address: string, amountAUSD = "1000") {
           await waitForReceipt(provider, sendAUSD.hash);
           mintTx = sendAUSD.hash;
         } else {
+          ausdError = "Agora testnet faucet is temporarily unavailable and backup wallet is empty. Please try again later.";
           console.warn("[faucet] Agora faucet failed and hot wallet has no AUSD to transfer");
         }
       } catch (inner) {
+        ausdError = "Agora testnet faucet is temporarily unavailable. Please try again later.";
         console.warn("[faucet] AUSD transfer warning:", (inner as any)?.message || inner);
       }
     }
   }
 
   let monTx: string | undefined;
+  let monError: string | undefined;
   if (needMon) {
-    const topup = ethers.parseEther(FAUCET.monTopup);
-    const send = await wallet.sendTransaction({ to: address, value: topup });
-    await waitForReceipt(provider, send.hash);
-    monTx = send.hash;
+    try {
+      const topup = ethers.parseEther(FAUCET.monTopup);
+      const hotMonBal = await provider.getBalance(wallet.address);
+      if (hotMonBal >= topup) {
+        const send = await wallet.sendTransaction({ to: address, value: topup });
+        await waitForReceipt(provider, send.hash);
+        monTx = send.hash;
+      } else {
+        monError = "Hot wallet has insufficient MON for gas top-up.";
+        console.warn("[faucet] Hot wallet MON balance too low for top-up");
+      }
+    } catch (e) {
+      monError = "MON gas top-up failed.";
+      console.warn("[faucet] MON send error:", (e as any)?.shortMessage || (e as any)?.message || e);
+    }
+  }
+
+  // If both AUSD and MON failed, throw a clear error
+  if (needMint && !mintTx && needMon && !monTx) {
+    throw new Error(ausdError || "Testnet faucet is temporarily unavailable. Please try again in a few minutes.");
   }
 
   clearWalletCache();
@@ -193,5 +214,6 @@ export async function faucetWallet(address: string, amountAUSD = "1000") {
     monTx,
     alreadyFunded: false,
     mintedAUSD: needMint ? String(capped) : "0",
+    warnings: [ausdError, monError].filter(Boolean),
   };
 }

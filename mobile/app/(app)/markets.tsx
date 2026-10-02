@@ -319,7 +319,7 @@ export default function MarketsScreen() {
                         </View>
                       </View>
                       <Text style={styles.volSub} numberOfLines={1}>
-                        Vol ${(m.volume24hAUSD / 1000).toFixed(0)}k · 20x max
+                        Vol ${(m.volume24hAUSD / 1000).toFixed(0)}k · {m.change24hPct >= 0 ? "+" : ""}{m.change24hPct.toFixed(1)}%
                       </Text>
                     </View>
                   </View>
@@ -820,11 +820,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-end",
     gap: 2,
-    height: 20,
+    height: 18,
   },
   sparkBar: {
     width: 3,
-    borderRadius: 1,
+    borderRadius: 1.5,
   },
   oracleFooter: {
     flexDirection: "row",
