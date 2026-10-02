@@ -34,14 +34,19 @@ export function BrandMark({
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: 4 },
+  wrap: {
+    gap: 4,
+    alignItems: "center",
+  },
   word: {
     color: colors.brand,
     fontFamily: "BebasNeue_400Regular",
+    textAlign: "center",
   },
   tag: {
     color: colors.muted,
     fontFamily: "DMSans_400Regular",
     letterSpacing: 0.5,
+    textAlign: "center",
   },
 });
