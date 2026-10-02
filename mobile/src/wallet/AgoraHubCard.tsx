@@ -139,11 +139,11 @@ export function AgoraHubCard({
           ]}
         >
           {faucetBusy ? (
-            <ActivityIndicator size="small" color="#00E5FF" />
+            <ActivityIndicator size="small" color={colors.brand} />
           ) : (
             <>
-              <Icon name="water-outline" size={14} color="#00E5FF" />
-              <Text style={[styles.actionBtnText, { color: "#00E5FF" }]}>
+              <Icon name="water-outline" size={14} color={colors.brand} />
+              <Text style={[styles.actionBtnText, { color: colors.brand }]}>
                 Claim AUSD
               </Text>
             </>
@@ -332,8 +332,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   faucetActionBtn: {
-    borderColor: "rgba(0, 229, 255, 0.3)",
-    backgroundColor: "rgba(0, 229, 255, 0.06)",
+    borderColor: "rgba(214, 255, 63, 0.35)",
+    backgroundColor: "rgba(214, 255, 63, 0.08)",
   },
   actionBtnPressed: {
     backgroundColor: "#1E2638",

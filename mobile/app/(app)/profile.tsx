@@ -378,8 +378,8 @@ export default function ProfileScreen() {
                   setShowReceiveModal(true);
                 }}
               >
-                <View style={[styles.quickActionIconWrap, { backgroundColor: "rgba(131, 110, 249, 0.18)" }]}>
-                  <Icon name="arrow-down" size={15} color={colors.monadPurple} />
+                <View style={[styles.quickActionIconWrap, { backgroundColor: "rgba(214, 255, 63, 0.15)" }]}>
+                  <Icon name="arrow-down" size={15} color={colors.brand} />
                 </View>
                 <Text style={styles.quickActionLabel}>RECEIVE</Text>
               </Pressable>
@@ -393,14 +393,14 @@ export default function ProfileScreen() {
                 onPress={onFaucet}
                 disabled={busy}
               >
-                <View style={[styles.quickActionIconWrap, { backgroundColor: "rgba(0, 229, 255, 0.15)" }]}>
+                <View style={[styles.quickActionIconWrap, { backgroundColor: "rgba(214, 255, 63, 0.15)" }]}>
                   {busy ? (
-                    <ActivityIndicator size="small" color="#00E5FF" />
+                    <ActivityIndicator size="small" color={colors.brand} />
                   ) : (
-                    <Icon name="water-outline" size={15} color="#00E5FF" />
+                    <Icon name="water-outline" size={15} color={colors.brand} />
                   )}
                 </View>
-                <Text style={[styles.quickActionLabel, { color: "#00E5FF" }]}>
+                <Text style={[styles.quickActionLabel, { color: colors.brand }]}>
                   {busy ? "CLAIMING…" : "FAUCET"}
                 </Text>
               </Pressable>
@@ -483,7 +483,7 @@ export default function ProfileScreen() {
                     }}
                     hitSlop={6}
                   >
-                    <Text style={[styles.assetSendLink, { color: colors.monadPurple }]}>Send ›</Text>
+                    <Text style={styles.assetSendLink}>Send ›</Text>
                   </Pressable>
                 </View>
               </View>
@@ -991,8 +991,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   faucetQuickBtn: {
-    borderColor: "rgba(0,229,255,0.3)",
-    backgroundColor: "rgba(0,229,255,0.06)",
+    borderColor: "rgba(214, 255, 63, 0.35)",
+    backgroundColor: "rgba(214, 255, 63, 0.08)",
   },
   quickActionBtnPressed: {
     backgroundColor: "#1E2638",

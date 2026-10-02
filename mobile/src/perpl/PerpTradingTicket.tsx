@@ -565,7 +565,7 @@ export function PerpTradingTicket() {
           <ActivityIndicator color="#000" />
         ) : (
           <>
-            <Icon name="flash" size={16} color={colors.brand} />
+            <Icon name="flash" size={16} color="#000000" />
             <Text style={styles.mainActionText}>
               OPEN {side} {currentMark.symbol} ({leverage}X)
             </Text>
@@ -1025,15 +1025,15 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   guardShieldBadge: {
-    backgroundColor: "#1B2232",
-    borderColor: "#836EF9",
+    backgroundColor: "rgba(214, 255, 63, 0.12)",
+    borderColor: "rgba(214, 255, 63, 0.4)",
     borderWidth: 1,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
   },
   guardShieldBadgeText: {
-    color: "#836EF9",
+    color: colors.brand,
     fontFamily: type.bold,
     fontSize: 9,
     letterSpacing: 0.6,
