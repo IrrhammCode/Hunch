@@ -1,13 +1,17 @@
-import React from "react";
+import React, { useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Modal,
-  View,
-  Text,
+  Platform,
   Pressable,
-  StyleSheet,
-  Dimensions,
   ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
+import { captureRef } from "react-native-view-shot";
+import * as Sharing from "expo-sharing";
+import { Icon } from "@/src/components/Icon";
 import { colors, radius, space, type } from "@/src/theme";
 import { copyToClipboard, haptic } from "@/src/utils/clipboard";
 import { useToast } from "@/src/components/Toast";
@@ -21,6 +25,9 @@ interface PnlShareModalProps {
 
 export function PnlShareModal({ visible, onClose, position }: PnlShareModalProps) {
   const toast = useToast();
+  const cardRef = useRef<View>(null);
+  const [sharingImage, setSharingImage] = useState(false);
+
   if (!position) return null;
 
   const isClosed = position.status === "CLOSED";
@@ -34,6 +41,187 @@ export function PnlShareModal({ visible, onClose, position }: PnlShareModalProps
   const currentPrice = isClosed
     ? (position.closedPrice ?? position.entryPrice)
     : (position.markPrice ?? position.entryPrice);
+
+  const downloadWebCanvasImage = async () => {
+    if (typeof document === "undefined") return;
+    const canvas = document.createElement("canvas");
+    canvas.width = 1080;
+    canvas.height = 1080;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    // Dark background gradient
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, 1080);
+    bgGrad.addColorStop(0, "#0D111A");
+    bgGrad.addColorStop(1, "#07090E");
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, 1080, 1080);
+
+    // Border
+    ctx.strokeStyle = "#222C3E";
+    ctx.lineWidth = 4;
+    ctx.strokeRect(24, 24, 1032, 1032);
+
+    // Ambient radial glow behind PnL
+    const radial = ctx.createRadialGradient(540, 540, 50, 540, 540, 450);
+    radial.addColorStop(0, isProfitable ? "rgba(46, 229, 157, 0.16)" : "rgba(255, 77, 106, 0.16)");
+    radial.addColorStop(1, "rgba(0, 0, 0, 0)");
+    ctx.fillStyle = radial;
+    ctx.fillRect(0, 0, 1080, 1080);
+
+    // Header: Brand & Network
+    ctx.fillStyle = "#D6FF3F";
+    ctx.font = "bold 44px sans-serif";
+    ctx.fillText("▲ HUNCH", 70, 120);
+
+    ctx.fillStyle = "#8B8E97";
+    ctx.font = "600 24px sans-serif";
+    ctx.fillText("DEX TERMINAL · MONAD TESTNET", 70, 160);
+
+    // Asset & Side badge
+    const badgeColor = position.side === "LONG" ? "#2EE59D" : "#FF4D6A";
+    const badgeBg = position.side === "LONG" ? "#0E291C" : "#321118";
+
+    // Draw Pill
+    ctx.fillStyle = badgeBg;
+    ctx.strokeStyle = badgeColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    if (typeof (ctx as any).roundRect === "function") {
+      (ctx as any).roundRect(70, 220, 240, 60, 30);
+    } else {
+      ctx.rect(70, 220, 240, 60);
+    }
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = badgeColor;
+    ctx.font = "bold 28px sans-serif";
+    ctx.fillText(`${position.side} ${position.leverage}X`, 100, 262);
+
+    ctx.fillStyle = "#F2F1EC";
+    ctx.font = "bold 36px sans-serif";
+    ctx.fillText(`${position.symbol} / AUSD PERP`, 340, 264);
+
+    // Main Return Label
+    ctx.fillStyle = "#8B8E97";
+    ctx.font = "bold 24px sans-serif";
+    ctx.fillText("RETURN ON MARGIN", 70, 400);
+
+    // Giant PnL %
+    ctx.fillStyle = isProfitable ? "#2EE59D" : "#FF4D6A";
+    ctx.font = "bold 120px sans-serif";
+    const sign = isProfitable ? "+" : "";
+    ctx.fillText(`${sign}${pnlPct.toFixed(1)}%`, 70, 520);
+
+    // USD Amount badge
+    ctx.fillStyle = isProfitable ? "rgba(46, 229, 157, 0.16)" : "rgba(255, 77, 106, 0.16)";
+    ctx.beginPath();
+    if (typeof (ctx as any).roundRect === "function") {
+      (ctx as any).roundRect(70, 560, 380, 64, 12);
+    } else {
+      ctx.rect(70, 560, 380, 64);
+    }
+    ctx.fill();
+
+    ctx.fillStyle = isProfitable ? "#2EE59D" : "#FF4D6A";
+    ctx.font = "bold 32px sans-serif";
+    ctx.fillText(`${sign}$${pnlAUSD.toFixed(2)} AUSD`, 95, 604);
+
+    // Stats Grid Box
+    ctx.fillStyle = "#121722";
+    ctx.strokeStyle = "#202838";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    if (typeof (ctx as any).roundRect === "function") {
+      (ctx as any).roundRect(70, 690, 940, 160, 16);
+    } else {
+      ctx.rect(70, 690, 940, 160);
+    }
+    ctx.fill();
+    ctx.stroke();
+
+    // Stats Columns
+    ctx.fillStyle = "#8B8E97";
+    ctx.font = "600 20px sans-serif";
+    ctx.fillText("ENTRY PRICE", 110, 745);
+    ctx.fillText(isClosed ? "CLOSED AT" : "MARK PRICE", 430, 745);
+    ctx.fillText("MARGIN", 750, 745);
+
+    ctx.fillStyle = "#F2F1EC";
+    ctx.font = "bold 32px sans-serif";
+    ctx.fillText(`$${position.entryPrice.toLocaleString()}`, 110, 800);
+    ctx.fillText(`$${currentPrice.toLocaleString()}`, 430, 800);
+    ctx.fillText(`$${position.marginAUSD} AUSD`, 750, 800);
+
+    // Footer
+    ctx.fillStyle = "#5A6170";
+    ctx.font = "600 22px sans-serif";
+    ctx.fillText("AGORA AUSD · PERPL PROTOCOL", 70, 950);
+
+    ctx.fillStyle = "#D6FF3F";
+    ctx.font = "bold 26px sans-serif";
+    ctx.fillText("hunch.trade", 840, 950);
+
+    // Trigger download
+    const dataUrl = canvas.toDataURL("image/png");
+    const link = document.createElement("a");
+    link.download = `hunch-pnl-${position.symbol}-${Date.now()}.png`;
+    link.href = dataUrl;
+    link.click();
+  };
+
+  const handleShareImage = async () => {
+    try {
+      setSharingImage(true);
+      await haptic("medium");
+
+      if (Platform.OS === "web") {
+        await downloadWebCanvasImage();
+        await haptic("success");
+        toast.show("Image Downloaded", {
+          body: "PnL card saved to your downloads.",
+          tone: "success",
+        });
+        return;
+      }
+
+      if (!cardRef.current) {
+        throw new Error("Card view not ready");
+      }
+
+      const uri = await captureRef(cardRef, {
+        format: "png",
+        quality: 1.0,
+        result: "tmpfile",
+      });
+
+      const isAvailable = await Sharing.isAvailableAsync();
+      if (isAvailable) {
+        await Sharing.shareAsync(uri, {
+          mimeType: "image/png",
+          dialogTitle: `Share ${position.symbol} PnL`,
+          UTI: "public.png",
+        });
+        await haptic("success");
+      } else {
+        await handleCopy();
+        toast.show("Sharing unavailable", {
+          body: "Copied text summary to clipboard instead.",
+          tone: "neutral",
+        });
+      }
+    } catch (err: any) {
+      console.warn("Failed to capture/share image:", err);
+      toast.show("Download Failed", {
+        body: err?.message || "Could not generate image, copied text instead.",
+        tone: "error",
+      });
+      await handleCopy();
+    } finally {
+      setSharingImage(false);
+    }
+  };
 
   const handleCopy = async () => {
     await haptic("medium");
@@ -74,7 +262,7 @@ export function PnlShareModal({ visible, onClose, position }: PnlShareModalProps
             bounces={false}
           >
             {/* VIRAL SHARE CARD */}
-            <View style={styles.card}>
+            <View ref={cardRef} collapsable={false} style={styles.card}>
               {/* Header */}
               <View style={styles.cardHeader}>
                 <View style={styles.brandRow}>
@@ -171,14 +359,32 @@ export function PnlShareModal({ visible, onClose, position }: PnlShareModalProps
               </View>
             </View>
 
-            {/* Action Row */}
-            <View style={styles.actionRow}>
-              <Pressable onPress={handleCopy} style={styles.copyBtn}>
-                <Text style={styles.copyBtnText}>COPY PnL SUMMARY</Text>
+            {/* Action Buttons */}
+            <View style={styles.actionContainer}>
+              <Pressable
+                onPress={handleShareImage}
+                disabled={sharingImage}
+                style={[styles.shareImageBtn, sharingImage && { opacity: 0.7 }]}
+              >
+                {sharingImage ? (
+                  <ActivityIndicator size="small" color="#0A0B0D" />
+                ) : (
+                  <>
+                    <Icon name="download-outline" size={17} color="#0A0B0D" />
+                    <Text style={styles.shareImageBtnText}>DOWNLOAD / SHARE IMAGE</Text>
+                  </>
+                )}
               </Pressable>
-              <Pressable onPress={onClose} style={styles.closeBtn}>
-                <Text style={styles.closeBtnText}>CLOSE</Text>
-              </Pressable>
+
+              <View style={styles.secondaryRow}>
+                <Pressable onPress={handleCopy} style={styles.copyBtn}>
+                  <Icon name="copy-outline" size={15} color={colors.ink} />
+                  <Text style={styles.copyBtnText}>COPY TEXT</Text>
+                </Pressable>
+                <Pressable onPress={onClose} style={styles.closeBtn}>
+                  <Text style={styles.closeBtnText}>CLOSE</Text>
+                </Pressable>
+              </View>
             </View>
           </ScrollView>
         </View>
@@ -427,14 +633,16 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 0.5,
   },
-  actionRow: {
-    flexDirection: "row",
+  actionContainer: {
     gap: 10,
+    marginTop: 4,
   },
-  copyBtn: {
-    flex: 2,
+  shareImageBtn: {
+    width: "100%",
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: 8,
     backgroundColor: colors.brand,
     paddingVertical: 14,
     borderRadius: radius.md,
@@ -444,26 +652,48 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-  copyBtnText: {
+  shareImageBtnText: {
     color: "#0A0B0D",
     fontFamily: type.bold,
     fontSize: 13,
     letterSpacing: 0.8,
   },
+  secondaryRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  copyBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: "#161D2B",
+    borderWidth: 1,
+    borderColor: "#263248",
+    paddingVertical: 12,
+    borderRadius: radius.md,
+  },
+  copyBtnText: {
+    color: colors.ink,
+    fontFamily: type.bold,
+    fontSize: 12,
+    letterSpacing: 0.6,
+  },
   closeBtn: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#1A2232",
-    borderWidth: 1.5,
-    borderColor: "#303F5C",
-    paddingVertical: 14,
+    backgroundColor: "#11151F",
+    borderWidth: 1,
+    borderColor: "#1E2536",
+    paddingVertical: 12,
     borderRadius: radius.md,
   },
   closeBtnText: {
-    color: "#FFFFFF",
+    color: colors.muted,
     fontFamily: type.bold,
-    fontSize: 13,
-    letterSpacing: 0.8,
+    fontSize: 12,
+    letterSpacing: 0.6,
   },
 });

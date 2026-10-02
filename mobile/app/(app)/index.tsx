@@ -100,6 +100,8 @@ export default function HunchScreen() {
   const [loading, setLoading] = useState(true);
   const settledRef = useRef<Set<string>>(new Set());
   const busyRef = useRef(false);
+  const currentRoundIdRef = useRef<string | null>(null);
+  const endsAtRef = useRef<number | null>(null);
   const tx = useSharedValue(0);
   const pulse = useSharedValue(0);
 
@@ -111,8 +113,23 @@ export default function HunchScreen() {
       setErr(null);
 
       if (next.round?.status === "open" && typeof next.timeRemaining === "number") {
-        setEndsAt(Date.now() + next.timeRemaining * 1000);
+        const roundIdStr = String(next.round.roundId);
+        const serverEndsAt = Date.now() + Math.max(0, next.timeRemaining) * 1000;
+        if (currentRoundIdRef.current !== roundIdStr || endsAtRef.current == null) {
+          currentRoundIdRef.current = roundIdStr;
+          endsAtRef.current = serverEndsAt;
+          setEndsAt(serverEndsAt);
+        } else {
+          // If already running for this round, only sync if drift is larger than 3.5s
+          const currentRemaining = (endsAtRef.current - Date.now()) / 1000;
+          if (Math.abs(currentRemaining - next.timeRemaining) > 3.5) {
+            endsAtRef.current = serverEndsAt;
+            setEndsAt(serverEndsAt);
+          }
+        }
       } else if (next.round?.status !== "open") {
+        currentRoundIdRef.current = null;
+        endsAtRef.current = null;
         setEndsAt(null);
       }
 
@@ -132,11 +149,17 @@ export default function HunchScreen() {
       }
 
       const openHunches = (await listHunches()).filter((h) => h.status === "open");
-      const ids = [...new Set(openHunches.map((h) => h.roundId))];
-      for (const rid of ids) {
-        if (settledRef.current.has(rid)) continue;
-        try {
-          const detail = await fetchRound(rid);
+      const ids = [...new Set(openHunches.map((h) => h.roundId))].filter(
+        (rid) => !settledRef.current.has(rid)
+      );
+
+      if (ids.length > 0) {
+        const roundDetails = await Promise.allSettled(ids.map((rid) => fetchRound(rid)));
+        for (let i = 0; i < ids.length; i++) {
+          const res = roundDetails[i];
+          if (res.status !== "fulfilled") continue;
+          const detail = res.value;
+          const rid = ids[i];
           if (detail.round?.status === "resolved" && typeof detail.round.yesWins === "boolean") {
             const settled = await settleRound(rid, detail.round.yesWins);
             settledRef.current.add(rid);
@@ -165,8 +188,6 @@ export default function HunchScreen() {
               else toast.error("You lost", `${outcome}\n${line}`);
             }
           }
-        } catch {
-          /* ignore */
         }
       }
     } catch (e) {
@@ -179,12 +200,12 @@ export default function HunchScreen() {
 
   useEffect(() => {
     refresh();
-    const id = setInterval(refresh, 6000);
+    const id = setInterval(refresh, 5000);
     return () => clearInterval(id);
   }, [refresh]);
 
   useEffect(() => {
-    const id = setInterval(() => setNowMs(Date.now()), 100);
+    const id = setInterval(() => setNowMs(Date.now()), 200);
     return () => clearInterval(id);
   }, []);
 
@@ -193,6 +214,15 @@ export default function HunchScreen() {
     data?.round?.status === "open" && endsAt != null
       ? Math.max(0, (endsAt - nowMs) / 1000)
       : 0;
+
+  // Fast auto-refresh when round ends so the next round loads smoothly without freezing at 0
+  useEffect(() => {
+    if (data?.round?.status === "open" && remainingSecRaw <= 0) {
+      refresh();
+      const fastId = setInterval(refresh, 1800);
+      return () => clearInterval(fastId);
+    }
+  }, [data?.round?.status, remainingSecRaw <= 0, refresh]);
   const urgent = remainingSecRaw > 0 && remainingSecRaw < 10;
 
   useEffect(() => {
@@ -218,7 +248,7 @@ export default function HunchScreen() {
   const remainingSec = remainingSecRaw;
   const remainingDisplay = open ? formatCountdown(remainingSec) : "—";
   const strikeLabel = round ? formatStrike(round.strike, round.expo) : "—";
-  const canTrade = open && remainingSec >= 12 && !busy;
+  const canTrade = open && remainingSec >= 6 && !busy;
 
   useEffect(() => {
     if (!open || !round?.market) {
@@ -276,8 +306,8 @@ export default function HunchScreen() {
         toast.show("No live round", { body: "Keeper is opening the next market." });
         return;
       }
-      if (remainingSec < 12) {
-        toast.show("Too late", { body: "Under 12s left — wait for next round." });
+      if (remainingSec < 6) {
+        toast.show("Too late", { body: "Under 6s left — wait for next round." });
         return;
       }
       if (!user?.address) {
@@ -383,6 +413,8 @@ export default function HunchScreen() {
 
   const pan = Gesture.Pan()
     .enabled(canTrade)
+    .activeOffsetX([-10, 10])
+    .failOffsetY([-15, 15])
     .onUpdate((e) => {
       tx.value = Math.max(-150, Math.min(150, e.translationX));
     })

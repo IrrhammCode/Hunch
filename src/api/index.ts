@@ -62,7 +62,7 @@ app.use("*", cors());
 let executeBusy = false;
 
 /** Cache so phone poll + keeper don't melt public RPC (15 req/s cap). */
-let roundCache: { key: string; at: number; body: unknown } | null = null;
+let roundCache: { key: string; at: number; body: any } | null = null;
 const ROUND_CACHE_MS = Number(process.env.ROUND_CACHE_MS || 5000);
 
 app.get("/health", (c) => c.json({ ok: true, service: "hunch-api" }));
@@ -356,7 +356,12 @@ app.get("/v1/round/current", async (c) => {
   const symbol = c.req.query("symbol")?.toUpperCase();
   const cacheKey = symbol || "latest";
   if (roundCache && roundCache.key === cacheKey && Date.now() - roundCache.at < ROUND_CACHE_MS) {
-    return c.json(roundCache.body);
+    const elapsedSec = (Date.now() - roundCache.at) / 1000;
+    const dynamicBody = {
+      ...roundCache.body,
+      timeRemaining: Math.max(0, Math.round(((roundCache.body.timeRemaining ?? 0) - elapsedSec) * 10) / 10),
+    };
+    return c.json(dynamicBody);
   }
 
   try {
@@ -436,7 +441,13 @@ app.get("/v1/round/current", async (c) => {
     roundCache = { key: cacheKey, at: Date.now(), body };
     return c.json(body);
   } catch (e: any) {
-    if (roundCache) return c.json(roundCache.body);
+    if (roundCache && roundCache.body) {
+      const elapsedSec = (Date.now() - roundCache.at) / 1000;
+      return c.json({
+        ...roundCache.body,
+        timeRemaining: Math.max(0, Math.round(((roundCache.body.timeRemaining ?? 0) - elapsedSec) * 10) / 10),
+      });
+    }
     const msg = e.shortMessage || e.message || String(e);
     const rateLimited = isRateLimitError(e);
     return c.json(

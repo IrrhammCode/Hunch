@@ -286,9 +286,9 @@ export default function MarketsScreen() {
 
           {/* TABLE HEADERS */}
           <View style={styles.tableHeaderRow}>
-            <Text style={[styles.tableColHeader, { flex: 2 }]}>MARKET</Text>
-            <Text style={[styles.tableColHeader, { flex: 1, textAlign: "center" }]}>TREND</Text>
-            <Text style={[styles.tableColHeader, { flex: 2, textAlign: "right" }]}>PRICE</Text>
+            <Text style={[styles.tableColHeader, styles.colMarket]}>MARKET</Text>
+            <Text style={[styles.tableColHeader, styles.colTrend]}>TREND</Text>
+            <Text style={[styles.tableColHeader, styles.colPrice]}>PRICE</Text>
           </View>
 
           {/* MARKET ROWS */}
@@ -705,14 +705,29 @@ const styles = StyleSheet.create({
   },
   tableHeaderRow: {
     flexDirection: "row",
-    paddingHorizontal: 10,
+    alignItems: "center",
+    paddingHorizontal: 14,
     marginTop: 6,
+    marginBottom: 4,
   },
   tableColHeader: {
     color: colors.muted,
     fontFamily: type.bold,
     fontSize: 10,
     letterSpacing: 0.8,
+  },
+  colMarket: {
+    flex: 2.7,
+    textAlign: "left",
+  },
+  colTrend: {
+    flex: 1.2,
+    textAlign: "center",
+    paddingLeft: 14,
+  },
+  colPrice: {
+    flex: 1.8,
+    textAlign: "right",
   },
   marketList: {
     backgroundColor: "#12141A",
@@ -735,12 +750,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 12,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     borderBottomWidth: 1,
     borderBottomColor: "#181C26",
   },
   rowLeft: {
-    flex: 2,
+    flex: 2.7,
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
@@ -790,12 +805,13 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   rowMid: {
-    flex: 1,
+    flex: 1.2,
     alignItems: "center",
     justifyContent: "center",
+    paddingLeft: 14,
   },
   rowRight: {
-    flex: 2,
+    flex: 1.8,
     alignItems: "flex-end",
   },
   priceNum: {
