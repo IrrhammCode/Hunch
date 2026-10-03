@@ -77,7 +77,7 @@ async function openRoundForMarket(meta: MarketMeta) {
   if (dep.vault) {
     const vault = vaultContract(wallet, dep);
     let assets = await vault.totalAssets();
-    const seedNeed = await vault.seedPerRound();
+    let seedNeed = await vault.seedPerRound();
     if (assets < seedNeed) {
       if (assets >= 5_000_000n) {
         const adjustedSeed = assets / 4n;
