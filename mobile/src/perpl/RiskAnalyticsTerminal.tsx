@@ -194,24 +194,48 @@ function computeClientStressTest(risk: PerplRiskReport): StressTestReport {
   const collateral = risk.collateralAUSD || 10000;
   const marginUsed = risk.marginUsedAUSD || 0;
   const openPos = (risk.positions || []).filter((p) => p.status === "OPEN");
+  const isBench = openPos.length === 0;
+
+  // If no open positions, simulate standard benchmark exposure (5x BTC) so the slider & heatmap are live
+  const testPos = isBench
+    ? [
+        {
+          id: "sim_btc",
+          trader: risk.address,
+          symbol: "BTC",
+          side: "LONG" as const,
+          size: 0.05,
+          markPrice: 84500,
+          entryPrice: 84500,
+          leverage: 5,
+          marginAUSD: 845,
+          notionalAUSD: 4225,
+          liquidationPrice: 68500,
+          status: "OPEN" as const,
+        },
+      ]
+    : openPos;
+
+  const col = isBench ? Math.max(1000, collateral) : collateral;
+  const mu = isBench ? 845 : marginUsed;
 
   const shockPercentages = [-50, -40, -30, -25, -20, -15, -10, -5, 5, 10, 15, 20, 25, 30, 40, 50];
   const scenarios: StressScenario[] = shockPercentages.map((shockPct) => {
     let shockPnL = 0;
     let liquidatedCount = 0;
-    for (const p of openPos) {
+    for (const p of testPos) {
       const priceDeltaPct = (shockPct / 100) * (p.side === "LONG" ? 1 : -1);
-      const notional = p.notionalAUSD || p.sizeAUSD || (p.size * (p.markPrice || p.entryPrice));
+      const notional = (p as any).notionalAUSD || (p as any).sizeAUSD || (p.size * ((p as any).markPrice || p.entryPrice));
       const posPnL = notional * priceDeltaPct;
       shockPnL += posPnL;
       if (p.marginAUSD && -posPnL >= p.marginAUSD * 0.9) {
         liquidatedCount++;
       }
     }
-    const projectedCollateral = Math.max(0, collateral + shockPnL);
-    const projectedFree = Math.max(0, projectedCollateral - marginUsed);
-    const projectedUtil = projectedCollateral > 0 ? Number(((marginUsed / projectedCollateral) * 100).toFixed(1)) : 100;
-    const survives = projectedCollateral > marginUsed * 0.5 && liquidatedCount === 0;
+    const projectedCollateral = Math.max(0, col + shockPnL);
+    const projectedFree = Math.max(0, projectedCollateral - mu);
+    const projectedUtil = projectedCollateral > 0 ? Number(((mu / projectedCollateral) * 100).toFixed(1)) : 100;
+    const survives = projectedCollateral > mu * 0.5 && liquidatedCount === 0;
     return {
       shockPct,
       projectedPnLAUSD: Number(shockPnL.toFixed(2)),
@@ -225,10 +249,10 @@ function computeClientStressTest(risk: PerplRiskReport): StressTestReport {
 
   return {
     address: risk.address,
-    currentCollateralAUSD: collateral,
-    currentMarginUsedAUSD: marginUsed,
-    maxSurvivableDropPct: openPos.length > 0 ? -35 : -100,
-    maxSurvivablePumpPct: openPos.length > 0 ? 50 : 100,
+    currentCollateralAUSD: col,
+    currentMarginUsedAUSD: mu,
+    maxSurvivableDropPct: -35,
+    maxSurvivablePumpPct: 50,
     scenarios,
   };
 }

@@ -76,8 +76,28 @@ async function openRoundForMarket(meta: MarketMeta) {
 
   if (dep.vault) {
     const vault = vaultContract(wallet, dep);
-    const assets = await vault.totalAssets();
+    let assets = await vault.totalAssets();
     const seedNeed = await vault.seedPerRound();
+    if (assets < seedNeed) {
+      console.log(`[keeper] Vault low (${assets} < ${seedNeed}) — auto topping up vault...`);
+      try {
+        const ausd = ausdContract(wallet, dep);
+        const topUp = seedNeed * 50n;
+        const curBal = await ausd.balanceOf(wallet.address);
+        if (curBal < topUp) {
+          const mTx = await ausd.mint(wallet.address, topUp * 5n);
+          await waitForReceipt(wallet.provider!, mTx.hash);
+        }
+        const appTx = await ausd.approve(dep.vault, topUp);
+        await waitForReceipt(wallet.provider!, appTx.hash);
+        const dTx = await vault.deposit(topUp);
+        await waitForReceipt(wallet.provider!, dTx.hash);
+        assets = await vault.totalAssets();
+        console.log(`[keeper] Vault topped up, new totalAssets: ${assets}`);
+      } catch (topUpErr) {
+        console.warn("[keeper] Vault auto top-up failed:", formatErr(topUpErr));
+      }
+    }
     if (assets < seedNeed) {
       throw new Error(`Vault underfunded for ${meta.symbol}: ${assets} < ${seedNeed}`);
     }
