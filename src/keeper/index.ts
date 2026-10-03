@@ -79,23 +79,16 @@ async function openRoundForMarket(meta: MarketMeta) {
     let assets = await vault.totalAssets();
     const seedNeed = await vault.seedPerRound();
     if (assets < seedNeed) {
-      console.log(`[keeper] Vault low (${assets} < ${seedNeed}) — auto topping up vault...`);
-      try {
-        const ausd = ausdContract(wallet, dep);
-        const topUp = seedNeed * 50n;
-        const curBal = await ausd.balanceOf(wallet.address);
-        if (curBal < topUp) {
-          const mTx = await ausd.mint(wallet.address, topUp * 5n);
-          await waitForReceipt(wallet.provider!, mTx.hash);
+      if (assets >= 5_000_000n) {
+        const adjustedSeed = assets / 4n;
+        console.log(`[keeper] Adjusting seedPerRound from ${seedNeed} to ${adjustedSeed} to match assets (${assets})`);
+        try {
+          const adjTx = await vault.setSeedPerRound(adjustedSeed);
+          await waitForReceipt(wallet.provider!, adjTx.hash);
+          seedNeed = adjustedSeed;
+        } catch (adjErr) {
+          console.warn("[keeper] setSeedPerRound adjustment failed:", formatErr(adjErr));
         }
-        const appTx = await ausd.approve(dep.vault, topUp);
-        await waitForReceipt(wallet.provider!, appTx.hash);
-        const dTx = await vault.deposit(topUp);
-        await waitForReceipt(wallet.provider!, dTx.hash);
-        assets = await vault.totalAssets();
-        console.log(`[keeper] Vault topped up, new totalAssets: ${assets}`);
-      } catch (topUpErr) {
-        console.warn("[keeper] Vault auto top-up failed:", formatErr(topUpErr));
       }
     }
     if (assets < seedNeed) {
