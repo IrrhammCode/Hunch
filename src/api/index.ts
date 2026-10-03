@@ -45,6 +45,7 @@ import {
 } from "./perpl";
 import { buildPerplRisk, stressTestPerplPortfolio } from "./perplRisk";
 import { PERPL_TESTNET } from "../shared/perpl";
+import { startKeeperLoop } from "../keeper/index";
 
 loadEnv();
 
@@ -799,3 +800,10 @@ const hostname = process.env.API_HOST || "0.0.0.0";
 console.log(`[api] http://localhost:${port} (bound ${hostname})`);
 console.log("[api] perks", perkStatus());
 serve({ fetch: app.fetch, port, hostname });
+ 
+if (process.env.RUN_KEEPER !== "false") {
+  console.log("[api] starting embedded keeper loop in background...");
+  startKeeperLoop().catch((err) => {
+    console.error("[api background keeper error]", err);
+  });
+}

@@ -27,6 +27,7 @@ import {
 } from "@/src/perpl/perplClient";
 import { MarginModal } from "@/src/perpl/MarginModal";
 import { LiquidationHealthGauge } from "@/src/perpl/LiquidationHealthGauge";
+import { RiskAnalyticsTerminal } from "@/src/perpl/RiskAnalyticsTerminal";
 import { PnlShareModal } from "@/src/perpl/PnlShareModal";
 import { fetchPerplRisk, type PerplRiskReport } from "@/src/api/client";
 import { listHunches, type HunchEntry } from "@/src/hunchBook";
@@ -126,12 +127,19 @@ export default function PositionsScreen() {
 
     try {
       const traderAddr = userAddress || pos.trader;
+      const fallbackMargin = pos.marginAUSD > 0
+        ? pos.marginAUSD
+        : (pos.size > 0 && pos.entryPrice > 0 && pos.leverage > 0)
+        ? (pos.size * pos.entryPrice) / pos.leverage
+        : 0;
+
       const res = await closePerplPosition(pos.id, traderAddr, {
         symbol: pos.symbol,
         side: pos.side,
         size: pos.size,
         leverage: pos.leverage,
         entryPrice: pos.entryPrice,
+        marginAUSD: fallbackMargin,
       });
 
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -362,6 +370,14 @@ export default function PositionsScreen() {
             onDepositPress={() => setShowMarginModal(true)}
           />
 
+          {/* RISK & ANALYTICS TERMINAL — Best Analytics / Risk Tool bounty */}
+          {userAddress ? (
+            <RiskAnalyticsTerminal
+              address={userAddress}
+              onDepositPress={() => setShowMarginModal(true)}
+            />
+          ) : null}
+
           {/* REAL REDEEMABLE HUNCH ONLY — no hardcoded payouts */}
           {redeemableHunches.length > 0 ? (
             <View style={styles.claimHeroCard}>
@@ -489,12 +505,22 @@ export default function PositionsScreen() {
 
                 const priceDelta = markPrice - pos.entryPrice;
                 const pnlValue = isClosed
-                  ? (pos.realizedPnLAUSD ?? 0)
+                  ? (pos.realizedPnLAUSD ?? (pos.realizedPnL != null ? pos.realizedPnL : 0))
                   : (pos.side === "LONG" ? priceDelta * pos.size : -priceDelta * pos.size);
 
-                const pnlPct = isClosed
-                  ? (pos.marginAUSD > 0 ? (pnlValue / pos.marginAUSD) * 100 : 0)
-                  : (pos.marginAUSD > 0 ? (pnlValue / pos.marginAUSD) * 100 : 0);
+                const effectiveMargin = pos.marginAUSD > 0
+                  ? pos.marginAUSD
+                  : (pos.size > 0 && pos.entryPrice > 0 && pos.leverage > 0)
+                  ? (pos.size * pos.entryPrice) / pos.leverage
+                  : (pos.sizeAUSD > 0 && pos.leverage > 0)
+                  ? pos.sizeAUSD / pos.leverage
+                  : 0;
+
+                const pnlPct = effectiveMargin > 0
+                  ? (pnlValue / effectiveMargin) * 100
+                  : (pos.entryPrice > 0 && markPrice > 0 && pos.leverage > 0)
+                  ? (((markPrice - pos.entryPrice) / pos.entryPrice) * (pos.side === "LONG" ? 1 : -1) * pos.leverage * 100)
+                  : (pos.unrealizedPnLPct ?? 0);
 
                 const isPositive = pnlValue >= 0;
 
@@ -582,7 +608,11 @@ export default function PositionsScreen() {
                       </View>
                       <View style={[styles.posStatCol, { alignItems: "flex-end" }]}>
                         <Text style={styles.posStatLabel}>MARGIN</Text>
-                        <Text style={styles.posStatVal}>${pos.marginAUSD} AUSD</Text>
+                        <Text style={styles.posStatVal}>
+                          {effectiveMargin > 0
+                            ? `$${effectiveMargin.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} AUSD`
+                            : "CROSS"}
+                        </Text>
                       </View>
                     </View>
 
@@ -670,8 +700,10 @@ export default function PositionsScreen() {
                           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                           setSharePos({
                             ...pos,
+                            marginAUSD: effectiveMargin,
                             markPrice,
-                            unrealizedPnLAUSD: pnlValue,
+                            realizedPnLAUSD: isClosed ? pnlValue : pos.realizedPnLAUSD,
+                            unrealizedPnLAUSD: !isClosed ? pnlValue : pos.unrealizedPnLAUSD,
                             unrealizedPnLPct: pnlPct,
                           });
                         }}

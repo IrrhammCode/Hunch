@@ -281,8 +281,8 @@ export function SendModal({
                   }}
                   style={[styles.tokenTab, token === "MON" && styles.tokenTabActive]}
                 >
-                  <View style={[styles.tabGlyph, { backgroundColor: "rgba(131,110,249,0.2)" }]}>
-                    <Text style={[styles.tabGlyphText, { color: colors.monadPurple }]}>M</Text>
+                  <View style={[styles.tabGlyph, { backgroundColor: "rgba(214,255,63,0.14)" }]}>
+                    <Text style={[styles.tabGlyphText, { color: colors.brand }]}>M</Text>
                   </View>
                   <View>
                     <Text style={[styles.tokenTabName, token === "MON" && styles.tokenTabNameActive]}>
@@ -601,17 +601,17 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#161C28",
+    backgroundColor: "#121714",
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: radius.md,
     borderWidth: 1.5,
-    borderColor: "#222B3D",
+    borderColor: "rgba(214,255,63,0.18)",
     gap: 10,
   },
   tokenTabActive: {
     borderColor: colors.brand,
-    backgroundColor: "#1B2436",
+    backgroundColor: "rgba(214,255,63,0.10)",
   },
   tabGlyph: {
     width: 32,
@@ -682,10 +682,10 @@ const styles = StyleSheet.create({
   recipientInputWrap: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#161C28",
+    backgroundColor: "#121714",
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: "#222B3D",
+    borderColor: "rgba(214,255,63,0.22)",
     paddingHorizontal: 12,
   },
   recipientInput: {
@@ -720,10 +720,12 @@ const styles = StyleSheet.create({
   pasteBtn: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#20283A",
+    backgroundColor: "#151F16",
     paddingHorizontal: 8,
     paddingVertical: 6,
     borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "rgba(214,255,63,0.22)",
     gap: 4,
   },
   pasteBtnText: {
@@ -878,11 +880,11 @@ const styles = StyleSheet.create({
   },
   chip: {
     flex: 1,
-    backgroundColor: "#1B2232",
+    backgroundColor: "#141A14",
     paddingVertical: 8,
     borderRadius: radius.sm,
     borderWidth: 1,
-    borderColor: "#2A364E",
+    borderColor: "rgba(214,255,63,0.22)",
     alignItems: "center",
     justifyContent: "center",
   },

@@ -117,12 +117,12 @@ export function QrScannerModal({
     {
       label: "@bob ($100 AUSD)",
       raw: `hunch:pay?address=${VERIFIED_DIRECTORY[1].address}&amount=100&token=AUSD&handle=@bob`,
-      color: "#836EF9",
+      color: "#A4E82E",
     },
     {
       label: "@keone ($50 AUSD)",
       raw: `hunch:pay?address=${VERIFIED_DIRECTORY[3].address}&amount=50&token=AUSD&handle=@keone`,
-      color: "#00E5FF",
+      color: "#2EE59D",
     },
   ];
 
@@ -405,16 +405,16 @@ const styles = StyleSheet.create({
   presetChip: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#161D2B",
+    backgroundColor: "#131A14",
     paddingHorizontal: 10,
     paddingVertical: 8,
     borderRadius: radius.sm,
     borderWidth: 1,
-    borderColor: "#222D42",
+    borderColor: "rgba(214, 255, 63, 0.22)",
     gap: 6,
   },
   presetChipPressed: {
-    backgroundColor: "#202A3E",
+    backgroundColor: "rgba(214, 255, 63, 0.15)",
     borderColor: colors.brand,
   },
   presetDot: {

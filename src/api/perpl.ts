@@ -195,17 +195,30 @@ export async function getUserPerplAccount(address: string) {
     const currentPrice = market ? market.markPrice : p.entryPrice;
     const priceDelta = currentPrice - p.entryPrice;
     const pnlAUSD = p.side === "LONG" ? priceDelta * p.size : -priceDelta * p.size;
-    const pnlPct = p.marginAUSD > 0 ? (pnlAUSD / p.marginAUSD) * 100 : 0;
+    const marginAUSD = p.marginAUSD > 0
+      ? p.marginAUSD
+      : (p.size > 0 && p.entryPrice > 0 && p.leverage > 0)
+        ? Number(((p.size * p.entryPrice) / p.leverage).toFixed(2))
+        : 0;
+    const pnlPct = marginAUSD > 0 ? (pnlAUSD / marginAUSD) * 100 : 0;
     const isOpen = p.status === "OPEN";
     if (isOpen) {
       totalUnrealizedPnL += pnlAUSD;
-      totalMarginUsed += p.marginAUSD;
+      totalMarginUsed += marginAUSD;
     }
+    const finalRealizedPnL = p.realizedPnLAUSD ?? (isOpen ? undefined : Number(pnlAUSD.toFixed(2)));
+    const finalPct = isOpen
+      ? Number(pnlPct.toFixed(2))
+      : (marginAUSD > 0 && finalRealizedPnL != null)
+        ? Number(((finalRealizedPnL / marginAUSD) * 100).toFixed(2))
+        : Number(pnlPct.toFixed(2));
     return {
       ...p,
+      marginAUSD,
       markPrice: currentPrice,
-      unrealizedPnLAUSD: isOpen ? Number(pnlAUSD.toFixed(2)) : (p.realizedPnLAUSD ?? 0),
-      unrealizedPnLPct: isOpen ? Number(pnlPct.toFixed(2)) : 0,
+      realizedPnLAUSD: finalRealizedPnL,
+      unrealizedPnLAUSD: isOpen ? Number(pnlAUSD.toFixed(2)) : (finalRealizedPnL ?? 0),
+      unrealizedPnLPct: finalPct,
     };
   });
 
@@ -491,6 +504,7 @@ export async function closePerplPosition(
     size?: number;
     leverage?: number;
     entryPrice?: number;
+    marginAUSD?: number;
     reason?: "USER" | "TP_TRIGGERED" | "SL_TRIGGERED" | "REVERSED";
   },
 ) {
@@ -517,6 +531,9 @@ export async function closePerplPosition(
     if (!fallback?.symbol || !fallback?.side || !fallback?.size) {
       throw new Error(`Position ${positionId} not found and no fallback metadata provided`);
     }
+    const calculatedMargin = (fallback.marginAUSD && fallback.marginAUSD > 0)
+      ? fallback.marginAUSD
+      : (fallback.size * (fallback.entryPrice || 1)) / (fallback.leverage || 1);
     pos = {
       id: positionId,
       trader: normalized,
@@ -526,7 +543,7 @@ export async function closePerplPosition(
       sizeAUSD: fallback.size * (fallback.entryPrice || 1),
       entryPrice: fallback.entryPrice || 0,
       leverage: fallback.leverage || 1,
-      marginAUSD: 0,
+      marginAUSD: Number(calculatedMargin.toFixed(2)),
       liquidationPrice: 0,
       openedAt: Date.now(),
       status: "OPEN",
@@ -534,6 +551,10 @@ export async function closePerplPosition(
     };
     all.push(pos);
     posIndex = all.length - 1;
+  }
+
+  if (pos.marginAUSD <= 0 && pos.size > 0 && pos.entryPrice > 0 && pos.leverage > 0) {
+    pos.marginAUSD = Number(((pos.size * pos.entryPrice) / pos.leverage).toFixed(2));
   }
 
   if (pos.status === "CLOSED") {

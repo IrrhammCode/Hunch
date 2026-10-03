@@ -269,7 +269,7 @@ export default function MarketDetailScreen() {
               <Text style={styles.symbol}>{symbol}</Text>
               <Text style={styles.pair}>/USD</Text>
               <View style={[styles.modePill, mode === "perp" ? styles.modePerp : styles.modeBlitz]}>
-                <Text style={[styles.modePillText, mode === "perp" ? { color: colors.up } : { color: colors.brand }]}>
+                <Text style={[styles.modePillText, { color: colors.brand }]}>
                   {mode === "perp" ? "PERP" : "60S"}
                 </Text>
               </View>
@@ -504,7 +504,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     borderWidth: 1,
   },
-  modePerp: { borderColor: "rgba(46,229,157,0.4)", backgroundColor: "rgba(46,229,157,0.1)" },
+  modePerp: { borderColor: "rgba(214,255,63,0.35)", backgroundColor: colors.brandDim },
   modeBlitz: { borderColor: "rgba(214,255,63,0.35)", backgroundColor: colors.brandDim },
   modePillText: { fontFamily: type.data, fontSize: 10, letterSpacing: 0.8 },
   chain: { color: colors.muted, fontFamily: type.data, fontSize: 9, letterSpacing: 1 },

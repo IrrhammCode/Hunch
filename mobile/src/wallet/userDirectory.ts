@@ -53,7 +53,7 @@ export const VERIFIED_DIRECTORY: ContactProfile[] = [
     name: "Bob Trader",
     address: "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
     verified: true,
-    avatarColor: "#836EF9",
+    avatarColor: "#A4E82E",
     bio: "Liquidity Provider & Perpl Arbitrageur",
   },
   {
@@ -69,7 +69,7 @@ export const VERIFIED_DIRECTORY: ContactProfile[] = [
     name: "Keone Hon",
     address: "0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65",
     verified: true,
-    avatarColor: "#836EF9",
+    avatarColor: "#7ED957",
     bio: "Monad Core Contributor",
   },
   {
@@ -77,7 +77,7 @@ export const VERIFIED_DIRECTORY: ContactProfile[] = [
     name: "Satoshi M.",
     address: "0x9965507D1a55bcC2695C58ba16FB37d819B0A4df",
     verified: true,
-    avatarColor: "#FFB020",
+    avatarColor: "#8BE038",
     bio: "Early Hunch Adopter",
   },
   {
@@ -85,7 +85,7 @@ export const VERIFIED_DIRECTORY: ContactProfile[] = [
     name: "Hunch Settlement Bot",
     address: "0x976EA74026E72CD555567505e6b14847190C6873",
     verified: true,
-    avatarColor: "#00E5FF",
+    avatarColor: "#2EE59D",
     bio: "Automated Round Keeper & Payout Dispatcher",
   },
 ];

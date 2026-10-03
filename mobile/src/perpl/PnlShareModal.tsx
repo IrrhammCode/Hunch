@@ -31,16 +31,41 @@ export function PnlShareModal({ visible, onClose, position }: PnlShareModalProps
   if (!position) return null;
 
   const isClosed = position.status === "CLOSED";
-  const pnlAUSD = isClosed ? (position.realizedPnLAUSD ?? 0) : (position.unrealizedPnLAUSD ?? 0);
-  const pnlPct = position.marginAUSD > 0
-    ? (pnlAUSD / position.marginAUSD) * 100
-    : (position.unrealizedPnLPct ?? 0);
+  const pnlAUSD = isClosed
+    ? (position.realizedPnLAUSD ?? position.realizedPnL ?? position.unrealizedPnLAUSD ?? 0)
+    : (position.unrealizedPnLAUSD ?? 0);
+
+  const currentPrice = isClosed
+    ? (position.closedPrice ?? position.markPrice ?? position.entryPrice)
+    : (position.markPrice ?? position.entryPrice);
+
+  // Derive accurate margin: check marginAUSD, or compute from size * entryPrice / leverage
+  let effectiveMargin = position.marginAUSD > 0 ? position.marginAUSD : 0;
+  if (effectiveMargin <= 0 && position.size > 0 && position.entryPrice > 0 && position.leverage > 0) {
+    effectiveMargin = (position.size * position.entryPrice) / position.leverage;
+  }
+  if (effectiveMargin <= 0 && position.sizeAUSD > 0 && position.leverage > 0) {
+    effectiveMargin = position.sizeAUSD / position.leverage;
+  }
+  if (effectiveMargin <= 0 && pnlAUSD !== 0 && position.unrealizedPnLPct && position.unrealizedPnLPct !== 0) {
+    effectiveMargin = Math.abs(pnlAUSD / (position.unrealizedPnLPct / 100));
+  }
+
+  // Derive accurate PnL %
+  let pnlPct = 0;
+  if (effectiveMargin > 0) {
+    pnlPct = (pnlAUSD / effectiveMargin) * 100;
+  } else if (position.entryPrice > 0 && currentPrice > 0 && position.leverage > 0) {
+    const priceDeltaPct =
+      ((currentPrice - position.entryPrice) / position.entryPrice) *
+      (position.side === "LONG" ? 1 : -1);
+    pnlPct = priceDeltaPct * position.leverage * 100;
+  } else if (position.unrealizedPnLPct != null && position.unrealizedPnLPct !== 0) {
+    pnlPct = position.unrealizedPnLPct;
+  }
 
   const isProfitable = pnlAUSD >= 0;
   const pnlColor = isProfitable ? colors.up : colors.down;
-  const currentPrice = isClosed
-    ? (position.closedPrice ?? position.entryPrice)
-    : (position.markPrice ?? position.entryPrice);
 
   const downloadWebCanvasImage = async () => {
     if (typeof document === "undefined") return;
@@ -151,8 +176,10 @@ export function PnlShareModal({ visible, onClose, position }: PnlShareModalProps
     ctx.fillStyle = "#F2F1EC";
     ctx.font = "bold 32px sans-serif";
     ctx.fillText(`$${position.entryPrice.toLocaleString()}`, 110, 800);
-    ctx.fillText(`$${currentPrice.toLocaleString()}`, 430, 800);
-    ctx.fillText(`$${position.marginAUSD} AUSD`, 750, 800);
+    const marginStr = effectiveMargin > 0
+      ? `$${effectiveMargin.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} AUSD`
+      : "CROSS";
+    ctx.fillText(marginStr, 750, 800);
 
     // Footer
     ctx.fillStyle = "#5A6170";
@@ -346,7 +373,11 @@ export function PnlShareModal({ visible, onClose, position }: PnlShareModalProps
                 </View>
                 <View style={styles.statCol}>
                   <Text style={styles.statLabel}>MARGIN</Text>
-                  <Text style={styles.statVal}>${position.marginAUSD} AUSD</Text>
+                  <Text style={styles.statVal}>
+                    {effectiveMargin > 0
+                      ? `$${effectiveMargin.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} AUSD`
+                      : "CROSS"}
+                  </Text>
                 </View>
               </View>
 

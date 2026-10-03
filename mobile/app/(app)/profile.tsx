@@ -226,7 +226,7 @@ export default function ProfileScreen() {
             <Text style={styles.networkText}>MONAD TESTNET</Text>
           </View>
           <View style={styles.statusRight}>
-            <View style={styles.purpleDot} />
+            <View style={styles.brandDot} />
             <Text style={styles.chainText}>AGORA AUSD</Text>
           </View>
         </View>
@@ -411,8 +411,8 @@ export default function ProfileScreen() {
               {/* 1. Liquid AUSD */}
               <View style={styles.assetRow}>
                 <View style={styles.assetRowLeft}>
-                  <View style={[styles.assetIcon, { backgroundColor: "#0E2B1F" }]}>
-                    <Text style={[styles.assetGlyph, { color: colors.up }]}>A</Text>
+                  <View style={[styles.assetIcon, { backgroundColor: "rgba(214, 255, 63, 0.15)" }]}>
+                    <Text style={[styles.assetGlyph, { color: colors.brand }]}>A</Text>
                   </View>
                   <View>
                     <Text style={styles.assetItemTitle}>Liquid Cash (EOA)</Text>
@@ -465,8 +465,8 @@ export default function ProfileScreen() {
               {/* 3. Monad Gas Token */}
               <View style={[styles.assetRow, { borderBottomWidth: 0, paddingBottom: 0 }]}>
                 <View style={styles.assetRowLeft}>
-                  <View style={[styles.assetIcon, { backgroundColor: "rgba(131, 110, 249, 0.2)" }]}>
-                    <Text style={[styles.assetGlyph, { color: colors.monadPurple }]}>M</Text>
+                  <View style={[styles.assetIcon, { backgroundColor: "rgba(214, 255, 63, 0.15)" }]}>
+                    <Text style={[styles.assetGlyph, { color: colors.brand }]}>M</Text>
                   </View>
                   <View>
                     <Text style={styles.assetItemTitle}>Monad Gas</Text>
@@ -684,11 +684,17 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     backgroundColor: colors.up,
   },
+  brandDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.brand,
+  },
   purpleDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: colors.monadPurple,
+    backgroundColor: colors.brand,
   },
   networkText: {
     color: colors.muted,
@@ -867,18 +873,18 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    backgroundColor: "#0D2119",
+    backgroundColor: "rgba(214, 255, 63, 0.12)",
     paddingVertical: 3,
     paddingHorizontal: 8,
     borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: "rgba(46,229,157,0.3)",
+    borderColor: "rgba(214, 255, 63, 0.3)",
   },
   agoraGlyphWrap: {
     width: 14,
     height: 14,
     borderRadius: 7,
-    backgroundColor: colors.up,
+    backgroundColor: colors.brand,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -888,7 +894,7 @@ const styles = StyleSheet.create({
     fontWeight: "900",
   },
   agoraBadgeText: {
-    color: colors.up,
+    color: colors.brand,
     fontFamily: type.bold,
     fontSize: 9,
     letterSpacing: 0.5,
@@ -923,18 +929,22 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "#171B24",
+    backgroundColor: "#131A14",
+    borderWidth: 1,
+    borderColor: "rgba(214, 255, 63, 0.22)",
     paddingVertical: 5,
     paddingHorizontal: 8,
     borderRadius: 6,
   },
   copyBtnText: {
-    color: colors.ink,
+    color: colors.brand,
     fontFamily: type.bold,
     fontSize: 10,
   },
   qrBtn: {
-    backgroundColor: "#171B24",
+    backgroundColor: "#131A14",
+    borderWidth: 1,
+    borderColor: "rgba(214, 255, 63, 0.22)",
     paddingVertical: 5,
     paddingHorizontal: 8,
     borderRadius: 6,
@@ -982,20 +992,20 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#161B26",
+    backgroundColor: "#131A14",
     paddingVertical: 10,
     paddingHorizontal: 6,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: "#232C3E",
+    borderColor: "rgba(214, 255, 63, 0.22)",
     gap: 6,
   },
   faucetQuickBtn: {
-    borderColor: "rgba(214, 255, 63, 0.35)",
-    backgroundColor: "rgba(214, 255, 63, 0.08)",
+    borderColor: "rgba(214, 255, 63, 0.45)",
+    backgroundColor: "rgba(214, 255, 63, 0.12)",
   },
   quickActionBtnPressed: {
-    backgroundColor: "#1E2638",
+    backgroundColor: "rgba(214, 255, 63, 0.18)",
     borderColor: colors.brand,
   },
   quickActionIconWrap: {
@@ -1065,7 +1075,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   assetSendLink: {
-    color: colors.up,
+    color: colors.brand,
     fontFamily: type.data,
     fontSize: 10,
     fontWeight: "700",

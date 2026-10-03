@@ -248,10 +248,10 @@ async function tick() {
   }
 }
 
-async function main() {
+export async function startKeeperLoop() {
   const dep = loadDeployment();
   const markets = enabledMarkets();
-  console.log("[keeper] starting multi-market — poll", POLL_MS, "ms");
+  console.log("[keeper] starting keeper loop — poll", POLL_MS, "ms");
   console.log("[keeper] factory", dep.factory, "vault", dep.vault ?? "(none)");
   console.log("[keeper] assets", markets.map((m) => `${m.symbol}=${m.feedId.slice(0, 10)}…`).join(" "));
   console.log("[keeper] rpc", process.env.MONAD_RPC_URL || "https://testnet-rpc.monad.xyz");
@@ -266,4 +266,8 @@ async function main() {
   }
 }
 
-main();
+if (require.main === module) {
+  startKeeperLoop().catch((err) => {
+    console.error("[keeper fatal error]", err);
+  });
+}

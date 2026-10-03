@@ -215,10 +215,11 @@ export default function HunchScreen() {
       ? Math.max(0, (endsAt - nowMs) / 1000)
       : 0;
 
-  // Fast auto-refresh when round ends so the next round loads smoothly without freezing at 0
+  // Fast auto-refresh when round ends or is resolving/resolved so the next round loads smoothly
   useEffect(() => {
-    if (data?.round?.status === "open" && remainingSecRaw <= 0) {
-      refresh();
+    const isWaitingForNewRound =
+      data?.round?.status !== "open" || remainingSecRaw <= 0;
+    if (isWaitingForNewRound) {
       const fastId = setInterval(refresh, 1800);
       return () => clearInterval(fastId);
     }

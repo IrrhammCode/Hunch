@@ -437,6 +437,73 @@ export async function fetchPerplAccount(address: string): Promise<PerplAccount> 
   return get<PerplAccount>(`/v1/perpl/account/${address}`);
 }
 
+export type HealthScore = {
+  score: number;
+  grade: "A" | "B" | "C" | "D" | "F";
+  components: {
+    utilizationScore: number;
+    liqBufferScore: number;
+    leverageScore: number;
+    diversityScore: number;
+  };
+};
+
+export type DeltaExposure = {
+  longNotionalAUSD: number;
+  shortNotionalAUSD: number;
+  netDeltaAUSD: number;
+  netDeltaPct: number;
+  bias: "LONG" | "SHORT" | "NEUTRAL";
+};
+
+export type VaREstimate = {
+  var95AUSD: number;
+  var99AUSD: number;
+  dailyVolPct: number;
+};
+
+export type FundingRateInfo = {
+  symbol: string;
+  currentRate8h: number;
+  annualizedPct: number;
+  direction: "PAY" | "EARN" | "FLAT";
+};
+
+export type TradingPerformance = {
+  totalTrades: number;
+  closedTrades: number;
+  winCount: number;
+  lossCount: number;
+  winRate: number;
+  totalRealizedPnLAUSD: number;
+  avgWinAUSD: number;
+  avgLossAUSD: number;
+  profitFactor: number;
+  bestTradeAUSD: number;
+  worstTradeAUSD: number;
+  avgHoldTimeMinutes: number;
+  sharpeProxy: number;
+};
+
+export type StressScenario = {
+  shockPct: number;
+  projectedPnLAUSD: number;
+  projectedCollateralAUSD: number;
+  projectedFreeMarginAUSD: number;
+  projectedUtilizationPct: number;
+  survives: boolean;
+  liquidatedPositionsCount: number;
+};
+
+export type StressTestReport = {
+  address: string;
+  currentCollateralAUSD: number;
+  currentMarginUsedAUSD: number;
+  maxSurvivableDropPct: number;
+  maxSurvivablePumpPct: number;
+  scenarios: StressScenario[];
+};
+
 export type PerplRiskReport = {
   address: string;
   authConfigured: boolean;
@@ -459,6 +526,12 @@ export type PerplRiskReport = {
   })[];
   marketMarks?: { symbol: string; markPrice: number; change24hPct: number }[];
   source?: string;
+  // ── Enhanced analytics (Best Analytics / Risk Tool bounty) ──
+  healthScore?: HealthScore;
+  deltaExposure?: DeltaExposure;
+  valueAtRisk?: VaREstimate;
+  fundingRates?: FundingRateInfo[];
+  tradingPerformance?: TradingPerformance;
 };
 
 export function fetchPerplRisk(address: string) {
@@ -467,6 +540,21 @@ export function fetchPerplRisk(address: string) {
   }
   return get<PerplRiskReport>(`/v1/perpl/risk/${address}`);
 }
+
+export function fetchStressTest(address: string) {
+  if (MOCK) {
+    return Promise.resolve({
+      address,
+      currentCollateralAUSD: 0,
+      currentMarginUsedAUSD: 0,
+      maxSurvivableDropPct: -50,
+      maxSurvivablePumpPct: 50,
+      scenarios: [],
+    } as StressTestReport);
+  }
+  return get<StressTestReport>(`/v1/perpl/risk/${address}/stress-test`);
+}
+
 
 export function placePerplOrder(params: {
   trader: string;
