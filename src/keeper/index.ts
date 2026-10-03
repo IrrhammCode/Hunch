@@ -132,28 +132,66 @@ async function resolveRound(marketAddr: string, feedId: string) {
   const market = marketContract(marketAddr, wallet);
   const pyth = pythContract(wallet, dep);
 
+  const symbol = symbolForFeed(feedId);
   const expiry = Number(await market.expiry());
+
+  // --- Strategy 1: Try Pyth Hermes VAA ---
   let update: any = null;
   try {
     update = await fetchPriceUpdateAt(feedId, expiry, 5);
   } catch (err: any) {
-    console.warn(`[keeper] fetchPriceUpdateAt failed for ${symbolForFeed(feedId)}:`, formatErr(err));
-    return;
+    console.warn(`[keeper] Pyth Hermes failed for ${symbol}:`, formatErr(err));
   }
-  if (!update || update.publishTime < expiry || update.publishTime > expiry + 5) {
-    console.warn(`[keeper] publishTime outside window for ${symbolForFeed(feedId)}`);
-    return;
+
+  if (update && update.publishTime >= expiry && update.publishTime <= expiry + 5) {
+    try {
+      const fee = await pyth.getUpdateFee(update.binaryUpdates);
+      let gasLimit = 350_000n;
+      try {
+        gasLimit = ((await market.resolve.estimateGas(update.binaryUpdates, { value: fee + 1n })) * 12n) / 10n;
+      } catch { /* keep fallback */ }
+      const tx = await market.resolve(update.binaryUpdates, { value: fee + 1n, gasLimit });
+      await waitForReceipt(wallet.provider!, tx.hash);
+      console.log("[keeper] resolved via Pyth", symbol, marketAddr, "yesWins=", await market.yesWins(), "tx", tx.hash);
+      return;
+    } catch (e: any) {
+      console.warn(`[keeper] Pyth resolve tx failed for ${symbol}:`, formatErr(e));
+    }
   }
-  const fee = await pyth.getUpdateFee(update.binaryUpdates);
-  let gasLimit = 350_000n;
+
+  // --- Strategy 2: Fallback to Perpl DEX mark price ---
+  console.log(`[keeper] falling back to Perpl mark price for ${symbol}…`);
   try {
-    gasLimit = ((await market.resolve.estimateGas(update.binaryUpdates, { value: fee + 1n })) * 12n) / 10n;
-  } catch {
-    /* keep fallback */
+    const { fetchPerplMarkPrice } = await import("../shared/perpl");
+    const perplPrice = await fetchPerplMarkPrice(symbol);
+    console.log(`[keeper] Perpl mark: ${symbol} = $${perplPrice.markUsd} (int64: ${perplPrice.price})`);
+
+    // HunchMarket stores strikePrice with strikeExpo (usually -8)
+    const strikeExpo = Number(await market.strikeExpo());
+    let priceInt64: bigint;
+    if (strikeExpo === -8) {
+      // Perpl price is already in expo=-8
+      priceInt64 = perplPrice.price;
+    } else {
+      // Convert: perplPrice.price is at expo=-8, strike is at strikeExpo
+      const shift = -8 - strikeExpo; // positive means perpl has more decimals
+      if (shift > 0) {
+        priceInt64 = perplPrice.price / BigInt(10 ** shift);
+      } else {
+        priceInt64 = perplPrice.price * BigInt(10 ** (-shift));
+      }
+    }
+
+    let gasLimit = 300_000n;
+    try {
+      gasLimit = ((await market.resolveByKeeper.estimateGas(priceInt64)) * 12n) / 10n;
+    } catch { /* keep fallback */ }
+    const tx = await market.resolveByKeeper(priceInt64, { gasLimit });
+    await waitForReceipt(wallet.provider!, tx.hash);
+    console.log("[keeper] resolved via Perpl", symbol, marketAddr, "yesWins=", await market.yesWins(), "tx", tx.hash);
+  } catch (e: any) {
+    console.error(`[keeper] Perpl fallback resolve failed for ${symbol}:`, formatErr(e));
   }
-  const tx = await market.resolve(update.binaryUpdates, { value: fee + 1n, gasLimit });
-  await waitForReceipt(wallet.provider!, tx.hash);
-  console.log("[keeper] resolved", symbolForFeed(feedId), marketAddr, "yesWins=", await market.yesWins(), "tx", tx.hash);
 }
 
 async function claimResidual(marketAddr: string) {

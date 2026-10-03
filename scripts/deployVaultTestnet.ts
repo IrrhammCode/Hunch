@@ -64,11 +64,23 @@ async function main() {
     deployer: deployer.address,
     pyth: MONAD_TESTNET.pyth,
     btcUsdFeedId: MONAD_TESTNET.btcUsdFeedId,
+    markets: prev?.markets || [
+      { symbol: "BTC", pair: "BTC-USD", feedId: "0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43" },
+      { symbol: "ETH", pair: "ETH-USD", feedId: "0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace" },
+      { symbol: "SOL", pair: "SOL-USD", feedId: "0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d" },
+    ],
     collateral: {
       address: ausdAddr,
       symbol: "AUSD",
       decimals: 6,
-      note: "MockAUSD testnet stand-in",
+      faucet: prev?.collateral?.faucet || "0xd236c18D274E54FAccC3dd9DDA4b27965a73ee6C",
+      note: prev?.collateral?.note || "Official Agora AUSD on Monad Testnet",
+    },
+    perpl: prev?.perpl || {
+      exchange: "0x1964C32f0bE608E7D29302AFF5E61268E72080cc",
+      apiUrl: "https://testnet.perpl.xyz/api",
+      wsUrl: "wss://testnet.perpl.xyz",
+      chainId: 10143,
     },
     factory: factoryAddr,
     vault: vaultAddr,
@@ -77,6 +89,7 @@ async function main() {
       factory: `${MONAD_TESTNET.explorer}/address/${factoryAddr}`,
       vault: `${MONAD_TESTNET.explorer}/address/${vaultAddr}`,
       pyth: `${MONAD_TESTNET.explorer}/address/${MONAD_TESTNET.pyth}`,
+      perpl: `${MONAD_TESTNET.explorer}/address/0x1964C32f0bE608E7D29302AFF5E61268E72080cc`,
     },
   };
 

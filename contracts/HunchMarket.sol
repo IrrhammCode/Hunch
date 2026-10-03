@@ -289,6 +289,25 @@ contract HunchMarket is ReentrancyGuard {
         emit RoundResolved(settlementPrice, yesWins);
     }
 
+    /// @notice Fallback resolve by factory owner using an off-chain price source (e.g. Perpl DEX mark).
+    /// @dev Only callable when Pyth resolve is unavailable. Requires factory owner (keeper) authorization.
+    function resolveByKeeper(int64 price) external nonReentrant {
+        if (status != Status.Open) revert AlreadyResolved();
+        if (block.timestamp < expiry) revert RoundNotExpired();
+        // Only factory owner can resolve with keeper price
+        // Access owner via factory since we don't store it directly
+        (bool ok, bytes memory data) = factory.staticcall(abi.encodeWithSignature("owner()"));
+        require(ok && data.length >= 32, "owner() call failed");
+        address factoryOwner = abi.decode(data, (address));
+        require(msg.sender == factoryOwner, "Not factory owner");
+
+        settlementPrice = price;
+        yesWins = settlementPrice >= strikePrice;
+        status = Status.Resolved;
+
+        emit RoundResolved(settlementPrice, yesWins);
+    }
+
     function redeem() external nonReentrant returns (uint256 payout) {
         if (status != Status.Resolved) revert NotResolved();
 

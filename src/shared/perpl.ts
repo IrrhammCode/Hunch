@@ -102,3 +102,21 @@ export function getPerplExchangeContract(signerOrProvider: ethers.Signer | ether
   const exchangeAddr = dep.perpl?.exchange || PERPL_TESTNET.exchange;
   return new Contract(exchangeAddr, PERPL_EXCHANGE_ABI, signerOrProvider);
 }
+
+/**
+ * Fetch Perpl DEX mark price for a symbol (e.g. "BTC", "ETH", "SOL").
+ * Returns a Pyth-compatible int64 price with expo = -8 (8 decimal places).
+ * e.g. BTC mark $84850.40 → 8485040000000n
+ */
+export async function fetchPerplMarkPrice(symbol: string): Promise<{ price: bigint; expo: number; markUsd: number }> {
+  const markets = await getPerplMarkets();
+  const sym = symbol.toUpperCase();
+  const found = markets.find((m) => m.symbol.toUpperCase() === sym);
+  if (!found) throw new Error(`Perpl market not found for symbol: ${symbol}`);
+  
+  const markUsd = found.markPrice;
+  // Convert to int64 with expo=-8 (same as Pyth format)
+  const expo = -8;
+  const price = BigInt(Math.round(markUsd * 1e8));
+  return { price, expo, markUsd };
+}

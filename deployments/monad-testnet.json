@@ -1,7 +1,7 @@
 {
   "network": "Monad Testnet",
   "chainId": 10143,
-  "deployedAt": "2026-09-15T10:38:05.493Z",
+  "deployedAt": "2026-10-03T21:03:50.000Z",
   "deployer": "0xFA9f60689e79030A83817Fd38913667f9d5E21B2",
   "pyth": "0x2880aB155794e7179c9eE2e38200202908C17B43",
   "btcUsdFeedId": "0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43",
@@ -35,12 +35,12 @@
     "wsUrl": "wss://testnet.perpl.xyz",
     "chainId": 10143
   },
-  "factory": "0x9b708E57B0a51d03207b0c65392D50de40e1B250",
-  "vault": "0xe064D0B2edE1891ebD0F815eDADd45541c62C927",
+  "factory": "0xdAf47D1A2a5b3E7E3D8449f7bC256D743F8BB689",
+  "vault": "0xC03e908806B0Be721f590177d609E4B546A061E3",
   "explorer": {
     "ausd": "https://testnet.monadvision.com/address/0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC",
-    "factory": "https://testnet.monadvision.com/address/0x9b708E57B0a51d03207b0c65392D50de40e1B250",
-    "vault": "https://testnet.monadvision.com/address/0xe064D0B2edE1891ebD0F815eDADd45541c62C927",
+    "factory": "https://testnet.monadvision.com/address/0xdAf47D1A2a5b3E7E3D8449f7bC256D743F8BB689",
+    "vault": "https://testnet.monadvision.com/address/0xC03e908806B0Be721f590177d609E4B546A061E3",
     "pyth": "https://testnet.monadvision.com/address/0x2880aB155794e7179c9eE2e38200202908C17B43",
     "perpl": "https://testnet.monadvision.com/address/0x1964C32f0bE608E7D29302AFF5E61268E72080cc"
   }
