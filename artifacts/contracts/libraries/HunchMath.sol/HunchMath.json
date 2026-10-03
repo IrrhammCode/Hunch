@@ -1,0 +1,26 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "HunchMath",
+  "sourceName": "contracts/libraries/HunchMath.sol",
+  "abi": [
+    {
+      "inputs": [],
+      "name": "InsufficientLiquidity",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "Slippage",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "ZeroAmount",
+      "type": "error"
+    }
+  ],
+  "bytecode": "0x60808060405234601757603a9081601d823930815050f35b600080fdfe600080fdfea264697066735822122007cd310a8fb66522fe3e0e9577942c80d9b38db7cf41d142a3eb4ab380b6890364736f6c63430008180033",
+  "deployedBytecode": "0x600080fdfea264697066735822122007cd310a8fb66522fe3e0e9577942c80d9b38db7cf41d142a3eb4ab380b6890364736f6c63430008180033",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}
