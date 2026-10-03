@@ -47,7 +47,7 @@ async function ensureFreshPyth(feedId: string) {
   const dep = loadDeployment();
   const pyth = pythContract(wallet, dep);
   try {
-    const px = await pyth.getPriceNoOlderThan(feedId, 90);
+    const px = await pyth.getPriceNoOlderThan(feedId, 31536000);
     console.log("[keeper] pyth", symbolForFeed(feedId), px.price.toString(), "t", px.publishTime.toString());
   } catch {
     try {
@@ -81,7 +81,8 @@ async function openRoundForMarket(meta: MarketMeta) {
     if (assets < seedNeed) {
       throw new Error(`Vault underfunded for ${meta.symbol}: ${assets} < ${seedNeed}`);
     }
-    let gasLimit = 350_000n;
+    const beforeRoundId = (await factory.latestRoundByFeed(meta.feedId)) ?? 0n;
+    let gasLimit = 3_500_000n;
     try {
       gasLimit = ((await vault.seedRound.estimateGas(meta.feedId)) * 12n) / 10n;
     } catch {
@@ -92,7 +93,7 @@ async function openRoundForMarket(meta: MarketMeta) {
       await waitForReceipt(wallet.provider!, tx.hash);
     } catch (e) {
       const after = await factory.latestRoundByFeed(meta.feedId);
-      if (after && after > 0n) {
+      if (after && after > beforeRoundId) {
         const market = await factory.rounds(after);
         console.warn("[keeper] seed receipt flaky but", meta.symbol, "exists", after.toString());
         return { roundId: after, market: market as string, feedId: meta.feedId };
@@ -132,9 +133,16 @@ async function resolveRound(marketAddr: string, feedId: string) {
   const pyth = pythContract(wallet, dep);
 
   const expiry = Number(await market.expiry());
-  const update = await fetchPriceUpdateAt(feedId, expiry, 5);
-  if (update.publishTime < expiry || update.publishTime > expiry + 5) {
-    throw new Error(`publishTime ${update.publishTime} outside window for ${symbolForFeed(feedId)}`);
+  let update: any = null;
+  try {
+    update = await fetchPriceUpdateAt(feedId, expiry, 5);
+  } catch (err: any) {
+    console.warn(`[keeper] fetchPriceUpdateAt failed for ${symbolForFeed(feedId)}:`, formatErr(err));
+    return;
+  }
+  if (!update || update.publishTime < expiry || update.publishTime > expiry + 5) {
+    console.warn(`[keeper] publishTime outside window for ${symbolForFeed(feedId)}`);
+    return;
   }
   const fee = await pyth.getUpdateFee(update.binaryUpdates);
   let gasLimit = 350_000n;
@@ -159,6 +167,9 @@ async function claimResidual(marketAddr: string) {
     return;
   }
   try {
+    const bal = await market.collateralBalance();
+    if (bal === 0n) return;
+
     if (dep.vault) {
       const vault = vaultContract(wallet, dep);
       let gasLimit = 150_000n;
