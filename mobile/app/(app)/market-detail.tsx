@@ -36,6 +36,8 @@ import { AmountChip, PrimaryButton } from "@/src/components/ui";
 import { getSelectedMarket, setSelectedMarket } from "@/src/market/selection";
 import { useWallet } from "@/src/wallet/WalletContext";
 import { placeWalletTrade } from "@/src/wallet/privyTrade";
+import { useLivePrice } from "@/src/hooks/useLivePrice";
+import { AnimatedLiveTicker } from "@/src/components/AnimatedLiveTicker";
 import { colors, monoStyle, radius, space, type } from "@/src/theme";
 
 const { width: W } = Dimensions.get("window");
@@ -68,6 +70,7 @@ export default function MarketDetailScreen() {
 
   const [kind, setKind] = useState<"auto" | "perp" | "blitz">(initialKind);
   const [tf, setTf] = useState<(typeof TFS)[number]["key"]>("1m");
+  const livePrice = useLivePrice(symbol, 1200);
   const [price, setPrice] = useState<number | null>(null);
   const [bars, setBars] = useState<ChartPoint[]>([]);
   const [blitz, setBlitz] = useState<MarketBoardRow | null>(null);
@@ -282,8 +285,16 @@ export default function MarketDetailScreen() {
         {/* Quote block */}
         <View style={styles.quote}>
           <View>
-            <Text style={styles.quoteLabel}>LAST</Text>
-            <Text style={styles.quotePrice}>{fmtUsd(price)}</Text>
+            <Text style={styles.quoteLabel}>LIVE REALTIME</Text>
+            <AnimatedLiveTicker
+              price={livePrice.price}
+              prevPrice={livePrice.prevPrice}
+              direction={livePrice.direction}
+              delta={livePrice.delta}
+              tickCount={livePrice.tickCount}
+              size="lg"
+              showBadge={true}
+            />
           </View>
           <View style={styles.quoteRight}>
             <View style={[styles.chgPill, stats.up ? styles.chgUp : styles.chgDown]}>

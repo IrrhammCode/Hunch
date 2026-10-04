@@ -77,8 +77,8 @@ export async function fetchLatestPrice(symbol: string) {
   const feed = marketBySymbol(s)?.feedId || feedIdFor(s);
   const id = feed.startsWith("0x") ? feed.slice(2) : feed;
 
-  // Short in-memory cache to prevent sub-second rate-limiting across rapid sequential calls
-  if (priceCache[s] && Date.now() - priceCache[s].cachedAt < 2500) {
+  // Short in-memory cache to prevent redundant socket calls while allowing sub-second live updates
+  if (priceCache[s] && Date.now() - priceCache[s].cachedAt < 800) {
     return priceCache[s];
   }
 

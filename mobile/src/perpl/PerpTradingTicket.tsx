@@ -17,6 +17,8 @@ import { Icon } from "@/src/components/Icon";
 import { setSelectedMarket } from "@/src/market/selection";
 import { colors, radius, space, type, monoStyle } from "@/src/theme";
 import { TokenLogo } from "@/src/components/TokenLogo";
+import { useLivePrice } from "@/src/hooks/useLivePrice";
+import { AnimatedLiveTicker } from "@/src/components/AnimatedLiveTicker";
 import Svg, { Path, Defs, LinearGradient, Stop, Circle } from "react-native-svg";
 
 const { width: W } = Dimensions.get("window");
@@ -130,9 +132,10 @@ export function PerpTradingTicket() {
   const { user } = useAuth();
   const { me, refresh: refreshWallet } = useWallet();
   const toast = useToast();
-  const { markets, loading: marketsLoading, refresh: refreshMarkets } = usePerplMarkets(4000);
+  const { markets, loading: marketsLoading, refresh: refreshMarkets } = usePerplMarkets(1500);
 
   const [selectedSymbol, setSelectedSymbol] = useState("BTC");
+  const livePrice = useLivePrice(selectedSymbol, 1200);
   const [side, setSide] = useState<"LONG" | "SHORT">("LONG");
   const [leverage, setLeverage] = useState<number>(10);
   const [marginAUSD, setMarginAUSD] = useState<string>("50");
@@ -335,12 +338,15 @@ export function PerpTradingTicket() {
         </View>
 
         <View style={styles.priceBlock}>
-          <Text style={styles.bigPrice} numberOfLines={1} adjustsFontSizeToFit>
-            {"$" + currentMark.markPrice.toLocaleString(undefined, {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}
-          </Text>
+          <AnimatedLiveTicker
+            price={livePrice.price}
+            prevPrice={livePrice.prevPrice}
+            direction={livePrice.direction}
+            delta={livePrice.delta}
+            tickCount={livePrice.tickCount}
+            size="hero"
+            showBadge={true}
+          />
           <View style={styles.priceMetaRow}>
             <Text
               style={[
@@ -352,16 +358,16 @@ export function PerpTradingTicket() {
               {currentMark.change24hPct.toFixed(2)}%
             </Text>
             <View style={styles.metaDot} />
-            <Text style={styles.pythFeedText}>Perpl</Text>
+            <Text style={styles.pythFeedText}>Perpl DEX</Text>
             <View style={styles.metaDot} />
-            <Text style={styles.pythFeedText}>Monad</Text>
+            <Text style={styles.pythFeedText}>Realtime</Text>
           </View>
         </View>
 
         {/* Wave area graphic */}
         <MiniWaveChart
           symbol={activeMarket?.symbol || selectedSymbol}
-          markPrice={currentMark.markPrice}
+          markPrice={livePrice.price}
           change24hPct={currentMark.change24hPct}
         />
 

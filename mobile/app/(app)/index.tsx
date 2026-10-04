@@ -50,6 +50,8 @@ import { useWallet } from "@/src/wallet/WalletContext";
 import { placeWalletTrade, redeemWalletPosition } from "@/src/wallet/privyTrade";
 import { PerpTradingTicket } from "@/src/perpl/PerpTradingTicket";
 import { placePerplOrder } from "@/src/perpl/perplClient";
+import { useLivePrice } from "@/src/hooks/useLivePrice";
+import { AnimatedLiveTicker } from "@/src/components/AnimatedLiveTicker";
 import { colors, radius, space, type } from "@/src/theme";
 
 const AMOUNTS = ["5", "10", "25"] as const;
@@ -76,6 +78,8 @@ export default function HunchScreen() {
   const [tradeMode, setTradeMode] = useState<"perps" | "hunch">("perps");
   const [data, setData] = useState<CurrentRoundResponse | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const selectedMarket = getSelectedMarket();
+  const livePriceData = useLivePrice(selectedMarket.symbol, 1200);
   const [picked, setPicked] = useState<"UP" | "DOWN" | null>(null);
   const [busy, setBusy] = useState(false);
   const [flash, setFlash] = useState<"up" | "down" | null>(null);
@@ -249,6 +253,7 @@ export default function HunchScreen() {
   const remainingSec = remainingSecRaw;
   const remainingDisplay = open ? formatCountdown(remainingSec) : "—";
   const strikeLabel = round ? formatStrike(round.strike, round.expo) : "—";
+  const strikeNum = round && round.strike ? Number(round.strike) * Math.pow(10, round.expo) : null;
   const canTrade = open && remainingSec >= 6 && !busy;
 
   useEffect(() => {
@@ -718,6 +723,34 @@ export default function HunchScreen() {
                         : (open && remainingSec <= 0 ? "SETTLING" : "OPEN")}
                     </Text>
                   </View>
+                </View>
+
+                {/* Real-time Live Oracle Price Card */}
+                <View style={styles.livePriceBanner}>
+                  <View style={styles.livePriceBannerHeader}>
+                    <View style={styles.liveDotRow}>
+                      <View
+                        style={[
+                          styles.liveBlinkingDot,
+                          livePriceData.direction === "down" ? styles.redDot : styles.greenDot,
+                        ]}
+                      />
+                      <Text style={styles.liveBannerTitle}>
+                        {selectedMarket.symbol} / USD REALTIME
+                      </Text>
+                    </View>
+                    <Text style={styles.liveSourceText}>Pyth Oracle · 1.2s</Text>
+                  </View>
+                  <AnimatedLiveTicker
+                    price={livePriceData.price}
+                    prevPrice={livePriceData.prevPrice}
+                    direction={livePriceData.direction}
+                    delta={livePriceData.delta}
+                    tickCount={livePriceData.tickCount}
+                    strike={strikeNum}
+                    size="md"
+                    showBadge={true}
+                  />
                 </View>
 
                 {/* Strike */}
@@ -1256,6 +1289,40 @@ const styles = StyleSheet.create({
     fontFamily: type.bold,
     fontSize: 11,
     letterSpacing: 0.8,
+  },
+  livePriceBanner: {
+    backgroundColor: "rgba(12, 14, 20, 0.9)",
+    padding: 10,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.08)",
+  },
+  livePriceBannerHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  liveDotRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  liveBlinkingDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  liveBannerTitle: {
+    color: colors.muted,
+    fontFamily: type.bold,
+    fontSize: 8,
+    letterSpacing: 0.6,
+  },
+  liveSourceText: {
+    color: "rgba(255, 255, 255, 0.35)",
+    fontFamily: type.data,
+    fontSize: 9,
   },
   strikeRow: {
     flexDirection: "row",
