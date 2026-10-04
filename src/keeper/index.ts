@@ -28,7 +28,7 @@ process.on("unhandledRejection", (reason) => {
 
 const SEED = () => ethers.parseUnits(process.env.SEED_AUSD || "1000", 6);
 const POLL_MS = Number(process.env.KEEPER_POLL_MS || 10000);
-const MIN_MON = ethers.parseEther(process.env.KEEPER_MIN_MON || "0.0005");
+const MIN_MON = ethers.parseEther(process.env.KEEPER_MIN_MON || "0.26");
 
 function formatErr(e: any): string {
   const parts = [
@@ -95,13 +95,19 @@ async function openRoundForMarket(meta: MarketMeta) {
       throw new Error(`Vault underfunded for ${meta.symbol}: ${assets} < ${seedNeed}`);
     }
     const beforeRoundId = (await factory.latestRoundByFeed(meta.feedId)) ?? 0n;
-    let gasLimit = 3_500_000n;
+    let gasLimit = 2_700_000n;
     try {
-      gasLimit = ((await vault.seedRound.estimateGas(meta.feedId)) * 12n) / 10n;
+      const est = await vault.seedRound.estimateGas(meta.feedId);
+      gasLimit = (est * 105n) / 100n;
     } catch {
       /* keep fallback */
     }
-    const tx = await vault.seedRound(meta.feedId, { gasLimit });
+    const feeData = await wallet.provider!.getFeeData();
+    const maxPriorityFeePerGas = feeData.maxPriorityFeePerGas || ethers.parseUnits("2", "gwei");
+    const gasPrice = feeData.gasPrice || ethers.parseUnits("100", "gwei");
+    const maxFeePerGas = (gasPrice * 115n) / 100n + maxPriorityFeePerGas;
+
+    const tx = await vault.seedRound(meta.feedId, { gasLimit, maxFeePerGas, maxPriorityFeePerGas });
     try {
       await waitForReceipt(wallet.provider!, tx.hash);
     } catch (e) {
@@ -279,13 +285,18 @@ async function tick() {
   const mon = await wallet.provider!.getBalance(wallet.address);
   if (mon < MIN_MON) {
     throw new Error(
-      `Low MON ${ethers.formatEther(mon)} (need ≥ ${ethers.formatEther(MIN_MON)}) — faucet then restart`,
+      `Low MON ${ethers.formatEther(mon)} (need ≥ ${ethers.formatEther(MIN_MON)}) for keeper ${wallet.address} — please send testnet MON to resume rounds`,
     );
   }
 
-  const markets = enabledMarkets();
+  let markets = enabledMarkets();
+  // Gas conservation: if keeper has < 1.0 MON, focus on primary BTC market to avoid multi-market gas drain
+  if (mon < ethers.parseEther("1.0") && markets.length > 1) {
+    markets = markets.filter((m) => m.symbol === "BTC");
+  }
+
   console.log(
-    `[keeper] chain=Monad hub markets=${markets.map((m) => m.symbol).join(",")} MON=${ethers.formatEther(mon)} factory=${dep.factory}`,
+    `[keeper] chain=Monad hub markets=${markets.map((m) => m.symbol).join(",")} MON=${ethers.formatEther(mon)} keeper=${wallet.address}`,
   );
 
   for (const meta of markets) {
