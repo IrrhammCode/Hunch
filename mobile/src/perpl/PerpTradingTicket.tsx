@@ -16,26 +16,112 @@ import { usePerplMarkets, placePerplOrder, PerplMarket } from "./perplClient";
 import { Icon } from "@/src/components/Icon";
 import { setSelectedMarket } from "@/src/market/selection";
 import { colors, radius, space, type, monoStyle } from "@/src/theme";
-import { PriceChart } from "@/src/components/PriceChart";
 import { TokenLogo } from "@/src/components/TokenLogo";
-import { mockPriceHistory } from "@/src/mock/fixtures";
+import Svg, { Path, Defs, LinearGradient, Stop, Circle } from "react-native-svg";
 
 const { width: W } = Dimensions.get("window");
 
 const LEVERAGE_OPTIONS = [2, 5, 10, 20] as const;
 const MARGIN_CHIPS = ["25", "50", "100", "500"] as const;
 
-function MiniWaveChart({ symbol }: { symbol?: string }) {
-  const sym = symbol || "BTC";
+function MiniWaveChart({
+  symbol = "BTC",
+  markPrice = 0,
+  change24hPct = 0,
+}: {
+  symbol?: string;
+  markPrice?: number;
+  change24hPct?: number;
+}) {
+  const isUp = change24hPct >= 0;
+  const strokeColor = isUp ? colors.up : colors.down;
+
+  const { linePath, areaPath, lastPoint } = useMemo(() => {
+    const chartW = 320;
+    const chartH = 60;
+    const padX = 6;
+    const padY = 8;
+    const usableW = chartW - padX * 2 - 12; // leave margin for pulse beacon
+    const usableH = chartH - padY * 2;
+
+    const nPoints = 18;
+    const deltaFrac = (change24hPct || 0) / 100;
+    const startP = markPrice > 0 ? markPrice / (1 + deltaFrac) : 100;
+    const endP = markPrice > 0 ? markPrice : 100 * (1 + deltaFrac);
+
+    let seed = 0;
+    for (let i = 0; i < symbol.length; i++) seed = (seed * 31 + symbol.charCodeAt(i)) % 1000;
+
+    const rawValues: number[] = [];
+    for (let i = 0; i < nPoints; i++) {
+      const t = i / (nPoints - 1);
+      const base = startP + (endP - startP) * t;
+      const wave1 = Math.sin(t * Math.PI * 2.2 + (seed % 7)) * (Math.abs(endP - startP) * 0.35 + base * 0.003);
+      const wave2 = Math.cos(t * Math.PI * 4.1 + (seed % 11)) * (base * 0.0015);
+      const damping = 1 - Math.pow(t, 2);
+      const val = i === 0 ? startP : i === nPoints - 1 ? endP : base + (wave1 + wave2) * damping;
+      rawValues.push(val);
+    }
+
+    const minV = Math.min(...rawValues);
+    const maxV = Math.max(...rawValues);
+    const range = maxV - minV || 1;
+
+    const coords = rawValues.map((v, i) => {
+      const x = padX + (i / (nPoints - 1)) * usableW;
+      const normY = (v - minV) / range;
+      const y = padY + (1 - normY) * usableH;
+      return { x, y };
+    });
+
+    let d = `M ${coords[0].x.toFixed(1)} ${coords[0].y.toFixed(1)}`;
+    for (let i = 0; i < coords.length - 1; i++) {
+      const p0 = coords[Math.max(0, i - 1)];
+      const p1 = coords[i];
+      const p2 = coords[i + 1];
+      const p3 = coords[Math.min(coords.length - 1, i + 2)];
+
+      const cp1x = p1.x + (p2.x - p0.x) / 6;
+      const cp1y = p1.y + (p2.y - p0.y) / 6;
+      const cp2x = p2.x - (p3.x - p1.x) / 6;
+      const cp2y = p2.y - (p3.y - p1.y) / 6;
+
+      d += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+    }
+
+    const last = coords[coords.length - 1];
+    const first = coords[0];
+    const area = `${d} L ${last.x.toFixed(1)} ${chartH} L ${first.x.toFixed(1)} ${chartH} Z`;
+
+    return {
+      linePath: d,
+      areaPath: area,
+      lastPoint: last,
+    };
+  }, [symbol, markPrice, change24hPct]);
+
   return (
     <View style={styles.chartContainer}>
-      <PriceChart
-        points={mockPriceHistory(sym, 1, 40).bars as any}
-        width={280}
-        height={110}
-        symbol={sym}
-        showVolume={false}
-      />
+      <Svg width="100%" height={60} viewBox="0 0 320 60" preserveAspectRatio="none">
+        <Defs>
+          <LinearGradient id={`heroWaveGrad_${symbol}`} x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0%" stopColor={strokeColor} stopOpacity="0.25" />
+            <Stop offset="85%" stopColor={strokeColor} stopOpacity="0.02" />
+            <Stop offset="100%" stopColor={strokeColor} stopOpacity="0.00" />
+          </LinearGradient>
+        </Defs>
+        <Path d={areaPath} fill={`url(#heroWaveGrad_${symbol})`} />
+        <Path
+          d={linePath}
+          fill="none"
+          stroke={strokeColor}
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <Circle cx={lastPoint.x} cy={lastPoint.y} r={5.5} fill={strokeColor} opacity={0.35} />
+        <Circle cx={lastPoint.x} cy={lastPoint.y} r={2.5} fill="#FFFFFF" />
+      </Svg>
     </View>
   );
 }
@@ -180,7 +266,7 @@ export function PerpTradingTicket() {
         </View>
       ) : (
         <>
-      {/* Top Ticker Selector Strip — tap opens coin detail page */}
+      {/* Top Ticker Selector Strip — tap switches market */}
       <View style={styles.tickerStrip}>
         {displayMarkets.map((m) => {
           const isSel = currentMark.symbol === m.symbol;
@@ -197,10 +283,6 @@ export function PerpTradingTicket() {
                   chainId: 10143,
                 });
                 Haptics.selectionAsync();
-                router.push({
-                  pathname: "/(app)/market-detail",
-                  params: { symbol: m.symbol, kind: "perp" },
-                });
               }}
               style={[styles.stripPill, isSel && styles.stripPillActive]}
             >
@@ -277,7 +359,11 @@ export function PerpTradingTicket() {
         </View>
 
         {/* Wave area graphic */}
-        <MiniWaveChart symbol={activeMarket?.symbol || selectedSymbol} />
+        <MiniWaveChart
+          symbol={activeMarket?.symbol || selectedSymbol}
+          markPrice={currentMark.markPrice}
+          change24hPct={currentMark.change24hPct}
+        />
 
         {/* 3 Stats Columns */}
         <View style={styles.statsRow}>
@@ -702,8 +788,8 @@ const styles = StyleSheet.create({
     fontSize: 9,
   },
   priceBlock: {
-    gap: 6,
-    marginTop: 10,
+    gap: 4,
+    marginTop: 12,
   },
   priceMetaRow: {
     flexDirection: "row",
@@ -720,7 +806,7 @@ const styles = StyleSheet.create({
   bigPrice: {
     color: colors.ink,
     fontFamily: type.data,
-    fontSize: 30,
+    fontSize: 32,
     fontWeight: "700",
     letterSpacing: -0.5,
   },
@@ -736,51 +822,18 @@ const styles = StyleSheet.create({
     fontSize: 10,
   },
   chartContainer: {
-    height: 90,
-    marginVertical: 10,
-    justifyContent: "flex-end",
-    position: "relative",
-  },
-  waveGraphic: {
-    height: 80,
+    height: 60,
     width: "100%",
-    backgroundColor: "rgba(214,255,63,0.03)",
-    borderRadius: radius.md,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(214,255,63,0.2)",
-    position: "relative",
-  },
-  waveDot: {
-    position: "absolute",
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.brand,
-    opacity: 0.8,
-  },
-  peakDot: {
-    position: "absolute",
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: colors.brand,
-    borderWidth: 2,
-    borderColor: "#FFF",
-  },
-  waveFillOverlay: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 35,
-    backgroundColor: "rgba(214,255,63,0.06)",
+    marginVertical: 10,
+    overflow: "hidden",
   },
   statsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     borderTopWidth: 1,
-    borderTopColor: "#1C202B",
-    paddingTop: 10,
+    borderTopColor: "rgba(255,255,255,0.07)",
+    paddingTop: 12,
+    marginTop: 2,
   },
   statCol: {
     gap: 2,

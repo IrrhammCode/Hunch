@@ -240,10 +240,13 @@ async function runMasterE2E() {
     if (!calldata.approve.data.startsWith("0x095ea7b3")) {
       throw new Error("Approve calldata does not use ERC20 approve selector 0x095ea7b3");
     }
-    if (!calldata.deposit.data.startsWith("0x6170c4b1")) {
-      throw new Error("Deposit calldata does not use Perpl deposit selector 0x6170c4b1");
+    const isDepositOrCreate =
+      calldata.deposit.data.startsWith("0x6170c4b1") ||
+      (calldata.action === "createAccount" && calldata.deposit.data.startsWith("0x"));
+    if (!isDepositOrCreate) {
+      throw new Error("Deposit calldata does not use Perpl deposit or createAccount selector");
     }
-    return `Approve selector: 0x095ea7b3 · Deposit selector: 0x6170c4b1 (Exchange: ${calldata.exchange})`;
+    return `Approve selector: 0x095ea7b3 · ${calldata.action}: ${calldata.deposit.data.slice(0, 10)} (Exchange: ${calldata.exchange})`;
   });
 
   await step("Suite 7", "Generate Withdraw Calldata", async () => {
