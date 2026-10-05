@@ -22,6 +22,7 @@ import {
 } from "react-native";
 import { colors, radius, space, type as typeFonts, monoStyle } from "@/src/theme";
 import { haptic } from "@/src/utils/clipboard";
+import { Icon } from "@/src/components/Icon";
 import {
   fetchPerplRisk,
   fetchStressTest,
@@ -476,7 +477,7 @@ function StressTestSection({
     return (
       <View style={s.section}>
         <View style={s.sectionHeader}>
-          <Text style={s.sectionIcon}>⚡</Text>
+          <Icon name="flash" size={13} color={colors.brand} />
           <Text style={s.sectionTitle}>STRESS-TEST SIMULATOR</Text>
         </View>
         <View style={{ alignItems: "center", paddingVertical: 20 }}>
@@ -498,7 +499,7 @@ function StressTestSection({
   return (
     <View style={s.section}>
       <View style={s.sectionHeader}>
-        <Text style={s.sectionIcon}>⚡</Text>
+        <Icon name="flash" size={13} color={colors.brand} />
         <Text style={s.sectionTitle}>STRESS-TEST SIMULATOR</Text>
         {selectedShock != null && (
           <Pressable
@@ -621,7 +622,7 @@ function StressTestSection({
                   fontWeight: "bold",
                 }}
               >
-                {selectedScenario.survives ? "✓ SURVIVES" : "⚠ LIQUIDATED"}
+                {selectedScenario.survives ? "SURVIVES" : "LIQUIDATED"}
               </Text>
             </View>
           </View>
@@ -1071,7 +1072,7 @@ export function RiskAnalyticsTerminal({
       {/* Warnings */}
       {risk.warnings && risk.warnings.length > 0 && (
         <View style={s.warningBanner}>
-          <Text style={s.warningIcon}>⚠</Text>
+          <Icon name="warning" size={13} color={colors.down} />
           <Text style={s.warningText} numberOfLines={2}>
             {risk.warnings[0]}
           </Text>

@@ -216,7 +216,7 @@ export default function MarketsScreen() {
             style={[styles.filterPill, filter === "hot" && styles.filterPillActiveHot]}
           >
             <Text style={[styles.filterText, filter === "hot" && { color: "#FF5533" }]}>
-              🔥 HOT 60S
+              HOT 60S
             </Text>
           </Pressable>
 
@@ -338,11 +338,11 @@ export default function MarketsScreen() {
                         </View>
                         {heat.tier === "HOT" ? (
                           <View style={styles.hotBadge}>
-                            <Text style={styles.hotBadgeText}>🔥 HOT</Text>
+                            <Text style={styles.hotBadgeText}>HOT</Text>
                           </View>
                         ) : heat.tier === "STEADY" ? (
                           <View style={styles.steadyBadge}>
-                            <Text style={styles.steadyBadgeText}>🌊 STEADY</Text>
+                            <Text style={styles.steadyBadgeText}>STEADY</Text>
                           </View>
                         ) : null}
                       </View>
@@ -394,7 +394,7 @@ export default function MarketsScreen() {
                           </View>
                           {heat.tier === "HOT" ? (
                             <View style={styles.hotBadge}>
-                              <Text style={styles.hotBadgeText}>🔥 HOT</Text>
+                              <Text style={styles.hotBadgeText}>HOT</Text>
                             </View>
                           ) : null}
                         </View>

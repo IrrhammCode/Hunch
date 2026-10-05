@@ -313,7 +313,6 @@ export function PerpTradingTicket({
                 <Text style={[styles.stripSymbol, isSel && styles.stripSymbolActive]}>
                   {m.symbol}
                 </Text>
-                {isHot ? <Text style={{ fontSize: 9 }}>🔥</Text> : null}
               </View>
               <Text style={styles.stripPrice}>
                 ${m.markPrice >= 1000 ? m.markPrice.toLocaleString(undefined, { maximumFractionDigits: 0 }) : m.markPrice.toFixed(2)}
@@ -518,7 +517,7 @@ export function PerpTradingTicket({
               style={styles.toggleRow}
             >
               <View style={[styles.checkbox, tpEnabled && styles.checkboxActive]}>
-                {tpEnabled && <Text style={styles.checkmark}>✓</Text>}
+                {tpEnabled && <Icon name="checkmark" size={10} color="#000" />}
               </View>
               <Text style={styles.guardLabel}>TAKE PROFIT (TP)</Text>
             </Pressable>
@@ -577,7 +576,7 @@ export function PerpTradingTicket({
               style={styles.toggleRow}
             >
               <View style={[styles.checkbox, slEnabled && styles.checkboxActiveSL]}>
-                {slEnabled && <Text style={styles.checkmark}>✓</Text>}
+                {slEnabled && <Icon name="checkmark" size={10} color="#000" />}
               </View>
               <Text style={styles.guardLabel}>STOP LOSS (SL)</Text>
             </Pressable>

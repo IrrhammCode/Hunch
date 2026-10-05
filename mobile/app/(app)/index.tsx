@@ -644,7 +644,7 @@ export default function HunchScreen() {
                   style={[styles.radarFilterPill, radarFilter === "hot" && styles.radarFilterPillActiveHot]}
                 >
                   <Text style={[styles.radarFilterText, radarFilter === "hot" && { color: "#FF5533" }]}>
-                    🔥 HOT 60S ({TOKEN_MARKETS.filter((m) => m.volatilityTier === "HOT").length})
+                    HOT 60S ({TOKEN_MARKETS.filter((m) => m.volatilityTier === "HOT").length})
                   </Text>
                 </Pressable>
                 <Pressable
@@ -652,7 +652,7 @@ export default function HunchScreen() {
                   style={[styles.radarFilterPill, radarFilter === "steady" && styles.radarFilterPillActiveSteady]}
                 >
                   <Text style={[styles.radarFilterText, radarFilter === "steady" && { color: "#33B5E5" }]}>
-                    🌊 STEADY ({TOKEN_MARKETS.filter((m) => m.volatilityTier === "STEADY").length})
+                    STEADY ({TOKEN_MARKETS.filter((m) => m.volatilityTier === "STEADY").length})
                   </Text>
                 </Pressable>
               </View>
@@ -664,7 +664,6 @@ export default function HunchScreen() {
               >
                 {filteredBlitzMarkets.map((m) => {
                   const isSel = currentSymbol.toUpperCase() === m.symbol.toUpperCase();
-                  const isHot = m.volatilityTier === "HOT";
                   return (
                     <Pressable
                       key={m.symbol}
@@ -685,7 +684,6 @@ export default function HunchScreen() {
                       <Text style={[styles.tradeTickerSymbol, isSel && styles.tradeTickerSymbolActive]}>
                         {m.symbol}
                       </Text>
-                      {isHot ? <Text style={{ fontSize: 9 }}>🔥</Text> : null}
                     </Pressable>
                   );
                 })}
@@ -924,7 +922,7 @@ export default function HunchScreen() {
                 style={styles.hedgeToggleRow}
               >
                 <View style={[styles.hedgeCheckbox, hedgeEnabled && styles.hedgeCheckboxActive]}>
-                  {hedgeEnabled && <Text style={styles.hedgeCheckmark}>✓</Text>}
+                  {hedgeEnabled && <Icon name="checkmark" size={11} color="#000" />}
                 </View>
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>

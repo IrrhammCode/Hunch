@@ -17,7 +17,7 @@ export type TokenMarketConfig = {
 };
 
 export const TOKEN_MARKETS: TokenMarketConfig[] = [
-  // --- 🔥 HOT MEMES & ULTRA-FAST VELOCITY (Optimal for 60s Blitz scalps) ---
+  // --- HIGH VOLATILITY / MEMES (Optimal for 60s Blitz scalps) ---
   {
     symbol: "PEPE",
     pair: "PEPE-USD",
@@ -91,7 +91,7 @@ export const TOKEN_MARKETS: TokenMarketConfig[] = [
     description: "Next-gen Move L1 · High-beta oscillations suitable for 60s",
   },
 
-  // --- ⚡ MODERATE VOLATILITY (Dual-Mode: 60s Blitz & Perps) ---
+  // --- MODERATE VOLATILITY (Dual-Mode: 60s Blitz & Perps) ---
   {
     symbol: "NEAR",
     pair: "NEAR-USD",
@@ -156,7 +156,7 @@ export const TOKEN_MARKETS: TokenMarketConfig[] = [
     description: "Pyth Network oracle token · Solid depth and consistent pricing",
   },
 
-  // --- 🌊 STEADY & MACRO TREND (Optimal for Leveraged Perps with TP/SL Guard) ---
+  // --- STEADY & MACRO TREND (Optimal for Leveraged Perps with TP/SL Guard) ---
   {
     symbol: "BTC",
     pair: "BTC-USD",
@@ -276,11 +276,11 @@ export function getMarketHeat(symbol?: string): HeatProfile {
       score,
       category: m.category,
       recommendedMode: "blitz",
-      modeBadge: `🔥 HOT 60S · ${score}/100`,
-      headline: "FAST VOLATILITY SURGE",
-      explanation: "Explosive intra-minute candles & rapid ticks. Best for quick 60s UP/DOWN binary scalps!",
+      modeBadge: `HOT · ${score}/100`,
+      headline: "HIGH VOLATILITY",
+      explanation: "Elevated intra-minute price velocity. Optimal for 60s UP/DOWN binary scalping.",
       actionText: "Switch to 60s Blitz",
-      accentColor: "#FF5533", // Fire orange/red
+      accentColor: "#FF5533",
     };
   }
 
@@ -290,11 +290,11 @@ export function getMarketHeat(symbol?: string): HeatProfile {
       score,
       category: m.category,
       recommendedMode: "perps",
-      modeBadge: `🌊 STEADY TREND · ${score}/100`,
-      headline: "SMOOTH MACRO DIRECTION",
-      explanation: "Low whipsaw risk with steady trendlines. Best for 10x-50x Leveraged Perps with TP/SL guard!",
+      modeBadge: `STEADY · ${score}/100`,
+      headline: "STEADY MOMENTUM",
+      explanation: "Low whipsaw risk with persistent trendlines. Optimal for leveraged Perps with TP/SL guard.",
       actionText: "Switch to Perps (20x)",
-      accentColor: "#33B5E5", // Deep cyan/blue
+      accentColor: "#33B5E5",
     };
   }
 
@@ -303,10 +303,10 @@ export function getMarketHeat(symbol?: string): HeatProfile {
     score,
     category: m.category,
     recommendedMode: "blitz",
-    modeBadge: `⚡ DUAL-MODE · ${score}/100`,
-    headline: "BALANCED MARKET MOMENTUM",
-    explanation: "Balanced speed. Primed for both rapid 60s scalps and technical Perpetual positions.",
+    modeBadge: `BALANCED · ${score}/100`,
+    headline: "BALANCED MOMENTUM",
+    explanation: "Moderate intra-hour range suitable for both 60s binary trades and perpetual positions.",
     actionText: "Dual Mode Ready",
-    accentColor: "#D6FF3F", // Lime brand
+    accentColor: "#D6FF3F",
   };
 }
