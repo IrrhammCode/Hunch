@@ -78,10 +78,22 @@ export async function executeCommittedIntent(params: {
   }
 
   const pyth = pythContract(wallet, dep);
+  const feedId = ((await market.priceFeedId()) as string) || dep.btcUsdFeedId;
+  let maxPriceAge = 31_536_000;
   try {
-    await pyth.getPriceNoOlderThan(dep.btcUsdFeedId, 90);
+    maxPriceAge = Number(await market.maxPriceAge());
   } catch {
-    await pullPythOnchain(pyth, dep.btcUsdFeedId, wallet);
+    /* fallback to 1 year */
+  }
+
+  try {
+    await pyth.getPriceNoOlderThan(feedId, maxPriceAge);
+  } catch {
+    try {
+      await pullPythOnchain(pyth, feedId, wallet);
+    } catch (pullErr: any) {
+      console.warn("[relayedTrade] pyth pull skipped/failed:", pullErr?.message || pullErr);
+    }
   }
 
   let execHash: string;
@@ -90,7 +102,8 @@ export async function executeCommittedIntent(params: {
     const execTx = await market.executeBuy(intentId, [], { value: 0, gasLimit: est + 300_000n });
     await waitForReceipt(provider, execTx.hash);
     execHash = execTx.hash;
-  } catch {
+  } catch (estErr) {
+    console.warn("[relayedTrade] estimateGas failed, fallback gasLimit:", estErr);
     const execTx = await market.executeBuy(intentId, [], { value: 0, gasLimit: 2_500_000n });
     await waitForReceipt(provider, execTx.hash);
     execHash = execTx.hash;
