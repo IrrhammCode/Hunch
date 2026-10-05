@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { StyleSheet, Text, View, Pressable, ScrollView, TextInput, ActivityIndicator, Dimensions } from "react-native";
 import { haptic as hapticFx } from "@/src/utils/clipboard";
 const Haptics = {
@@ -128,13 +128,26 @@ function MiniWaveChart({
   );
 }
 
-export function PerpTradingTicket() {
+export function PerpTradingTicket({
+  initialSymbol = "BTC",
+  onSymbolChange,
+}: {
+  initialSymbol?: string;
+  onSymbolChange?: (symbol: string) => void;
+} = {}) {
   const { user } = useAuth();
   const { me, refresh: refreshWallet } = useWallet();
   const toast = useToast();
   const { markets, loading: marketsLoading, refresh: refreshMarkets } = usePerplMarkets(1500);
 
-  const [selectedSymbol, setSelectedSymbol] = useState("BTC");
+  const [selectedSymbol, setSelectedSymbol] = useState(initialSymbol || "BTC");
+
+  useEffect(() => {
+    if (initialSymbol && initialSymbol.toUpperCase() !== selectedSymbol.toUpperCase()) {
+      setSelectedSymbol(initialSymbol.toUpperCase());
+    }
+  }, [initialSymbol]);
+
   const livePrice = useLivePrice(selectedSymbol, 1200);
   const [side, setSide] = useState<"LONG" | "SHORT">("LONG");
   const [leverage, setLeverage] = useState<number>(10);
@@ -270,14 +283,20 @@ export function PerpTradingTicket() {
       ) : (
         <>
       {/* Top Ticker Selector Strip — tap switches market */}
-      <View style={styles.tickerStrip}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.tickerStrip}
+      >
         {displayMarkets.map((m) => {
-          const isSel = currentMark.symbol === m.symbol;
+          const isSel = currentMark.symbol.toUpperCase() === m.symbol.toUpperCase();
+          const isHot = m.volatilityTier === "HOT" || m.change24hPct > 10;
           return (
             <Pressable
               key={m.symbol}
               onPress={() => {
                 setSelectedSymbol(m.symbol);
+                if (onSymbolChange) onSymbolChange(m.symbol);
                 setSelectedMarket({
                   symbol: m.symbol,
                   pair: `${m.symbol}-USD`,
@@ -294,6 +313,7 @@ export function PerpTradingTicket() {
                 <Text style={[styles.stripSymbol, isSel && styles.stripSymbolActive]}>
                   {m.symbol}
                 </Text>
+                {isHot ? <Text style={{ fontSize: 9 }}>🔥</Text> : null}
               </View>
               <Text style={styles.stripPrice}>
                 ${m.markPrice >= 1000 ? m.markPrice.toLocaleString(undefined, { maximumFractionDigits: 0 }) : m.markPrice.toFixed(2)}
@@ -305,7 +325,7 @@ export function PerpTradingTicket() {
             </Pressable>
           );
         })}
-      </View>
+      </ScrollView>
 
       {/* Hero Chart & Price Card */}
       <View style={styles.heroMarketCard}>

@@ -54,26 +54,13 @@ import { PerpTradingTicket } from "@/src/perpl/PerpTradingTicket";
 import { placePerplOrder } from "@/src/perpl/perplClient";
 import { useLivePrice } from "@/src/hooks/useLivePrice";
 import { AnimatedLiveTicker } from "@/src/components/AnimatedLiveTicker";
+import { MarketHeatBanner } from "@/src/components/MarketHeatBanner";
+import { TOKEN_MARKETS, getMarketHeat } from "@/src/config/markets";
 import { colors, radius, space, type } from "@/src/theme";
 
 const AMOUNTS = ["5", "10", "25"] as const;
 const { width: SCREEN_W } = Dimensions.get("window");
 const SWIPE_X = SCREEN_W * 0.26;
-
-const BLITZ_MARKETS = [
-  { symbol: "BTC", label: "BTC / USD" },
-  { symbol: "ETH", label: "ETH / USD" },
-  { symbol: "SOL", label: "SOL / USD" },
-  { symbol: "MON", label: "MON / USD" },
-  { symbol: "DOGE", label: "DOGE / USD" },
-  { symbol: "SUI", label: "SUI / USD" },
-  { symbol: "AVAX", label: "AVAX / USD" },
-  { symbol: "LINK", label: "LINK / USD" },
-  { symbol: "NEAR", label: "NEAR / USD" },
-  { symbol: "PEPE", label: "PEPE / USD" },
-  { symbol: "BNB", label: "BNB / USD" },
-  { symbol: "XRP", label: "XRP / USD" },
-];
 
 function formatStrike(raw: string, expo: number) {
   const n = Number(raw) * Math.pow(10, expo);
@@ -96,7 +83,14 @@ export default function HunchScreen() {
   const [data, setData] = useState<CurrentRoundResponse | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [currentSymbol, setCurrentSymbol] = useState(getSelectedMarket().symbol || "BTC");
+  const [radarFilter, setRadarFilter] = useState<"all" | "hot" | "steady">("all");
   const livePriceData = useLivePrice(currentSymbol, 1200);
+
+  const filteredBlitzMarkets = TOKEN_MARKETS.filter((m) => {
+    if (radarFilter === "hot") return m.volatilityTier === "HOT";
+    if (radarFilter === "steady") return m.volatilityTier === "STEADY";
+    return true;
+  });
   const [picked, setPicked] = useState<"UP" | "DOWN" | null>(null);
   const [busy, setBusy] = useState(false);
   const [flash, setFlash] = useState<"up" | "down" | null>(null);
@@ -582,6 +576,18 @@ export default function HunchScreen() {
           </View>
         </View>
 
+        {/* Volatility Radar Banner */}
+        <View style={{ paddingHorizontal: 12, marginBottom: 4 }}>
+          <MarketHeatBanner
+            symbol={currentSymbol}
+            currentMode={tradeMode}
+            onSwitchMode={(mode) => {
+              setTradeMode(mode);
+              Haptics.selectionAsync();
+            }}
+          />
+        </View>
+
         {tradeMode === "perps" ? (
           <Animated.View
             entering={FadeIn.duration(200)}
@@ -593,7 +599,19 @@ export default function HunchScreen() {
               paddingBottom: 8,
             }}
           >
-            <PerpTradingTicket />
+            <PerpTradingTicket
+              initialSymbol={currentSymbol}
+              onSymbolChange={(s) => {
+                setCurrentSymbol(s);
+                setSelectedMarket({
+                  symbol: s,
+                  pair: `${s}-USD`,
+                  label: `${s} / USD`,
+                  chain: "monad",
+                  chainId: 10143,
+                });
+              }}
+            />
           </Animated.View>
         ) : (
           <ScrollView
@@ -610,15 +628,43 @@ export default function HunchScreen() {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
-            {/* Top Market Selector Strip — tap switches token */}
-            <View style={{ marginBottom: 4 }}>
+            {/* Volatility Category Filters & Ticker Strip */}
+            <View style={{ marginBottom: 4, gap: 8 }}>
+              <View style={styles.radarFilterRow}>
+                <Pressable
+                  onPress={() => { setRadarFilter("all"); Haptics.selectionAsync(); }}
+                  style={[styles.radarFilterPill, radarFilter === "all" && styles.radarFilterPillActive]}
+                >
+                  <Text style={[styles.radarFilterText, radarFilter === "all" && styles.radarFilterTextActive]}>
+                    ALL ({TOKEN_MARKETS.length})
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => { setRadarFilter("hot"); Haptics.selectionAsync(); }}
+                  style={[styles.radarFilterPill, radarFilter === "hot" && styles.radarFilterPillActiveHot]}
+                >
+                  <Text style={[styles.radarFilterText, radarFilter === "hot" && { color: "#FF5533" }]}>
+                    🔥 HOT 60S ({TOKEN_MARKETS.filter((m) => m.volatilityTier === "HOT").length})
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => { setRadarFilter("steady"); Haptics.selectionAsync(); }}
+                  style={[styles.radarFilterPill, radarFilter === "steady" && styles.radarFilterPillActiveSteady]}
+                >
+                  <Text style={[styles.radarFilterText, radarFilter === "steady" && { color: "#33B5E5" }]}>
+                    🌊 STEADY ({TOKEN_MARKETS.filter((m) => m.volatilityTier === "STEADY").length})
+                  </Text>
+                </Pressable>
+              </View>
+
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.tradeTickerStrip}
               >
-                {BLITZ_MARKETS.map((m) => {
+                {filteredBlitzMarkets.map((m) => {
                   const isSel = currentSymbol.toUpperCase() === m.symbol.toUpperCase();
+                  const isHot = m.volatilityTier === "HOT";
                   return (
                     <Pressable
                       key={m.symbol}
@@ -639,6 +685,7 @@ export default function HunchScreen() {
                       <Text style={[styles.tradeTickerSymbol, isSel && styles.tradeTickerSymbolActive]}>
                         {m.symbol}
                       </Text>
+                      {isHot ? <Text style={{ fontSize: 9 }}>🔥</Text> : null}
                     </Pressable>
                   );
                 })}
@@ -1696,5 +1743,40 @@ const styles = StyleSheet.create({
   tradeTickerSymbolActive: {
     color: colors.brand,
     fontWeight: "bold",
+  },
+  radarFilterRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 2,
+  },
+  radarFilterPill: {
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: radius.sm,
+    backgroundColor: "#12141A",
+    borderWidth: 1,
+    borderColor: "#1E222D",
+  },
+  radarFilterPillActive: {
+    borderColor: colors.brand,
+    backgroundColor: "rgba(214, 255, 63, 0.12)",
+  },
+  radarFilterPillActiveHot: {
+    borderColor: "#FF5533",
+    backgroundColor: "rgba(255, 85, 51, 0.12)",
+  },
+  radarFilterPillActiveSteady: {
+    borderColor: "#33B5E5",
+    backgroundColor: "rgba(51, 181, 229, 0.12)",
+  },
+  radarFilterText: {
+    fontFamily: type.bold,
+    fontSize: 10,
+    color: colors.muted,
+    letterSpacing: 0.4,
+  },
+  radarFilterTextActive: {
+    color: colors.brand,
   },
 });

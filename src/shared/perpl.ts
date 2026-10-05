@@ -1,5 +1,6 @@
 import { ethers, Contract } from "ethers";
 import { getProvider, loadDeployment } from "./chain";
+import { marketBySymbol, MARKETS } from "./markets";
 
 export const PERPL_TESTNET = {
   chainId: 10143,
@@ -27,6 +28,9 @@ export type PerplMarketSummary = {
   maxLeverage: number;
   priceDecimals: number;
   sizeDecimals: number;
+  category?: "meme" | "major" | "l1" | "defi" | "l2";
+  volatilityTier?: "HOT" | "MODERATE" | "STEADY";
+  volatilityScore?: number;
 };
 
 let contextCache: { at: number; data: any } | null = null;
@@ -68,6 +72,8 @@ export async function getPerplMarkets(): Promise<PerplMarketSummary[]> {
     const initMarginBps = m.config?.initial_margin ?? 1000;
     const maxLeverage = Math.min(50, Math.max(1, Math.round(10000 / initMarginBps)));
 
+    const meta = marketBySymbol(m.symbol);
+
     return {
       id: m.id,
       perpetualId: m.perpetual_id ?? m.id,
@@ -85,6 +91,9 @@ export async function getPerplMarkets(): Promise<PerplMarketSummary[]> {
       maxLeverage,
       priceDecimals: pDec,
       sizeDecimals: sDec,
+      category: meta?.category,
+      volatilityTier: meta?.volatilityTier || (Math.abs(change24hPct) > 10 ? "HOT" : "STEADY"),
+      volatilityScore: meta?.volatilityScore ?? (Math.abs(change24hPct) > 10 ? 88 : 42),
     };
   });
 
@@ -98,11 +107,26 @@ export async function getPerplMarkets(): Promise<PerplMarketSummary[]> {
     { symbol: "PEPE", name: "PEPE Perp", defaultPx: 0.0000045, maxLev: 15, pDec: 8 },
     { symbol: "BNB", name: "BNB Perp", defaultPx: 790.0, maxLev: 30, pDec: 2 },
     { symbol: "XRP", name: "XRP Perp", defaultPx: 1.55, maxLev: 20, pDec: 4 },
+    { symbol: "MON", name: "MON Perp", defaultPx: 0.42, maxLev: 20, pDec: 4 },
+    { symbol: "WIF", name: "WIF Perp", defaultPx: 2.45, maxLev: 20, pDec: 4 },
+    { symbol: "BONK", name: "BONK Perp", defaultPx: 0.000018, maxLev: 15, pDec: 8 },
+    { symbol: "SHIB", name: "SHIB Perp", defaultPx: 0.000014, maxLev: 15, pDec: 8 },
+    { symbol: "NEAR", name: "NEAR Perp", defaultPx: 4.85, maxLev: 20, pDec: 3 },
+    { symbol: "TIA", name: "TIA Perp", defaultPx: 3.6, maxLev: 20, pDec: 3 },
+    { symbol: "APT", name: "APT Perp", defaultPx: 6.2, maxLev: 20, pDec: 3 },
+    { symbol: "ARB", name: "ARB Perp", defaultPx: 0.55, maxLev: 20, pDec: 4 },
+    { symbol: "OP", name: "OP Perp", defaultPx: 1.45, maxLev: 20, pDec: 3 },
+    { symbol: "PYTH", name: "PYTH Perp", defaultPx: 0.35, maxLev: 20, pDec: 4 },
+    { symbol: "ADA", name: "ADA Perp", defaultPx: 0.75, maxLev: 20, pDec: 4 },
+    { symbol: "DOT", name: "DOT Perp", defaultPx: 4.3, maxLev: 20, pDec: 3 },
+    { symbol: "LTC", name: "LTC Perp", defaultPx: 88.5, maxLev: 25, pDec: 2 },
+    { symbol: "BCH", name: "BCH Perp", defaultPx: 360.0, maxLev: 25, pDec: 2 },
   ];
 
   for (let i = 0; i < extraConfigs.length; i++) {
     const c = extraConfigs[i]!;
     if (existing.has(c.symbol)) continue;
+    const meta = marketBySymbol(c.symbol);
     perplList.push({
       id: 9100 + i,
       perpetualId: 9100 + i,
@@ -113,13 +137,16 @@ export async function getPerplMarkets(): Promise<PerplMarketSummary[]> {
       lastPrice: c.defaultPx,
       bidPrice: c.defaultPx * 0.9995,
       askPrice: c.defaultPx * 1.0005,
-      change24hPct: 2.14,
+      change24hPct: meta?.volatilityTier === "HOT" ? 8.45 : 2.14,
       volume24hAUSD: 184500,
       openInterest: 6420,
       fundingRateBps: 1,
       maxLeverage: c.maxLev,
       priceDecimals: c.pDec,
       sizeDecimals: 2,
+      category: meta?.category,
+      volatilityTier: meta?.volatilityTier || "MODERATE",
+      volatilityScore: meta?.volatilityScore ?? 55,
     });
   }
 

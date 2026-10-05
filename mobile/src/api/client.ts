@@ -173,6 +173,9 @@ export type MarketBoardRow = {
   spot?: { yes: string; no: string };
   reason?: string;
   explorer?: string;
+  category?: "meme" | "major" | "l1" | "defi" | "l2";
+  volatilityTier?: "HOT" | "MODERATE" | "STEADY";
+  volatilityScore?: number;
 };
 
 export type MarketBoard = {
@@ -386,6 +389,9 @@ export type PerplMarket = {
   maxLeverage: number;
   priceDecimals: number;
   sizeDecimals: number;
+  category?: "meme" | "major" | "l1" | "defi" | "l2";
+  volatilityTier?: "HOT" | "MODERATE" | "STEADY";
+  volatilityScore?: number;
 };
 
 export type PerplPosition = {

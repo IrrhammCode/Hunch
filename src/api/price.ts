@@ -20,6 +20,18 @@ const SYMBOL_MAP: Record<string, string> = {
   PEPE: "Crypto.PEPE/USD",
   BNB: "Crypto.BNB/USD",
   XRP: "Crypto.XRP/USD",
+  WIF: "Crypto.WIF/USD",
+  BONK: "Crypto.BONK/USD",
+  SHIB: "Crypto.SHIB/USD",
+  ADA: "Crypto.ADA/USD",
+  DOT: "Crypto.DOT/USD",
+  LTC: "Crypto.LTC/USD",
+  BCH: "Crypto.BCH/USD",
+  PYTH: "Crypto.PYTH/USD",
+  ARB: "Crypto.ARB/USD",
+  OP: "Crypto.OP/USD",
+  APT: "Crypto.APT/USD",
+  TIA: "Crypto.TIA/USD",
 };
 
 const priceCache: Record<
@@ -186,6 +198,18 @@ const CG_IDS: Record<string, string> = {
   PEPE: "pepe",
   BNB: "binancecoin",
   XRP: "ripple",
+  WIF: "dogwifcoin",
+  BONK: "bonk",
+  SHIB: "shiba-inu",
+  ADA: "cardano",
+  DOT: "polkadot",
+  LTC: "litecoin",
+  BCH: "bitcoin-cash",
+  PYTH: "pyth-network",
+  ARB: "arbitrum",
+  OP: "optimism",
+  APT: "aptos",
+  TIA: "celestia",
 };
 
 async function fetchCoingeckoHistory(symbol: string, bars = 90) {
@@ -290,5 +314,8 @@ export function catalogMarkets() {
     pair: m.pair,
     label: m.label,
     feedId: m.feedId,
+    category: m.category,
+    volatilityTier: m.volatilityTier,
+    volatilityScore: m.volatilityScore,
   }));
 }

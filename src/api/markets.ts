@@ -1,5 +1,5 @@
 import { ethers } from "ethers";
-import { enabledMarkets, symbolForFeed } from "../shared/markets";
+import { enabledMarkets, symbolForFeed, marketByFeedId } from "../shared/markets";
 import { CHAINS, chainByKey } from "../shared/multichain";
 import {
   contractAt,
@@ -27,6 +27,7 @@ function cacheSet(key: string, body: unknown) {
 async function roundSummary(chainKey: string, feedId: string) {
   const chain = chainByKey(chainKey);
   const dep = loadChainDeployment(chain);
+  const meta = marketByFeedId(feedId);
   if (!dep?.factory) {
     return {
       symbol: symbolForFeed(feedId),
@@ -34,6 +35,9 @@ async function roundSummary(chainKey: string, feedId: string) {
       feedId,
       chain: chain.key,
       chainId: chain.chainId,
+      category: meta?.category,
+      volatilityTier: meta?.volatilityTier,
+      volatilityScore: meta?.volatilityScore,
       roundId: null,
       market: null,
       status: "unavailable" as const,
@@ -52,6 +56,9 @@ async function roundSummary(chainKey: string, feedId: string) {
         feedId,
         chain: chain.key,
         chainId: chain.chainId,
+        category: meta?.category,
+        volatilityTier: meta?.volatilityTier,
+        volatilityScore: meta?.volatilityScore,
         roundId: null,
         market: null,
         status: "waiting" as const,
@@ -80,6 +87,9 @@ async function roundSummary(chainKey: string, feedId: string) {
       chain: chain.key,
       chainName: chain.name,
       chainId: chain.chainId,
+      category: meta?.category,
+      volatilityTier: meta?.volatilityTier,
+      volatilityScore: meta?.volatilityScore,
       settlementHub: Boolean(chain.settlementHub),
       explorer: chain.explorer,
       roundId: roundIdBn.toString(),

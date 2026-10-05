@@ -23,9 +23,10 @@ import { PriceChart } from "@/src/components/PriceChart";
 import { Icon } from "@/src/components/Icon";
 import { TokenLogo } from "@/src/components/TokenLogo";
 import { getSelectedMarket, setSelectedMarket } from "@/src/market/selection";
+import { getMarketHeat } from "@/src/config/markets";
 import { colors, monoStyle, radius, space, type } from "@/src/theme";
 
-type FilterTab = "all" | "blitz" | "perps";
+type FilterTab = "all" | "hot" | "blitz" | "perps";
 const { width: W } = Dimensions.get("window");
 
 function MiniSparkline({ positive, symbol }: { positive: boolean; symbol?: string }) {
@@ -142,12 +143,20 @@ export default function MarketsScreen() {
 
   const filteredPerps = displayPerps.filter((m) => {
     if (filter === "blitz") return false;
+    if (filter === "hot") {
+      const heat = getMarketHeat(m.symbol);
+      return heat.tier === "HOT" || m.change24hPct > 7;
+    }
     if (!search) return true;
     return m.symbol.toLowerCase().includes(search.toLowerCase());
   });
 
   const hunchMarkets = (board?.markets ?? []).filter((h) => {
     if (filter === "perps") return false;
+    if (filter === "hot") {
+      const heat = getMarketHeat(h.symbol);
+      return heat.tier === "HOT";
+    }
     if (!search) return true;
     return h.symbol.toLowerCase().includes(search.toLowerCase());
   });
@@ -199,6 +208,15 @@ export default function MarketsScreen() {
           >
             <Text style={[styles.filterText, filter === "all" && styles.filterTextActive]}>
               ALL
+            </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => { setFilter("hot"); Haptics.selectionAsync(); }}
+            style={[styles.filterPill, filter === "hot" && styles.filterPillActiveHot]}
+          >
+            <Text style={[styles.filterText, filter === "hot" && { color: "#FF5533" }]}>
+              🔥 HOT 60S
             </Text>
           </Pressable>
 
@@ -302,6 +320,7 @@ export default function MarketsScreen() {
               </View>
             ) : null}
             {filteredPerps.map((m) => {
+              const heat = getMarketHeat(m.symbol);
               return (
                 <Pressable
                   key={`perp-${m.id}`}
@@ -317,6 +336,15 @@ export default function MarketsScreen() {
                         <View style={styles.levBadge}>
                           <Text style={styles.levBadgeText}>{m.maxLeverage}X</Text>
                         </View>
+                        {heat.tier === "HOT" ? (
+                          <View style={styles.hotBadge}>
+                            <Text style={styles.hotBadgeText}>🔥 HOT</Text>
+                          </View>
+                        ) : heat.tier === "STEADY" ? (
+                          <View style={styles.steadyBadge}>
+                            <Text style={styles.steadyBadgeText}>🌊 STEADY</Text>
+                          </View>
+                        ) : null}
                       </View>
                       <Text style={styles.volSub} numberOfLines={1}>
                         Vol ${(m.volume24hAUSD / 1000).toFixed(0)}k · {m.change24hPct >= 0 ? "+" : ""}{m.change24hPct.toFixed(1)}%
@@ -345,8 +373,9 @@ export default function MarketsScreen() {
             })}
 
             {/* All 60s blitz markets from API board (BTC/ETH/SOL…) */}
-            {(filter === "all" || filter === "blitz") &&
+            {(filter === "all" || filter === "blitz" || filter === "hot") &&
               hunchMarkets.map((row) => {
+                const heat = getMarketHeat(row.symbol);
                 const yesC = row.spot ? Number(row.spot.yes) * 100 : null;
                 return (
                   <Pressable
@@ -363,6 +392,11 @@ export default function MarketsScreen() {
                           <View style={[styles.levBadge, { backgroundColor: "rgba(214,255,63,0.18)" }]}>
                             <Text style={[styles.levBadgeText, { color: colors.brand }]}>60S</Text>
                           </View>
+                          {heat.tier === "HOT" ? (
+                            <View style={styles.hotBadge}>
+                              <Text style={styles.hotBadgeText}>🔥 HOT</Text>
+                            </View>
+                          ) : null}
                         </View>
                         <Text style={styles.volSub} numberOfLines={1}>
                           {row.status === "open"
@@ -612,11 +646,39 @@ const styles = StyleSheet.create({
     backgroundColor: "#161B16",
     borderColor: colors.brand,
   },
+  filterPillActiveHot: {
+    backgroundColor: "rgba(255, 85, 51, 0.12)",
+    borderColor: "#FF5533",
+  },
   filterText: {
     color: colors.muted,
     fontFamily: type.bold,
     fontSize: 11,
     letterSpacing: 0.5,
+  },
+  hotBadge: {
+    backgroundColor: "rgba(255, 85, 51, 0.16)",
+    paddingVertical: 1,
+    paddingHorizontal: 5,
+    borderRadius: 3,
+  },
+  hotBadgeText: {
+    color: "#FF5533",
+    fontFamily: type.bold,
+    fontSize: 8,
+    letterSpacing: 0.3,
+  },
+  steadyBadge: {
+    backgroundColor: "rgba(51, 181, 229, 0.14)",
+    paddingVertical: 1,
+    paddingHorizontal: 5,
+    borderRadius: 3,
+  },
+  steadyBadgeText: {
+    color: "#33B5E5",
+    fontFamily: type.bold,
+    fontSize: 8,
+    letterSpacing: 0.3,
   },
   filterTextActive: {
     color: colors.brand,
