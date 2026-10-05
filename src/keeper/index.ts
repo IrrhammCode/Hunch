@@ -290,9 +290,11 @@ async function tick() {
   }
 
   let markets = enabledMarkets();
-  // Gas conservation: if keeper has < 1.0 MON, focus on primary BTC market to avoid multi-market gas drain
+  // Gas conservation: tier active markets to avoid testnet gas drain
   if (mon < ethers.parseEther("1.0") && markets.length > 1) {
     markets = markets.filter((m) => m.symbol === "BTC");
+  } else if (mon < ethers.parseEther("3.0") && markets.length > 3) {
+    markets = markets.filter((m) => ["BTC", "ETH", "SOL", "MON"].includes(m.symbol));
   }
 
   console.log(

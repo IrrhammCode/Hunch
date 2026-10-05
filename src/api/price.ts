@@ -12,6 +12,14 @@ const SYMBOL_MAP: Record<string, string> = {
   ETH: "Crypto.ETH/USD",
   SOL: "Crypto.SOL/USD",
   MON: "Crypto.MON/USD",
+  DOGE: "Crypto.DOGE/USD",
+  SUI: "Crypto.SUI/USD",
+  AVAX: "Crypto.AVAX/USD",
+  LINK: "Crypto.LINK/USD",
+  NEAR: "Crypto.NEAR/USD",
+  PEPE: "Crypto.PEPE/USD",
+  BNB: "Crypto.BNB/USD",
+  XRP: "Crypto.XRP/USD",
 };
 
 const priceCache: Record<
@@ -170,6 +178,14 @@ const CG_IDS: Record<string, string> = {
   ETH: "ethereum",
   SOL: "solana",
   MON: "monad",
+  DOGE: "dogecoin",
+  SUI: "sui",
+  AVAX: "avalanche-2",
+  LINK: "chainlink",
+  NEAR: "near",
+  PEPE: "pepe",
+  BNB: "binancecoin",
+  XRP: "ripple",
 };
 
 async function fetchCoingeckoHistory(symbol: string, bars = 90) {

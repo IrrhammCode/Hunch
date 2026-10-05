@@ -7,6 +7,7 @@ const Haptics = {
   NotificationFeedbackType: { Success: 0, Warning: 1, Error: 2 },
 };
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useFocusEffect } from "expo-router";
 import {
   Dimensions,
   Linking,
@@ -44,7 +45,8 @@ import { Icon } from "@/src/components/Icon";
 import { useToast } from "@/src/components/Toast";
 import { AmountChip, BalanceChip, PrimaryButton } from "@/src/components/ui";
 import { explorerTx } from "@/src/config/chain";
-import { getSelectedMarket } from "@/src/market/selection";
+import { getSelectedMarket, setSelectedMarket } from "@/src/market/selection";
+import { TokenLogo } from "@/src/components/TokenLogo";
 import { addHunch, listHunches, settleRound } from "@/src/hunchBook";
 import { useWallet } from "@/src/wallet/WalletContext";
 import { placeWalletTrade, redeemWalletPosition } from "@/src/wallet/privyTrade";
@@ -57,6 +59,21 @@ import { colors, radius, space, type } from "@/src/theme";
 const AMOUNTS = ["5", "10", "25"] as const;
 const { width: SCREEN_W } = Dimensions.get("window");
 const SWIPE_X = SCREEN_W * 0.26;
+
+const BLITZ_MARKETS = [
+  { symbol: "BTC", label: "BTC / USD" },
+  { symbol: "ETH", label: "ETH / USD" },
+  { symbol: "SOL", label: "SOL / USD" },
+  { symbol: "MON", label: "MON / USD" },
+  { symbol: "DOGE", label: "DOGE / USD" },
+  { symbol: "SUI", label: "SUI / USD" },
+  { symbol: "AVAX", label: "AVAX / USD" },
+  { symbol: "LINK", label: "LINK / USD" },
+  { symbol: "NEAR", label: "NEAR / USD" },
+  { symbol: "PEPE", label: "PEPE / USD" },
+  { symbol: "BNB", label: "BNB / USD" },
+  { symbol: "XRP", label: "XRP / USD" },
+];
 
 function formatStrike(raw: string, expo: number) {
   const n = Number(raw) * Math.pow(10, expo);
@@ -78,8 +95,8 @@ export default function HunchScreen() {
   const [tradeMode, setTradeMode] = useState<"perps" | "hunch">("perps");
   const [data, setData] = useState<CurrentRoundResponse | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  const selectedMarket = getSelectedMarket();
-  const livePriceData = useLivePrice(selectedMarket.symbol, 1200);
+  const [currentSymbol, setCurrentSymbol] = useState(getSelectedMarket().symbol || "BTC");
+  const livePriceData = useLivePrice(currentSymbol, 1200);
   const [picked, setPicked] = useState<"UP" | "DOWN" | null>(null);
   const [busy, setBusy] = useState(false);
   const [flash, setFlash] = useState<"up" | "down" | null>(null);
@@ -111,8 +128,7 @@ export default function HunchScreen() {
 
   const refresh = useCallback(async () => {
     try {
-      const sel = getSelectedMarket();
-      const next = await fetchCurrentRound(sel.symbol);
+      const next = await fetchCurrentRound(currentSymbol);
       setData(next);
       setErr(null);
 
@@ -139,7 +155,7 @@ export default function HunchScreen() {
 
       // Check if current round just resolved
       if (next.round?.status === "resolved" && typeof next.round.yesWins === "boolean") {
-        const symbol = sel.symbol;
+        const symbol = currentSymbol;
         const outcome = next.round.yesWins ? `${symbol} finished UP` : `${symbol} finished DOWN`;
         setSettlementBanner((prev) => {
           if (prev && prev.roundId === String(next.round?.roundId)) return prev;
@@ -172,7 +188,7 @@ export default function HunchScreen() {
               await Haptics.notificationAsync(
                 won ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Error,
               );
-              const symbol = sel.symbol;
+              const symbol = currentSymbol;
               const outcome = detail.round.yesWins ? `${symbol} finished UP` : `${symbol} finished DOWN`;
               const line = settled.map((h) => `${h.side} → ${h.status.toUpperCase()}`).join("\n");
               setLastResult(line);
@@ -200,7 +216,22 @@ export default function HunchScreen() {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [currentSymbol, toast]);
+
+  useEffect(() => {
+    refresh();
+  }, [currentSymbol, refresh]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const s = getSelectedMarket().symbol || "BTC";
+      if (s !== currentSymbol) {
+        setCurrentSymbol(s);
+      }
+      refresh();
+      refreshWallet();
+    }, [currentSymbol, refresh, refreshWallet]),
+  );
 
   useEffect(() => {
     refresh();
@@ -338,7 +369,7 @@ export default function HunchScreen() {
           address: user.address,
           side,
           amountAUSD: amount,
-          symbol: getSelectedMarket().symbol,
+          symbol: currentSymbol,
           market: getSelectedMarket().market || round?.market || undefined,
         });
         roundId = result.roundId;
@@ -579,6 +610,41 @@ export default function HunchScreen() {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
+            {/* Top Market Selector Strip — tap switches token */}
+            <View style={{ marginBottom: 4 }}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.tradeTickerStrip}
+              >
+                {BLITZ_MARKETS.map((m) => {
+                  const isSel = currentSymbol.toUpperCase() === m.symbol.toUpperCase();
+                  return (
+                    <Pressable
+                      key={m.symbol}
+                      onPress={() => {
+                        setCurrentSymbol(m.symbol);
+                        setSelectedMarket({
+                          symbol: m.symbol,
+                          pair: `${m.symbol}-USD`,
+                          label: `${m.symbol} / USD`,
+                          chain: "monad",
+                          chainId: 10143,
+                        });
+                        Haptics.selectionAsync();
+                      }}
+                      style={[styles.tradeTickerPill, isSel && styles.tradeTickerPillActive]}
+                    >
+                      <TokenLogo symbol={m.symbol} size={15} />
+                      <Text style={[styles.tradeTickerSymbol, isSel && styles.tradeTickerSymbolActive]}>
+                        {m.symbol}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </View>
+
             {/* Stake Amount Header */}
             <View style={styles.stakeHeaderRow}>
               <Text style={styles.stakeLabel}>STAKE AMOUNT</Text>
@@ -688,7 +754,7 @@ export default function HunchScreen() {
                 <View style={styles.cardHeaderRow}>
                   <View style={styles.assetBadge}>
                     <Icon name="flash" size={14} color={colors.brand} />
-                    <Text style={styles.assetName}>{getSelectedMarket().symbol} / USD</Text>
+                    <Text style={styles.assetName}>{currentSymbol} / USD</Text>
                   </View>
                   <Text style={styles.roundOracleText}>
                     Monad · R#{round?.roundId || "—"} · Pyth
@@ -736,7 +802,7 @@ export default function HunchScreen() {
                         ]}
                       />
                       <Text style={styles.liveBannerTitle}>
-                        {selectedMarket.symbol} / USD REALTIME
+                        {currentSymbol} / USD REALTIME
                       </Text>
                     </View>
                     <Text style={styles.liveSourceText}>Pyth Oracle · 1.2s</Text>
@@ -1600,5 +1666,35 @@ const styles = StyleSheet.create({
     color: colors.brand,
     fontFamily: type.data,
     fontSize: 10,
+  },
+  tradeTickerStrip: {
+    flexDirection: "row",
+    gap: 8,
+    paddingVertical: 2,
+    paddingHorizontal: 2,
+  },
+  tradeTickerPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 18,
+    backgroundColor: "#161922",
+    borderWidth: 1,
+    borderColor: "#252B3B",
+  },
+  tradeTickerPillActive: {
+    backgroundColor: "rgba(214,255,63,0.12)",
+    borderColor: colors.brand,
+  },
+  tradeTickerSymbol: {
+    fontFamily: type.bold,
+    fontSize: 12,
+    color: "#8E9BAE",
+  },
+  tradeTickerSymbolActive: {
+    color: colors.brand,
+    fontWeight: "bold",
   },
 });

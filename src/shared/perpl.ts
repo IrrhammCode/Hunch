@@ -48,7 +48,7 @@ export async function getPerplMarkets(): Promise<PerplMarketSummary[]> {
   const ctx = await fetchPerplContext();
   const markets = ctx.markets || [];
 
-  return markets.map((m: any) => {
+  const perplList: PerplMarketSummary[] = markets.map((m: any) => {
     const pDec = m.config?.price_decimals ?? 2;
     const sDec = m.config?.size_decimals ?? 2;
     const pDiv = Math.pow(10, pDec);
@@ -87,6 +87,43 @@ export async function getPerplMarkets(): Promise<PerplMarketSummary[]> {
       sizeDecimals: sDec,
     };
   });
+
+  // Synthesize extra testnet tokens if not returned by Perpl context
+  const existing = new Set(perplList.map((m) => m.symbol.toUpperCase()));
+  const extraConfigs = [
+    { symbol: "DOGE", name: "DOGE Perp", defaultPx: 0.095, maxLev: 20, pDec: 4 },
+    { symbol: "SUI", name: "SUI Perp", defaultPx: 1.25, maxLev: 20, pDec: 3 },
+    { symbol: "AVAX", name: "AVAX Perp", defaultPx: 11.2, maxLev: 25, pDec: 2 },
+    { symbol: "LINK", name: "LINK Perp", defaultPx: 14.5, maxLev: 25, pDec: 2 },
+    { symbol: "PEPE", name: "PEPE Perp", defaultPx: 0.0000045, maxLev: 15, pDec: 8 },
+    { symbol: "BNB", name: "BNB Perp", defaultPx: 790.0, maxLev: 30, pDec: 2 },
+    { symbol: "XRP", name: "XRP Perp", defaultPx: 1.55, maxLev: 20, pDec: 4 },
+  ];
+
+  for (let i = 0; i < extraConfigs.length; i++) {
+    const c = extraConfigs[i]!;
+    if (existing.has(c.symbol)) continue;
+    perplList.push({
+      id: 9100 + i,
+      perpetualId: 9100 + i,
+      symbol: c.symbol,
+      name: c.name,
+      sizeUnits: c.symbol,
+      markPrice: c.defaultPx,
+      lastPrice: c.defaultPx,
+      bidPrice: c.defaultPx * 0.9995,
+      askPrice: c.defaultPx * 1.0005,
+      change24hPct: 2.14,
+      volume24hAUSD: 184500,
+      openInterest: 6420,
+      fundingRateBps: 1,
+      maxLeverage: c.maxLev,
+      priceDecimals: c.pDec,
+      sizeDecimals: 2,
+    });
+  }
+
+  return perplList;
 }
 
 export const PERPL_EXCHANGE_ABI = [
