@@ -9,11 +9,19 @@ import React, {
 import {
   clearMeraSession,
   ensureMeraLogin,
+  getLastSavedAccount,
+  getSavedAccounts,
   isNativePasskeySupported,
+  lockMeraSession,
   meraNativeReady,
+  removeSavedAccount,
+  signInSavedAccount,
   unlockMeraFromStored,
   type MeraRuntime,
+  type SavedMeraAccount,
 } from "./mera";
+
+export type { SavedMeraAccount };
 
 export type SessionUser = {
   id: string;
@@ -29,6 +37,13 @@ export type AuthMethod = "mera" | "mock" | null;
 type AuthContextValue = {
   user: SessionUser | null;
   ready: boolean;
+  /** Remembered account on this device (if any). */
+  savedAccount: SavedMeraAccount | null;
+  /** All accounts known on this device. */
+  savedAccounts: SavedMeraAccount[];
+  refreshSavedAccount: () => Promise<void>;
+  forgetAccount: (address: string) => Promise<void>;
+  signInWithSavedAccount: (address: string) => Promise<void>;
   /** Always false — Privy removed. Kept for call-site compatibility. */
   privyMode: boolean;
   /** True when passkey stack is available to use. */
@@ -39,9 +54,9 @@ type AuthContextValue = {
   missingAuthConfig: boolean;
   authMethod: AuthMethod;
   mockMode: boolean;
-  /** Primary login — Mera passkey (Face ID / device unlock). */
+  /** Primary login — Mera passkey (Face ID / device unlock). Defaults to "signin". */
   loginWithMera: (mode?: "create" | "signin" | "auto") => Promise<void>;
-  /** Alias for UI copy: “Continue with Face ID”. */
+  /** Alias for UI copy: “Continue with Face ID” — strictly unlocks / signs in. */
   loginWithFaceId: () => Promise<void>;
   logout: () => Promise<void>;
   getEthereumProvider: () => Promise<any>;
@@ -67,6 +82,21 @@ function MeraOnlyAuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [ready, setReady] = useState(false);
   const [meraRuntime, setMeraRuntime] = useState<MeraRuntime | null>(null);
+  const [savedAccount, setSavedAccount] = useState<SavedMeraAccount | null>(null);
+  const [savedAccounts, setSavedAccounts] = useState<SavedMeraAccount[]>([]);
+
+  const refreshSavedAccount = useCallback(async () => {
+    try {
+      const [last, all] = await Promise.all([
+        getLastSavedAccount(),
+        getSavedAccounts(),
+      ]);
+      setSavedAccount(last);
+      setSavedAccounts(all);
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -79,26 +109,58 @@ function MeraOnlyAuthProvider({ children }: { children: React.ReactNode }) {
       } catch {
         /* ignore */
       } finally {
+        await refreshSavedAccount();
         setReady(true);
       }
     })();
-  }, []);
+  }, [refreshSavedAccount]);
 
   const loginWithMera = useCallback(
-    async (mode: "create" | "signin" | "auto" = "auto") => {
+    async (mode: "create" | "signin" | "auto" = "signin") => {
       const rt = await ensureMeraLogin(mode);
       setMeraRuntime(rt);
       setUser(meraUserFromRuntime(rt));
+      await refreshSavedAccount();
       setReady(true);
     },
-    [],
+    [refreshSavedAccount],
+  );
+
+  const loginWithFaceId = useCallback(async () => {
+    // Strictly sign in / unlock existing passkey. NEVER create a new account!
+    await loginWithMera("signin");
+  }, [loginWithMera]);
+
+  const signInExplicitAccount = useCallback(
+    async (address: string) => {
+      const rt = await signInSavedAccount(address);
+      setMeraRuntime(rt);
+      setUser(meraUserFromRuntime(rt));
+      await refreshSavedAccount();
+      setReady(true);
+    },
+    [refreshSavedAccount],
   );
 
   const logout = useCallback(async () => {
-    await clearMeraSession();
+    // Lock runtime session, but preserve remembered device account
+    await lockMeraSession();
     setMeraRuntime(null);
     setUser(null);
-  }, []);
+    await refreshSavedAccount();
+  }, [refreshSavedAccount]);
+
+  const forgetAccount = useCallback(
+    async (address: string) => {
+      await removeSavedAccount(address);
+      if (user?.address?.toLowerCase() === address.toLowerCase()) {
+        setMeraRuntime(null);
+        setUser(null);
+      }
+      await refreshSavedAccount();
+    },
+    [user, refreshSavedAccount],
+  );
 
   const isNative = isNativePasskeySupported();
 
@@ -106,6 +168,11 @@ function MeraOnlyAuthProvider({ children }: { children: React.ReactNode }) {
     () => ({
       user,
       ready,
+      savedAccount,
+      savedAccounts,
+      refreshSavedAccount,
+      forgetAccount,
+      signInWithSavedAccount: signInExplicitAccount,
       privyMode: false,
       meraAvailable: true,
       isNativePasskey: isNative,
@@ -113,14 +180,27 @@ function MeraOnlyAuthProvider({ children }: { children: React.ReactNode }) {
       authMethod: user?.mera ? "mera" : null,
       mockMode: false,
       loginWithMera,
-      loginWithFaceId: () => loginWithMera("auto"),
+      loginWithFaceId,
       logout,
       getEthereumProvider: async () => {
         if (meraRuntime) return meraRuntime.provider;
         throw new Error("Sign in with passkey first");
       },
     }),
-    [user, ready, loginWithMera, logout, meraRuntime, isNative],
+    [
+      user,
+      ready,
+      savedAccount,
+      savedAccounts,
+      refreshSavedAccount,
+      forgetAccount,
+      signInExplicitAccount,
+      loginWithMera,
+      loginWithFaceId,
+      logout,
+      meraRuntime,
+      isNative,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

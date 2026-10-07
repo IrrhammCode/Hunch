@@ -25,6 +25,8 @@ export const MERA_RP_ID =
   process.env.EXPO_PUBLIC_MERA_RP_ID || "accounts.hunch.app";
 
 const SESSION_KEY = "hunch.mera.session.v1";
+const SAVED_ACCOUNTS_KEY = "hunch.mera.saved_accounts.v1";
+const LAST_ACCOUNT_KEY = "hunch.mera.last_account.v1";
 const memory = new Map<string, string>();
 
 export type MeraSession = {
@@ -33,6 +35,15 @@ export type MeraSession = {
   credentialId?: string;
   privateKeyHex: string;
   createdAt: number;
+};
+
+export type SavedMeraAccount = {
+  address: `0x${string}`;
+  credentialId?: string;
+  privateKeyHex: string;
+  name?: string;
+  createdAt: number;
+  lastUsedAt: number;
 };
 
 export type MeraRuntime = {
@@ -256,30 +267,135 @@ export async function clearMeraSession() {
   await storeRemove(SESSION_KEY);
 }
 
-export async function unlockMeraFromStored(): Promise<MeraRuntime | null> {
-  const s = await loadMeraSession();
-  if (!s?.privateKeyHex) return null;
-  const pk = hexToBytes(s.privateKeyHex as `0x${string}`);
-  try {
-    return buildRuntime(pk);
-  } finally {
-    pk.fill(0);
+export async function lockMeraSession() {
+  await storeRemove(SESSION_KEY);
+}
+
+export async function getSavedAccounts(): Promise<SavedMeraAccount[]> {
+  const raw = await storeGet(SAVED_ACCOUNTS_KEY);
+  if (!raw) {
+    const s = await loadMeraSession();
+    if (s?.address && s?.privateKeyHex) {
+      const migrated: SavedMeraAccount = {
+        address: s.address as `0x${string}`,
+        credentialId: s.credentialId,
+        privateKeyHex: s.privateKeyHex,
+        createdAt: s.createdAt,
+        lastUsedAt: s.createdAt,
+      };
+      await storeSet(SAVED_ACCOUNTS_KEY, JSON.stringify([migrated]));
+      await storeSet(LAST_ACCOUNT_KEY, migrated.address);
+      return [migrated];
+    }
+    return [];
   }
+  try {
+    return JSON.parse(raw) as SavedMeraAccount[];
+  } catch {
+    return [];
+  }
+}
+
+export async function getLastSavedAccount(): Promise<SavedMeraAccount | null> {
+  const accounts = await getSavedAccounts();
+  if (accounts.length === 0) return null;
+  const lastAddr = await storeGet(LAST_ACCOUNT_KEY);
+  if (lastAddr) {
+    const match = accounts.find((a) => a.address.toLowerCase() === lastAddr.toLowerCase());
+    if (match) return match;
+  }
+  return [...accounts].sort((a, b) => b.lastUsedAt - a.lastUsedAt)[0] || null;
+}
+
+export async function addSavedAccount(acc: SavedMeraAccount): Promise<void> {
+  try {
+    const list = await getSavedAccounts();
+    const filtered = list.filter((a) => a.address.toLowerCase() !== acc.address.toLowerCase());
+    const updated = [acc, ...filtered];
+    await storeSet(SAVED_ACCOUNTS_KEY, JSON.stringify(updated));
+    await storeSet(LAST_ACCOUNT_KEY, acc.address);
+  } catch {}
+}
+
+export async function removeSavedAccount(address: string): Promise<void> {
+  try {
+    const list = await getSavedAccounts();
+    const filtered = list.filter((a) => a.address.toLowerCase() !== address.toLowerCase());
+    await storeSet(SAVED_ACCOUNTS_KEY, JSON.stringify(filtered));
+    const active = await loadMeraSession();
+    if (active?.address.toLowerCase() === address.toLowerCase()) {
+      await storeRemove(SESSION_KEY);
+    }
+  } catch {}
+}
+
+export async function signInSavedAccount(address: string): Promise<MeraRuntime> {
+  const accounts = await getSavedAccounts();
+  const match = accounts.find((a) => a.address.toLowerCase() === address.toLowerCase());
+  if (!match) {
+    throw new Error(`Account ${address} not found on this device.`);
+  }
+  await storeSet(LAST_ACCOUNT_KEY, match.address);
+  return signInMeraAccount();
+}
+
+export async function unlockMeraFromStored(): Promise<MeraRuntime | null> {
+  // 1. Try active session
+  const s = await loadMeraSession();
+  if (s?.privateKeyHex) {
+    const pk = hexToBytes(s.privateKeyHex as `0x${string}`);
+    try {
+      return buildRuntime(pk);
+    } finally {
+      pk.fill(0);
+    }
+  }
+
+  // 2. Try last saved account
+  const last = await getLastSavedAccount();
+  if (last?.privateKeyHex) {
+    const pk = hexToBytes(last.privateKeyHex as `0x${string}`);
+    try {
+      const runtime = buildRuntime(pk);
+      await saveMeraSession({
+        rpId: MERA_RP_ID,
+        address: runtime.address,
+        credentialId: last.credentialId,
+        privateKeyHex: last.privateKeyHex,
+        createdAt: last.createdAt,
+      });
+      return runtime;
+    } finally {
+      pk.fill(0);
+    }
+  }
+
+  return null;
 }
 
 async function finishFromPrf(opts: {
   prfOutput: Uint8Array;
   credentialId?: string;
+  name?: string;
 }): Promise<MeraRuntime> {
   const pk = deriveEvmKey(opts.prfOutput);
   try {
     const runtime = buildRuntime(pk);
-    await saveMeraSession({
+    const session: MeraSession = {
       rpId: MERA_RP_ID,
       address: runtime.address,
       credentialId: opts.credentialId,
       privateKeyHex: bytesToHex(pk),
       createdAt: Date.now(),
+    };
+    await saveMeraSession(session);
+    await addSavedAccount({
+      address: runtime.address,
+      credentialId: opts.credentialId,
+      privateKeyHex: bytesToHex(pk),
+      name: opts.name,
+      createdAt: Date.now(),
+      lastUsedAt: Date.now(),
     });
     return runtime;
   } finally {
@@ -302,21 +418,20 @@ export async function createMeraAccount(label?: string): Promise<MeraRuntime> {
       return finishFromPrf({
         prfOutput: created.prfOutput,
         credentialId: created.credentialId,
+        name,
       });
     } catch (err: any) {
       console.warn(
         `[Mera] Native passkey creation rejected by iOS for RP ID "${MERA_RP_ID}".\n` +
         `Cause: iOS requires https://${MERA_RP_ID}/.well-known/apple-app-site-association to be hosted on public HTTPS.\n` +
-        `Error details:`,
-        err?.message || err,
-        err?.cause ? `| Cause: ${JSON.stringify(err.cause)}` : "",
+        `Falling back to secure device key derivation on Monad Testnet so development testing is unblocked.`,
       );
-      console.log("[Mera] Falling back to secure device key derivation on Monad Testnet so development testing is unblocked.");
       const prfOutput = Crypto.getRandomBytes(32);
       const credentialId = `dev-passkey-${Date.now()}`;
       return finishFromPrf({
         prfOutput,
         credentialId,
+        name,
       });
     }
   }
@@ -330,70 +445,106 @@ export async function createMeraAccount(label?: string): Promise<MeraRuntime> {
   return finishFromPrf({
     prfOutput,
     credentialId,
+    name,
   });
 }
 
 export async function signInMeraAccount(): Promise<MeraRuntime> {
-  const existing = await loadMeraSession();
+  // 1. Check if there is a known account saved on this device
+  const saved = await getLastSavedAccount();
 
+  if (saved?.privateKeyHex) {
+    if (isNativePasskeySupported()) {
+      try {
+        console.log(`[Mera] Requesting native passkey assertion for RP ID "${MERA_RP_ID}"...`);
+        const asserted = await getPasskeyPrfOutput({
+          rpId: MERA_RP_ID,
+          webAuthnClient: reactNativeWebAuthnClient,
+          ...(saved.credentialId && !saved.credentialId.startsWith("dev-") && !saved.credentialId.startsWith("preview-")
+            ? { credential: { credentialId: saved.credentialId } }
+            : {}),
+        });
+        return finishFromPrf({
+          prfOutput: asserted.prfOutput,
+          credentialId: asserted.credentialId,
+          name: saved.name,
+        });
+      } catch (err: any) {
+        console.warn(
+          `[Mera] Native passkey assertion error for RP ID "${MERA_RP_ID}":`,
+          err?.message || err,
+        );
+        // Fallback: Unlock the verified saved account on device
+        const pk = hexToBytes(saved.privateKeyHex as `0x${string}`);
+        try {
+          const runtime = buildRuntime(pk);
+          await saveMeraSession({
+            rpId: MERA_RP_ID,
+            address: runtime.address,
+            credentialId: saved.credentialId,
+            privateKeyHex: saved.privateKeyHex,
+            createdAt: saved.createdAt,
+          });
+          await addSavedAccount({
+            ...saved,
+            lastUsedAt: Date.now(),
+          });
+          return runtime;
+        } finally {
+          pk.fill(0);
+        }
+      }
+    } else {
+      // Non-native / web / preview: unlock the saved account
+      const pk = hexToBytes(saved.privateKeyHex as `0x${string}`);
+      try {
+        const runtime = buildRuntime(pk);
+        await saveMeraSession({
+          rpId: MERA_RP_ID,
+          address: runtime.address,
+          credentialId: saved.credentialId,
+          privateKeyHex: saved.privateKeyHex,
+          createdAt: saved.createdAt,
+        });
+        await addSavedAccount({
+          ...saved,
+          lastUsedAt: Date.now(),
+        });
+        return runtime;
+      } finally {
+        pk.fill(0);
+      }
+    }
+  }
+
+  // 2. If NO account is saved on device, check iCloud Keychain / system passkeys
   if (isNativePasskeySupported()) {
     try {
-      console.log(`[Mera] Requesting native passkey assertion for RP ID "${MERA_RP_ID}"...`);
+      console.log(`[Mera] Querying system passkeys for RP ID "${MERA_RP_ID}"...`);
       const asserted = await getPasskeyPrfOutput({
         rpId: MERA_RP_ID,
         webAuthnClient: reactNativeWebAuthnClient,
-        ...(existing?.credentialId
-          ? { credential: { credentialId: existing.credentialId } }
-          : {}),
       });
       return finishFromPrf({
         prfOutput: asserted.prfOutput,
         credentialId: asserted.credentialId,
       });
-    } catch (err: any) {
-      console.warn(
-        `[Mera] Native passkey assertion failed for RP ID "${MERA_RP_ID}":`,
-        err?.message || err,
-      );
-      if (existing?.privateKeyHex) {
-        console.log("[Mera] Unlocking existing session from SecureStore.");
-        const unlocked = await unlockMeraFromStored();
-        if (unlocked) return unlocked;
-      }
-      console.log("[Mera] Falling back to secure device key derivation on Monad Testnet.");
-      const prfOutput = Crypto.getRandomBytes(32);
-      const credentialId = existing?.credentialId || `dev-passkey-${Date.now()}`;
-      return finishFromPrf({
-        prfOutput,
-        credentialId,
-      });
+    } catch {
+      throw new Error("No passkey found on this device. Please tap 'Create an account' to register.");
     }
   }
 
-  // Web / Expo Go preview fallback: unlock stored session if present, otherwise generate a preview account
-  if (existing?.privateKeyHex) {
-    const unlocked = await unlockMeraFromStored();
-    if (unlocked) return unlocked;
-  }
-
-  const prfOutput = Crypto.getRandomBytes(32);
-  const credentialId = existing?.credentialId || `preview-${Date.now()}`;
-  return finishFromPrf({
-    prfOutput,
-    credentialId,
-  });
+  // 3. Web / preview without any saved account
+  throw new Error("No saved account on this device. Please tap 'Create an account' to register.");
 }
 
 export async function ensureMeraLogin(
-  mode: "create" | "signin" | "auto" = "auto",
+  mode: "create" | "signin" | "auto" = "signin",
 ): Promise<MeraRuntime> {
   if (mode === "create") return createMeraAccount();
   if (mode === "signin") return signInMeraAccount();
+  // mode === "auto" (cold-start auto-unlock only)
   const stored = await unlockMeraFromStored();
   if (stored) return stored;
-  try {
-    return await signInMeraAccount();
-  } catch {
-    return createMeraAccount();
-  }
+  return signInMeraAccount();
 }

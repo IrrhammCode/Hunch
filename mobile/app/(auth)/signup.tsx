@@ -18,26 +18,32 @@ import { Icon } from "@/src/components/Icon";
 import { MERA_RP_ID } from "@/src/auth/mera";
 import { colors, radius, space, type } from "@/src/theme";
 
+function shortAddress(addr: string) {
+  if (!addr) return "";
+  if (addr.length <= 12) return addr;
+  return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+}
+
 const STEPS = [
   {
     n: "01",
     title: "Create a passkey",
-    body: "Face ID on this device.",
+    body: "Face ID / biometric unlock on this device.",
   },
   {
     n: "02",
     title: "Wallet is generated",
-    body: "Monad EOA from the passkey.",
+    body: "Monad testnet EOA derived securely from your passkey.",
   },
   {
     n: "03",
     title: "Fund and trade",
-    body: "AUSD, Perpl, 60s markets.",
+    body: "Claim faucet AUSD & MON. Trade 60s and Perpl perps.",
   },
 ];
 
 export default function SignupScreen() {
-  const { user, meraAvailable, loginWithMera } = useAuth();
+  const { user, meraAvailable, loginWithMera, savedAccount } = useAuth();
   const insets = useSafeAreaInsets();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -85,6 +91,26 @@ export default function SignupScreen() {
             </Text>
           </Animated.View>
 
+          {/* If an account already exists on device, alert the user */}
+          {savedAccount?.address ? (
+            <Animated.View entering={FadeInUp.duration(240)} style={styles.existingNotice}>
+              <Icon name="information-circle-outline" size={16} color={colors.brand} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.existingNoticeTitle}>Account already on device</Text>
+                <Text style={styles.existingNoticeBody}>
+                  {shortAddress(savedAccount.address)} is already saved.
+                </Text>
+              </View>
+              <Pressable
+                onPress={() => router.replace("/(auth)/login")}
+                hitSlop={8}
+                style={styles.signinExistingBtn}
+              >
+                <Text style={styles.signinExistingText}>Sign in</Text>
+              </Pressable>
+            </Animated.View>
+          ) : null}
+
           <View style={styles.steps}>
             {STEPS.map((s, i) => (
               <Animated.View
@@ -118,7 +144,7 @@ export default function SignupScreen() {
           ]}
         >
           <PrimaryButton
-            label={busy ? "Waiting for Face ID..." : "Create an account"}
+            label={busy ? "Creating passkey..." : "Create an account"}
             onPress={onCreate}
             disabled={busy || !meraAvailable}
           />
@@ -196,6 +222,37 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 19,
     textAlign: "center",
+  },
+  existingNotice: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    borderWidth: 1,
+    borderColor: "rgba(214, 255, 63, 0.3)",
+    backgroundColor: "rgba(214, 255, 63, 0.08)",
+    borderRadius: radius.md,
+    padding: 12,
+  },
+  existingNoticeTitle: {
+    color: colors.ink,
+    fontFamily: type.bold,
+    fontSize: 12,
+  },
+  existingNoticeBody: {
+    color: colors.muted,
+    fontFamily: type.body,
+    fontSize: 11,
+  },
+  signinExistingBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: radius.sm,
+    backgroundColor: colors.brand,
+  },
+  signinExistingText: {
+    color: colors.bg,
+    fontFamily: type.bold,
+    fontSize: 12,
   },
   steps: { gap: 8 },
   step: {
