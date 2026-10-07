@@ -15,6 +15,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -43,7 +44,9 @@ import { colors, monoStyle, radius, space, type } from "@/src/theme";
 const { width: W } = Dimensions.get("window");
 const CHART_W = W - 28;
 const CHART_H = 248;
-const SIZES = ["5", "10", "25"] as const;
+const LEVERAGE_OPTIONS = [2, 3, 5, 10, 15, 20, 25, 30, 40, 50] as const;
+const PERP_MARGIN_CHIPS = ["10", "25", "50", "100", "250", "500"] as const;
+const BLITZ_MARGIN_CHIPS = ["5", "10", "25", "50", "100"] as const;
 const TFS = [
   { key: "1m", resolution: 1, bars: 90 },
   { key: "5m", resolution: 5, bars: 72 },
@@ -75,7 +78,12 @@ export default function MarketDetailScreen() {
   const [bars, setBars] = useState<ChartPoint[]>([]);
   const [blitz, setBlitz] = useState<MarketBoardRow | null>(null);
   const [perp, setPerp] = useState<PerplMarket | null>(null);
-  const [amount, setAmount] = useState("10");
+  const [amount, setAmount] = useState("50");
+  const [leverage, setLeverage] = useState<number>(10);
+  const [tpEnabled, setTpEnabled] = useState(false);
+  const [slEnabled, setSlEnabled] = useState(false);
+  const [tpPresetPct, setTpPresetPct] = useState<number>(50);
+  const [slPresetPct, setSlPresetPct] = useState<number>(25);
   const [busy, setBusy] = useState<"UP" | "DOWN" | "LONG" | "SHORT" | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -223,6 +231,22 @@ export default function MarketDetailScreen() {
     }
   };
 
+  const marginNum = parseFloat(amount) || 0;
+  const positionSizeAUSD = marginNum * leverage;
+  const currentPrice = perp?.markPrice || price || 0;
+  const estLiqLong = currentPrice > 0 && leverage > 0 ? Math.max(0, currentPrice * (1 - (1 / leverage - 0.05))) : 0;
+  const estLiqShort = currentPrice > 0 && leverage > 0 ? currentPrice * (1 + (1 / leverage - 0.05)) : 0;
+  const targetTpPrice = (s: "LONG" | "SHORT") => {
+    if (!currentPrice || leverage <= 0) return 0;
+    const deltaFraction = (tpPresetPct / 100) / leverage;
+    return s === "LONG" ? currentPrice * (1 + deltaFraction) : Math.max(0, currentPrice * (1 - deltaFraction));
+  };
+  const targetSlPrice = (s: "LONG" | "SHORT") => {
+    if (!currentPrice || leverage <= 0) return 0;
+    const deltaFraction = (slPresetPct / 100) / leverage;
+    return s === "LONG" ? Math.max(0, currentPrice * (1 - deltaFraction)) : currentPrice * (1 + deltaFraction);
+  };
+
   const onPerp = async (side: "LONG" | "SHORT") => {
     if (!perp) {
       toast.error("No perp market", "Start API — Perpl markets load from testnet.");
@@ -232,22 +256,32 @@ export default function MarketDetailScreen() {
       toast.error("Sign in required", "Use Face ID / Mera passkey first.");
       return;
     }
+    if (marginNum < 5) {
+      toast.error("Margin too small", "Minimum margin is 5 AUSD.");
+      return;
+    }
     setBusy(side);
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
       const { placePerplOrder } = await import("@/src/api/client");
-      const marginNum = Number(amount) || 10;
+      const finalTp = tpEnabled && currentPrice > 0 ? Number(targetTpPrice(side).toFixed(perp.priceDecimals || 2)) : undefined;
+      const finalSl = slEnabled && currentPrice > 0 ? Number(targetSlPrice(side).toFixed(perp.priceDecimals || 2)) : undefined;
       const res = await placePerplOrder({
         trader: user.address,
         symbol: perp.symbol,
         side,
         marginAUSD: marginNum,
-        leverage: 2,
+        leverage,
+        tpPrice: finalTp,
+        slPrice: finalSl,
       });
       if (!res.success) throw new Error("Perpl order rejected");
-      toast.show("Perpl order", {
-        body: `${side} ${perp.symbol} ${marginNum} AUSD`,
+      const guardStr = [finalTp ? `TP $${finalTp}` : null, finalSl ? `SL $${finalSl}` : null].filter(Boolean).join(" · ");
+      toast.show("Perpl order executed", {
+        body: `${side} ${perp.symbol} · ${leverage}x ($${positionSizeAUSD.toLocaleString()} AUSD)${guardStr ? ` · ${guardStr}` : ""}`,
         tone: "success",
+        actionLabel: "View Portfolio",
+        onAction: () => router.push("/(app)/positions"),
       });
       refreshWallet();
     } catch (e: any) {
@@ -404,29 +438,189 @@ export default function MarketDetailScreen() {
 
           {/* Ticket */}
           <View style={styles.ticket}>
-            <Text style={styles.ticketTitle}>
-              {mode === "perp" ? "PERPL TICKET" : "60S TICKET"} · AUSD
-            </Text>
+            <View style={styles.ticketHeaderRow}>
+              <Text style={styles.ticketTitle}>
+                {mode === "perp" ? "PERPL TICKET" : "60S TICKET"} · AUSD
+              </Text>
+              <Text style={styles.ticketBalance}>
+                AVAIL: {me?.ausd != null ? Number(me.ausd).toFixed(2) : "—"} AUSD
+              </Text>
+            </View>
             <Text style={styles.ticketSub}>
               {mode === "perp"
-                ? `Leverage 2x · account must be linked · wallet ${user?.address ? user.address.slice(0, 8) + "…" : "—"}`
+                ? `${symbol}-PERP · Up to ${perp?.maxLeverage || 50}x · Monad Testnet`
                 : blitzOpen
                   ? `Round #${blitz?.roundId} · Pyth settle on Monad`
-                  : "No open round — keeper needs MON gas to open the next series"}
+                  : "Pyth oracle synced · Next 60s round queued"}
             </Text>
 
-            <View style={styles.sizeRow}>
-              {SIZES.map((s) => (
-                <AmountChip key={s} value={s} selected={amount === s} onPress={() => setAmount(s)} />
-              ))}
-              <Text style={monoStyle(12, colors.muted)}>AUSD</Text>
+            {/* Collateral Amount Input Section */}
+            <View style={styles.inputCard}>
+              <TextInput
+                value={amount}
+                onChangeText={setAmount}
+                keyboardType="decimal-pad"
+                style={styles.textInput}
+                placeholder="50.00"
+                placeholderTextColor={colors.muted}
+              />
+              <View style={styles.inputRightWrap}>
+                <Pressable
+                  onPress={() => {
+                    const userBal = me?.ausd ? Math.floor(Number(me.ausd)) : 100;
+                    setAmount(String(Math.max(5, userBal)));
+                    Haptics.selectionAsync();
+                  }}
+                  style={styles.maxChip}
+                >
+                  <Text style={styles.maxChipText}>MAX</Text>
+                </Pressable>
+                <Text style={styles.ausdSuffix}>AUSD</Text>
+              </View>
             </View>
+
+            {/* Amount Chips */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.amountChipsRow}>
+              {(mode === "perp" ? PERP_MARGIN_CHIPS : BLITZ_MARGIN_CHIPS).map((s) => (
+                <Pressable
+                  key={s}
+                  onPress={() => { setAmount(s); Haptics.selectionAsync(); }}
+                  style={[styles.amountChip, amount === s && styles.amountChipActive]}
+                >
+                  <Text style={[styles.amountChipText, amount === s && styles.amountChipTextActive]}>
+                    ${s}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+
+            {mode === "perp" && (
+              <>
+                {/* Leverage Multiplier Section */}
+                <View style={styles.levSection}>
+                  <View style={styles.levHeader}>
+                    <Text style={styles.levTitle}>LEVERAGE MULTIPLIER</Text>
+                    <Text style={styles.levHighlight}>{leverage}x</Text>
+                  </View>
+
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.levScrollRow}>
+                    {LEVERAGE_OPTIONS.map((lev) => {
+                      const maxLev = perp?.maxLeverage || 50;
+                      const isOverMax = lev > maxLev;
+                      const isSel = leverage === lev;
+                      return (
+                        <Pressable
+                          key={lev}
+                          disabled={isOverMax}
+                          onPress={() => { setLeverage(lev); Haptics.selectionAsync(); }}
+                          style={[
+                            styles.levChip,
+                            isSel && styles.levChipActive,
+                            isOverMax && styles.levChipDisabled,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.levChipText,
+                              isSel && styles.levChipTextActive,
+                              isOverMax && styles.levChipTextDisabled,
+                            ]}
+                          >
+                            {lev}x
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </ScrollView>
+
+                  {/* Custom Leverage Stepper */}
+                  <View style={styles.customLevRow}>
+                    <Text style={styles.customLevLabel}>CUSTOM MULTIPLIER</Text>
+                    <View style={styles.customLevControls}>
+                      <Pressable
+                        onPress={() => {
+                          const next = Math.max(2, leverage - 1);
+                          setLeverage(next);
+                          Haptics.selectionAsync();
+                        }}
+                        style={styles.stepBtn}
+                        hitSlop={8}
+                      >
+                        <Text style={styles.stepBtnText}>−</Text>
+                      </Pressable>
+                      <View style={styles.customLevInputWrap}>
+                        <TextInput
+                          value={String(leverage)}
+                          onChangeText={(txt) => {
+                            const num = parseInt(txt.replace(/[^0-9]/g, ""), 10);
+                            if (!isNaN(num)) {
+                              const max = perp?.maxLeverage || 50;
+                              setLeverage(Math.min(max, Math.max(1, num)));
+                            }
+                          }}
+                          keyboardType="number-pad"
+                          style={styles.customLevInput}
+                          maxLength={2}
+                        />
+                        <Text style={styles.customLevSuffix}>X</Text>
+                      </View>
+                      <Pressable
+                        onPress={() => {
+                          const max = perp?.maxLeverage || 50;
+                          const next = Math.min(max, leverage + 1);
+                          setLeverage(next);
+                          Haptics.selectionAsync();
+                        }}
+                        style={styles.stepBtn}
+                        hitSlop={8}
+                      >
+                        <Text style={styles.stepBtnText}>+</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Position Summary info */}
+                <View style={styles.posSizeRow}>
+                  <Text style={styles.posSizeLabel}>POSITION SIZE:</Text>
+                  <Text style={styles.posSizeVal}>
+                    ${positionSizeAUSD.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} AUSD
+                  </Text>
+                  {currentPrice > 0 ? (
+                    <Text style={styles.liqEstText}>
+                      · Liq Long ~${estLiqLong.toFixed(perp?.priceDecimals || 1)}
+                    </Text>
+                  ) : null}
+                </View>
+
+                {/* TP & SL Guards */}
+                <View style={styles.guardRow}>
+                  <Pressable
+                    onPress={() => { setTpEnabled(!tpEnabled); Haptics.selectionAsync(); }}
+                    style={[styles.guardPill, tpEnabled && styles.guardPillActive]}
+                  >
+                    <Text style={[styles.guardPillText, tpEnabled && styles.guardPillTextActive]}>
+                      TP +{tpPresetPct}%
+                    </Text>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={() => { setSlEnabled(!slEnabled); Haptics.selectionAsync(); }}
+                    style={[styles.guardPill, slEnabled && styles.guardPillActiveSL]}
+                  >
+                    <Text style={[styles.guardPillText, slEnabled && styles.guardPillTextActiveSL]}>
+                      SL -{slPresetPct}%
+                    </Text>
+                  </Pressable>
+                </View>
+              </>
+            )}
 
             {mode === "blitz" ? (
               <View style={styles.actions}>
                 <View style={{ flex: 1 }}>
                   <PrimaryButton
-                    label={busy === "DOWN" ? "…" : `DOWN ${amount}`}
+                    label={busy === "DOWN" ? "…" : `DOWN ${amount} AUSD`}
                     tone="down"
                     disabled={!blitzOpen || busy !== null}
                     onPress={() => onBlitz("DOWN")}
@@ -434,7 +628,7 @@ export default function MarketDetailScreen() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <PrimaryButton
-                    label={busy === "UP" ? "…" : `UP ${amount}`}
+                    label={busy === "UP" ? "…" : `UP ${amount} AUSD`}
                     tone="up"
                     disabled={!blitzOpen || busy !== null}
                     onPress={() => onBlitz("UP")}
@@ -445,7 +639,7 @@ export default function MarketDetailScreen() {
               <View style={styles.actions}>
                 <View style={{ flex: 1 }}>
                   <PrimaryButton
-                    label={busy === "SHORT" ? "…" : `SHORT ${amount}`}
+                    label={busy === "SHORT" ? "…" : `SHORT ${symbol} · ${leverage}x`}
                     tone="down"
                     disabled={busy !== null}
                     onPress={() => onPerp("SHORT")}
@@ -453,7 +647,7 @@ export default function MarketDetailScreen() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <PrimaryButton
-                    label={busy === "LONG" ? "…" : `LONG ${amount}`}
+                    label={busy === "LONG" ? "…" : `LONG ${symbol} · ${leverage}x`}
                     tone="up"
                     disabled={busy !== null}
                     onPress={() => onPerp("LONG")}
@@ -619,14 +813,268 @@ const styles = StyleSheet.create({
     padding: space.md,
     gap: 10,
   },
+  ticketHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
   ticketTitle: {
     color: colors.brand,
-    fontFamily: type.data,
+    fontFamily: type.bold,
     fontSize: 12,
     letterSpacing: 1.1,
   },
-  ticketSub: { color: colors.muted, fontFamily: type.body, fontSize: 12, lineHeight: 17 },
-  sizeRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  ticketBalance: {
+    color: colors.muted,
+    fontFamily: type.data,
+    fontSize: 11,
+  },
+  ticketSub: {
+    color: colors.muted,
+    fontFamily: type.body,
+    fontSize: 11,
+    lineHeight: 16,
+  },
+  inputCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#0D0F14",
+    borderRadius: radius.md,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  textInput: {
+    flex: 1,
+    color: colors.ink,
+    fontFamily: type.data,
+    fontSize: 22,
+    fontWeight: "800",
+    padding: 0,
+  },
+  inputRightWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  maxChip: {
+    backgroundColor: "#1C212E",
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 4,
+  },
+  maxChipText: {
+    color: colors.brand,
+    fontFamily: type.bold,
+    fontSize: 10,
+  },
+  ausdSuffix: {
+    color: colors.muted,
+    fontFamily: type.bold,
+    fontSize: 12,
+  },
+  amountChipsRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  amountChip: {
+    minWidth: 54,
+    backgroundColor: "#171B24",
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: radius.md,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  amountChipActive: {
+    backgroundColor: "rgba(214,255,63,0.2)",
+    borderWidth: 1,
+    borderColor: colors.brand,
+  },
+  amountChipText: {
+    color: colors.muted,
+    fontFamily: type.data,
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  amountChipTextActive: {
+    color: colors.brand,
+  },
+  levSection: {
+    backgroundColor: "#10131A",
+    borderRadius: radius.md,
+    padding: 10,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.06)",
+  },
+  levHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  levTitle: {
+    color: colors.muted,
+    fontFamily: type.bold,
+    fontSize: 9,
+    letterSpacing: 0.8,
+  },
+  levHighlight: {
+    color: colors.brand,
+    fontFamily: type.data,
+    fontSize: 12,
+    fontWeight: "bold",
+  },
+  levScrollRow: {
+    flexDirection: "row",
+    gap: 6,
+  },
+  levChip: {
+    minWidth: 44,
+    paddingHorizontal: 10,
+    backgroundColor: "#191D26",
+    paddingVertical: 8,
+    borderRadius: radius.sm,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  levChipActive: {
+    backgroundColor: colors.brand,
+  },
+  levChipDisabled: {
+    opacity: 0.35,
+    backgroundColor: "#12141A",
+  },
+  levChipText: {
+    color: colors.muted,
+    fontFamily: type.data,
+    fontSize: 11,
+    fontWeight: "bold",
+  },
+  levChipTextActive: {
+    color: "#000000",
+  },
+  levChipTextDisabled: {
+    color: "#4E5467",
+  },
+  customLevRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255,255,255,0.06)",
+    paddingTop: 8,
+    marginTop: 2,
+  },
+  customLevLabel: {
+    color: colors.muted,
+    fontFamily: type.bold,
+    fontSize: 9,
+    letterSpacing: 0.8,
+  },
+  customLevControls: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  stepBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: radius.sm,
+    backgroundColor: "#1A1F2B",
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stepBtnText: {
+    color: colors.ink,
+    fontFamily: type.bold,
+    fontSize: 14,
+    lineHeight: 16,
+  },
+  customLevInputWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#0D0F14",
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    paddingHorizontal: 8,
+    height: 26,
+    gap: 2,
+  },
+  customLevInput: {
+    color: colors.brand,
+    fontFamily: type.data,
+    fontSize: 12,
+    fontWeight: "bold",
+    minWidth: 20,
+    textAlign: "center",
+    padding: 0,
+  },
+  customLevSuffix: {
+    color: colors.muted,
+    fontFamily: type.bold,
+    fontSize: 9,
+  },
+  posSizeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 2,
+  },
+  posSizeLabel: {
+    color: colors.muted,
+    fontFamily: type.bold,
+    fontSize: 9,
+    letterSpacing: 0.6,
+  },
+  posSizeVal: {
+    color: colors.brand,
+    fontFamily: type.data,
+    fontSize: 11,
+    fontWeight: "bold",
+  },
+  liqEstText: {
+    color: colors.muted,
+    fontFamily: type.data,
+    fontSize: 10,
+  },
+  guardRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  guardPill: {
+    flex: 1,
+    backgroundColor: "#161922",
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    paddingVertical: 6,
+    alignItems: "center",
+  },
+  guardPillActive: {
+    backgroundColor: "rgba(38,166,154,0.18)",
+    borderColor: colors.up,
+  },
+  guardPillActiveSL: {
+    backgroundColor: "rgba(239,83,80,0.18)",
+    borderColor: colors.down,
+  },
+  guardPillText: {
+    color: colors.muted,
+    fontFamily: type.bold,
+    fontSize: 10,
+    letterSpacing: 0.5,
+  },
+  guardPillTextActive: {
+    color: colors.up,
+  },
+  guardPillTextActiveSL: {
+    color: colors.down,
+  },
   actions: { flexDirection: "row", gap: 10 },
   walletLine: {
     color: colors.muted,

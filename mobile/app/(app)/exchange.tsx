@@ -171,7 +171,9 @@ export default function OptionsExchangeScreen() {
                 <Text style={monoStyle(11, on ? colors.ink : colors.muted)}>
                   {r.status === "open" && r.spot
                     ? `${(Number(r.spot.yes) * 100).toFixed(0)}¢`
-                    : r.status.toUpperCase()}
+                    : r.status === "waiting"
+                      ? "50¢"
+                      : r.status.toUpperCase()}
                 </Text>
               </Pressable>
             );
@@ -277,10 +279,12 @@ export default function OptionsExchangeScreen() {
               <Text style={monoStyle(12, colors.muted)}>
                 {r.spot
                   ? `UP ${(Number(r.spot.yes) * 100).toFixed(0)}¢  DN ${(Number(r.spot.no) * 100).toFixed(0)}¢`
-                  : r.reason || r.status}
+                  : r.status === "waiting"
+                    ? "50¢ Base · Next round"
+                    : r.reason || r.status}
               </Text>
               <Text style={monoStyle(12, r.status === "open" ? colors.brand : colors.muted)}>
-                {r.status === "open" ? "LIVE" : r.status.toUpperCase()}
+                {r.status === "open" ? "LIVE" : r.status === "waiting" ? "READY" : r.status.toUpperCase()}
               </Text>
             </Pressable>
           ))}

@@ -23,8 +23,8 @@ import Svg, { Path, Defs, LinearGradient, Stop, Circle } from "react-native-svg"
 
 const { width: W } = Dimensions.get("window");
 
-const LEVERAGE_OPTIONS = [2, 5, 10, 20] as const;
-const MARGIN_CHIPS = ["25", "50", "100", "500"] as const;
+const LEVERAGE_OPTIONS = [2, 3, 5, 10, 15, 20, 25, 30, 40, 50] as const;
+const MARGIN_CHIPS = ["10", "25", "50", "100", "250", "500"] as const;
 
 function MiniWaveChart({
   symbol = "BTC",
@@ -436,18 +436,84 @@ export function PerpTradingTicket({
           <Text style={styles.formSectionTitle}>LEVERAGE MULTIPLIER</Text>
           <Text style={styles.formSectionHighlight}>{leverage}x</Text>
         </View>
-        <View style={styles.levRow}>
-          {LEVERAGE_OPTIONS.map((lev) => (
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.levScrollRow}
+        >
+          {LEVERAGE_OPTIONS.map((lev) => {
+            const isOverMax = activeMarket && lev > activeMarket.maxLeverage;
+            const isSel = leverage === lev;
+            return (
+              <Pressable
+                key={lev}
+                disabled={isOverMax}
+                onPress={() => { setLeverage(lev); Haptics.selectionAsync(); }}
+                style={[
+                  styles.levChip,
+                  isSel && styles.levChipActive,
+                  isOverMax && styles.levChipDisabled,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.levChipText,
+                    isSel && styles.levChipTextActive,
+                    isOverMax && styles.levChipTextDisabled,
+                  ]}
+                >
+                  {lev}x
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+
+        {/* Custom Leverage Stepper */}
+        <View style={styles.customLevRow}>
+          <Text style={styles.customLevLabel}>CUSTOM MULTIPLIER</Text>
+          <View style={styles.customLevControls}>
             <Pressable
-              key={lev}
-              onPress={() => { setLeverage(lev); Haptics.selectionAsync(); }}
-              style={[styles.levChip, leverage === lev && styles.levChipActive]}
+              onPress={() => {
+                const next = Math.max(2, leverage - 1);
+                setLeverage(next);
+                Haptics.selectionAsync();
+              }}
+              style={styles.stepBtn}
+              hitSlop={8}
             >
-              <Text style={[styles.levChipText, leverage === lev && styles.levChipTextActive]}>
-                {lev}x
-              </Text>
+              <Text style={styles.stepBtnText}>−</Text>
             </Pressable>
-          ))}
+            <View style={styles.customLevInputWrap}>
+              <TextInput
+                value={String(leverage)}
+                onChangeText={(txt) => {
+                  const num = parseInt(txt.replace(/[^0-9]/g, ""), 10);
+                  if (!isNaN(num)) {
+                    const max = activeMarket?.maxLeverage || 50;
+                    setLeverage(Math.min(max, Math.max(1, num)));
+                  }
+                }}
+                keyboardType="number-pad"
+                style={styles.customLevInput}
+                maxLength={2}
+              />
+              <Text style={styles.customLevSuffix}>X</Text>
+            </View>
+            <Pressable
+              onPress={() => {
+                const max = activeMarket?.maxLeverage || 50;
+                const next = Math.min(max, leverage + 1);
+                setLeverage(next);
+                Haptics.selectionAsync();
+              }}
+              style={styles.stepBtn}
+              hitSlop={8}
+            >
+              <Text style={styles.stepBtnText}>+</Text>
+            </Pressable>
+          </View>
         </View>
       </View>
 
@@ -462,14 +528,18 @@ export function PerpTradingTicket({
           <TextInput
             value={marginAUSD}
             onChangeText={setMarginAUSD}
-            keyboardType="numeric"
+            keyboardType="decimal-pad"
             style={styles.textInput}
             placeholder="50.00"
             placeholderTextColor={colors.muted}
           />
           <View style={styles.inputRightWrap}>
             <Pressable
-              onPress={() => setMarginAUSD("250")}
+              onPress={() => {
+                const userBal = me?.ausd ? Math.floor(Number(me.ausd)) : 100;
+                setMarginAUSD(String(Math.max(5, userBal)));
+                Haptics.selectionAsync();
+              }}
               style={styles.maxChip}
             >
               <Text style={styles.maxChipText}>MAX</Text>
@@ -479,7 +549,11 @@ export function PerpTradingTicket({
         </View>
 
         {/* Quick Amount Chips */}
-        <View style={styles.amountChipsRow}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.amountChipsRow}
+        >
           {MARGIN_CHIPS.map((chip) => (
             <Pressable
               key={chip}
@@ -491,6 +565,19 @@ export function PerpTradingTicket({
               </Text>
             </Pressable>
           ))}
+        </ScrollView>
+
+        {/* Position Summary info */}
+        <View style={styles.posSizeRow}>
+          <Text style={styles.posSizeLabel}>POSITION SIZE:</Text>
+          <Text style={styles.posSizeVal}>
+            ${positionSizeAUSD.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} AUSD
+          </Text>
+          {estLiqPrice > 0 ? (
+            <Text style={styles.liqEstText}>
+              · Liq ~${estLiqPrice.toFixed(activeMarket?.priceDecimals || 1)}
+            </Text>
+          ) : null}
         </View>
       </View>
 
@@ -945,15 +1032,26 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 8,
   },
+  levScrollRow: {
+    flexDirection: "row",
+    gap: 8,
+    paddingVertical: 2,
+  },
   levChip: {
-    flex: 1,
+    minWidth: 48,
+    paddingHorizontal: 12,
     backgroundColor: "#191D26",
     paddingVertical: 10,
     borderRadius: radius.md,
     alignItems: "center",
+    justifyContent: "center",
   },
   levChipActive: {
     backgroundColor: colors.brand,
+  },
+  levChipDisabled: {
+    opacity: 0.35,
+    backgroundColor: "#12141A",
   },
   levChipText: {
     color: colors.muted,
@@ -963,6 +1061,70 @@ const styles = StyleSheet.create({
   },
   levChipTextActive: {
     color: "#000000",
+  },
+  levChipTextDisabled: {
+    color: "#4E5467",
+  },
+  customLevRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255,255,255,0.06)",
+    paddingTop: 10,
+    marginTop: 2,
+  },
+  customLevLabel: {
+    color: colors.muted,
+    fontFamily: type.bold,
+    fontSize: 9,
+    letterSpacing: 0.8,
+  },
+  customLevControls: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  stepBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: radius.sm,
+    backgroundColor: "#1A1F2B",
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stepBtnText: {
+    color: colors.ink,
+    fontFamily: type.bold,
+    fontSize: 15,
+    lineHeight: 18,
+  },
+  customLevInputWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#0D0F14",
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    paddingHorizontal: 8,
+    height: 28,
+    gap: 2,
+  },
+  customLevInput: {
+    color: colors.brand,
+    fontFamily: type.data,
+    fontSize: 13,
+    fontWeight: "bold",
+    minWidth: 22,
+    textAlign: "center",
+    padding: 0,
+  },
+  customLevSuffix: {
+    color: colors.muted,
+    fontFamily: type.bold,
+    fontSize: 10,
   },
   inputCard: {
     flexDirection: "row",
@@ -1025,6 +1187,32 @@ const styles = StyleSheet.create({
   },
   amountChipTextActive: {
     color: colors.brand,
+  },
+  posSizeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255,255,255,0.06)",
+    paddingTop: 8,
+    marginTop: 2,
+    gap: 6,
+  },
+  posSizeLabel: {
+    color: colors.muted,
+    fontFamily: type.bold,
+    fontSize: 9,
+    letterSpacing: 0.6,
+  },
+  posSizeVal: {
+    color: colors.brand,
+    fontFamily: type.data,
+    fontSize: 11,
+    fontWeight: "bold",
+  },
+  liqEstText: {
+    color: colors.muted,
+    fontFamily: type.data,
+    fontSize: 10,
   },
   specsCard: {
     backgroundColor: "#0D0F14",

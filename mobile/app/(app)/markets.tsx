@@ -236,7 +236,7 @@ export default function MarketsScreen() {
           >
             <Icon name="trending-up" size={13} color={filter === "perps" ? colors.brand : colors.muted} />
             <Text style={[styles.filterText, filter === "perps" && styles.filterTextActive]}>
-              PERPS 20X
+              PERPS 50X
             </Text>
           </Pressable>
         </View>
@@ -261,7 +261,7 @@ export default function MarketsScreen() {
                   <Text style={styles.heroPair}>{displayPerps[0].symbol} / AUSD</Text>
                 </View>
                 <View style={styles.heroPerpBadge}>
-                  <Text style={styles.heroPerpText}>PERP 20X</Text>
+                  <Text style={styles.heroPerpText}>{displayPerps[0].maxLeverage}X MAX</Text>
                 </View>
               </View>
 
@@ -372,11 +372,27 @@ export default function MarketsScreen() {
               );
             })}
 
-            {/* All 60s blitz markets from API board (BTC/ETH/SOL…) */}
-            {(filter === "all" || filter === "blitz" || filter === "hot") &&
+            {/* 60s blitz markets from API board (filter === "blitz" or "hot") */}
+            {(filter === "blitz" || filter === "hot") &&
               hunchMarkets.map((row) => {
                 const heat = getMarketHeat(row.symbol);
                 const yesC = row.spot ? Number(row.spot.yes) * 100 : null;
+                const isOpen = row.status === "open";
+                const perpMatch = perplMarkets.find((p) => p.symbol.toUpperCase() === row.symbol.toUpperCase());
+                const markPrice = perpMatch ? perpMatch.markPrice : (row as any).spotPrice;
+                const priceDisplay =
+                  isOpen && yesC != null
+                    ? `${yesC.toFixed(0)}¢`
+                    : markPrice != null
+                      ? markPrice >= 1000
+                        ? `$${markPrice.toLocaleString(undefined, { maximumFractionDigits: 1 })}`
+                        : markPrice >= 1
+                          ? `$${markPrice.toFixed(3)}`
+                          : `$${markPrice.toFixed(4)}`
+                      : "50¢";
+                const statusDisplay = isOpen ? "LIVE" : "NEXT ROUND";
+                const statusColor = isOpen ? styles.posColor : { color: colors.muted };
+
                 return (
                   <Pressable
                     key={`blitz-${row.chain}-${row.symbol}`}
@@ -399,9 +415,9 @@ export default function MarketsScreen() {
                           ) : null}
                         </View>
                         <Text style={styles.volSub} numberOfLines={1}>
-                          {row.status === "open"
+                          {isOpen
                             ? `${Math.ceil(row.timeRemaining || 0)}s left · UP/DOWN`
-                            : row.reason || row.status}
+                            : "Pyth oracle live · 60s rounds"}
                         </Text>
                       </View>
                     </View>
@@ -410,10 +426,10 @@ export default function MarketsScreen() {
                     </View>
                     <View style={styles.rowRight}>
                       <Text style={styles.priceNum}>
-                        {yesC != null ? `${yesC.toFixed(0)}¢` : row.status.toUpperCase()}
+                        {priceDisplay}
                       </Text>
-                      <Text style={[styles.deltaNum, row.status === "open" ? styles.posColor : styles.negColor]}>
-                        {row.status === "open" ? "LIVE" : row.status}
+                      <Text style={[styles.deltaNum, statusColor]}>
+                        {statusDisplay}
                       </Text>
                     </View>
                   </Pressable>

@@ -15,6 +15,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
   ActivityIndicator,
 } from "react-native";
@@ -698,9 +699,34 @@ export default function HunchScreen() {
               </Text>
             </View>
 
+            {/* Custom Amount Input */}
+            <View style={styles.stakeInputCard}>
+              <TextInput
+                value={amount}
+                onChangeText={setAmount}
+                keyboardType="decimal-pad"
+                style={styles.stakeTextInput}
+                placeholder="10.00"
+                placeholderTextColor={colors.muted}
+              />
+              <View style={styles.stakeInputRight}>
+                <Pressable
+                  onPress={() => {
+                    const bal = me?.ausd ? Math.floor(Number(me.ausd)) : 50;
+                    setAmount(String(Math.max(5, bal)));
+                    Haptics.selectionAsync();
+                  }}
+                  style={styles.stakeMaxBtn}
+                >
+                  <Text style={styles.stakeMaxBtnText}>MAX</Text>
+                </Pressable>
+                <Text style={styles.stakeCurrencySuffix}>AUSD</Text>
+              </View>
+            </View>
+
             {/* Amount chips */}
-            <View style={styles.amountRow}>
-              {["5", "10", "25", "50"].map((a) => (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.amountRow}>
+              {["5", "10", "25", "50", "100"].map((a) => (
                 <Pressable
                   key={a}
                   onPress={() => {
@@ -714,10 +740,7 @@ export default function HunchScreen() {
                   </Text>
                 </Pressable>
               ))}
-              <View style={styles.editChip}>
-                <Text style={styles.editChipText}>AUSD</Text>
-              </View>
-            </View>
+            </ScrollView>
 
             {/* Swipe Direction Hint */}
             <View style={styles.directionHintRow}>
@@ -1155,6 +1178,47 @@ const styles = StyleSheet.create({
     color: colors.muted,
     fontFamily: type.data,
     fontSize: 10,
+  },
+  stakeInputCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#0D0F14",
+    borderRadius: radius.md,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    marginBottom: 8,
+    width: "100%",
+  },
+  stakeTextInput: {
+    flex: 1,
+    color: colors.ink,
+    fontFamily: type.data,
+    fontSize: 20,
+    fontWeight: "800",
+    padding: 0,
+  },
+  stakeInputRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  stakeMaxBtn: {
+    backgroundColor: "#1C212E",
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 4,
+  },
+  stakeMaxBtnText: {
+    color: colors.brand,
+    fontFamily: type.bold,
+    fontSize: 10,
+  },
+  stakeCurrencySuffix: {
+    color: colors.muted,
+    fontFamily: type.bold,
+    fontSize: 11,
   },
   amountRow: {
     flexDirection: "row",

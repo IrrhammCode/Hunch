@@ -11,6 +11,8 @@ import {
 } from "../shared/providers";
 import { withRpcRetry } from "../shared/rpcRetry";
 
+import { fetchLatestPrice } from "./price";
+
 const cache = new Map<string, { at: number; body: unknown }>();
 const TTL = 4000;
 
@@ -28,10 +30,19 @@ async function roundSummary(chainKey: string, feedId: string) {
   const chain = chainByKey(chainKey);
   const dep = loadChainDeployment(chain);
   const meta = marketByFeedId(feedId);
+  const sym = symbolForFeed(feedId);
+
+  let fallbackPrice: number | null = null;
+  try {
+    const p = await fetchLatestPrice(sym);
+    if (p?.price) fallbackPrice = p.price;
+  } catch {}
+
   if (!dep?.factory) {
     return {
-      symbol: symbolForFeed(feedId),
-      pair: `${symbolForFeed(feedId)}-USD`,
+      symbol: sym,
+      pair: `${sym}-USD`,
+      label: `${sym} / USD`,
       feedId,
       chain: chain.key,
       chainId: chain.chainId,
@@ -42,6 +53,12 @@ async function roundSummary(chainKey: string, feedId: string) {
       market: null,
       status: "unavailable" as const,
       reason: "no factory deployment on this chain",
+      spotPrice: fallbackPrice,
+      strike: fallbackPrice ? String(Math.round(fallbackPrice * 1e8)) : null,
+      spot: {
+        yes: "0.50",
+        no: "0.50",
+      },
     };
   }
 
@@ -51,8 +68,9 @@ async function roundSummary(chainKey: string, feedId: string) {
     const roundIdBn = (await factory.latestRoundByFeed(feedId)) as bigint;
     if (!roundIdBn || roundIdBn === 0n) {
       return {
-        symbol: symbolForFeed(feedId),
-        pair: `${symbolForFeed(feedId)}-USD`,
+        symbol: sym,
+        pair: `${sym}-USD`,
+        label: `${sym} / USD`,
         feedId,
         chain: chain.key,
         chainId: chain.chainId,
@@ -62,7 +80,13 @@ async function roundSummary(chainKey: string, feedId: string) {
         roundId: null,
         market: null,
         status: "waiting" as const,
-        reason: "keeper opening first round",
+        reason: "Next round preparing",
+        spotPrice: fallbackPrice,
+        strike: fallbackPrice ? String(Math.round(fallbackPrice * 1e8)) : null,
+        spot: {
+          yes: "0.50",
+          no: "0.50",
+        },
       };
     }
     const marketAddr = (await factory.rounds(roundIdBn)) as string;
