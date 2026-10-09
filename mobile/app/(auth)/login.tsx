@@ -32,6 +32,7 @@ export default function LoginScreen() {
     isNativePasskey,
     missingAuthConfig,
     loginWithFaceId,
+    loginAsReviewer,
     savedAccount,
     forgetAccount,
   } = useAuth();
@@ -179,6 +180,19 @@ export default function LoginScreen() {
               <Text style={styles.signupBtnText}>Create a new account</Text>
             </Pressable>
             <Text style={styles.signupFoot}>No email or seed phrase needed</Text>
+          </View>
+
+          {/* Apple Reviewer / Demonstration Access */}
+          <View style={styles.reviewerSection}>
+            <Pressable
+              onPress={() => run(loginAsReviewer, "Demo access failed")}
+              hitSlop={12}
+              disabled={busy}
+              style={styles.reviewerBtn}
+            >
+              <Icon name="shield-checkmark-outline" size={13} color={colors.muted} />
+              <Text style={styles.reviewerBtnText}>Demo / App Review Access</Text>
+            </Pressable>
           </View>
 
           {error ? (
@@ -388,6 +402,26 @@ const styles = StyleSheet.create({
     fontFamily: type.body,
     fontSize: 11,
     textAlign: "center",
+  },
+  reviewerSection: {
+    alignItems: "center",
+    marginTop: 2,
+  },
+  reviewerBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    borderRadius: radius.sm,
+    backgroundColor: "rgba(255, 255, 255, 0.04)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.08)",
+  },
+  reviewerBtnText: {
+    color: colors.muted,
+    fontFamily: type.medium,
+    fontSize: 11,
   },
   errorBox: {
     flexDirection: "row",

@@ -449,6 +449,20 @@ export async function createMeraAccount(label?: string): Promise<MeraRuntime> {
   });
 }
 
+/** Demo / Apple Reviewer Account that does not require device biometrics. */
+export async function createReviewerAccount(): Promise<MeraRuntime> {
+  const prfOutput = new Uint8Array(32);
+  const seed = "hunch-apple-reviewer-demo-v1";
+  for (let i = 0; i < 32; i++) {
+    prfOutput[i] = (seed.charCodeAt(i % seed.length) * (i + 17) + 31) % 256;
+  }
+  return finishFromPrf({
+    prfOutput,
+    credentialId: "apple-reviewer-demo-v1",
+    name: "reviewer@hunch.app",
+  });
+}
+
 export async function signInMeraAccount(): Promise<MeraRuntime> {
   // 1. Check if there is a known account saved on this device
   const saved = await getLastSavedAccount();

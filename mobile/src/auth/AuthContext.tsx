@@ -8,6 +8,7 @@ import React, {
 } from "react";
 import {
   clearMeraSession,
+  createReviewerAccount,
   ensureMeraLogin,
   getLastSavedAccount,
   getSavedAccounts,
@@ -58,6 +59,8 @@ type AuthContextValue = {
   loginWithMera: (mode?: "create" | "signin" | "auto") => Promise<void>;
   /** Alias for UI copy: “Continue with Face ID” — strictly unlocks / signs in. */
   loginWithFaceId: () => Promise<void>;
+  /** Demo / Apple Reviewer Login — bypasses device biometrics for App Review. */
+  loginAsReviewer: () => Promise<void>;
   logout: () => Promise<void>;
   getEthereumProvider: () => Promise<any>;
 };
@@ -131,6 +134,14 @@ function MeraOnlyAuthProvider({ children }: { children: React.ReactNode }) {
     await loginWithMera("signin");
   }, [loginWithMera]);
 
+  const loginAsReviewer = useCallback(async () => {
+    const rt = await createReviewerAccount();
+    setMeraRuntime(rt);
+    setUser(meraUserFromRuntime(rt));
+    await refreshSavedAccount();
+    setReady(true);
+  }, [refreshSavedAccount]);
+
   const signInExplicitAccount = useCallback(
     async (address: string) => {
       const rt = await signInSavedAccount(address);
@@ -181,6 +192,7 @@ function MeraOnlyAuthProvider({ children }: { children: React.ReactNode }) {
       mockMode: false,
       loginWithMera,
       loginWithFaceId,
+      loginAsReviewer,
       logout,
       getEthereumProvider: async () => {
         if (meraRuntime) return meraRuntime.provider;
@@ -197,6 +209,7 @@ function MeraOnlyAuthProvider({ children }: { children: React.ReactNode }) {
       signInExplicitAccount,
       loginWithMera,
       loginWithFaceId,
+      loginAsReviewer,
       logout,
       meraRuntime,
       isNative,
