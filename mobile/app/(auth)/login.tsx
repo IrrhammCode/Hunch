@@ -2,11 +2,13 @@ import { Redirect, router } from "expo-router";
 import { useState } from "react";
 import {
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import Animated, { FadeInUp } from "react-native-reanimated";
@@ -39,6 +41,9 @@ export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showReviewerModal, setShowReviewerModal] = useState(false);
+  const [reviewerUser, setReviewerUser] = useState("reviewer@hunch.app");
+  const [reviewerPass, setReviewerPass] = useState("AppleReview2026!");
 
   if (user) return <Redirect href="/(app)" />;
 
@@ -182,16 +187,26 @@ export default function LoginScreen() {
             <Text style={styles.signupFoot}>No email or seed phrase needed</Text>
           </View>
 
-          {/* Apple Reviewer / Demonstration Access */}
+          {/* Apple Reviewer / Demonstration Access Card */}
           <View style={styles.reviewerSection}>
             <Pressable
-              onPress={() => run(loginAsReviewer, "Demo access failed")}
+              onPress={() => setShowReviewerModal(true)}
               hitSlop={12}
               disabled={busy}
-              style={styles.reviewerBtn}
+              style={styles.reviewerCard}
             >
-              <Icon name="shield-checkmark-outline" size={13} color={colors.muted} />
-              <Text style={styles.reviewerBtnText}>Demo / App Review Access</Text>
+              <View style={styles.reviewerCardLeft}>
+                <View style={styles.reviewerBadge}>
+                  <Icon name="shield-checkmark" size={16} color={colors.brand} />
+                </View>
+                <View style={styles.reviewerCardMeta}>
+                  <Text style={styles.reviewerCardTitle}>App Review & Demo Sign-In</Text>
+                  <Text style={styles.reviewerCardSub}>
+                    Username & password review credentials
+                  </Text>
+                </View>
+              </View>
+              <Icon name="chevron-forward" size={16} color={colors.muted} />
             </Pressable>
           </View>
 
@@ -215,6 +230,90 @@ export default function LoginScreen() {
           </Text>
         </View>
       </KeyboardAvoidingView>
+
+      {/* Reviewer / Demo Credentials Modal */}
+      <Modal
+        visible={showReviewerModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowReviewerModal(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={styles.modalBackdrop}
+        >
+          <Pressable
+            style={styles.modalDismissOverlay}
+            onPress={() => setShowReviewerModal(false)}
+          />
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <View style={styles.modalHeaderLeft}>
+                <Icon name="shield-checkmark" size={18} color={colors.brand} />
+                <Text style={styles.modalTitle}>App Review & Demo Sign-In</Text>
+              </View>
+              <Pressable
+                onPress={() => setShowReviewerModal(false)}
+                hitSlop={12}
+                style={styles.modalCloseBtn}
+              >
+                <Icon name="close" size={18} color={colors.muted} />
+              </Pressable>
+            </View>
+
+            <Text style={styles.modalDesc}>
+              Use the demo credentials provided in TestFlight Beta App Review Information to evaluate all features on Monad Testnet.
+            </Text>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>USER NAME</Text>
+              <TextInput
+                style={styles.textInput}
+                value={reviewerUser}
+                onChangeText={setReviewerUser}
+                autoCapitalize="none"
+                autoCorrect={false}
+                placeholder="reviewer@hunch.app"
+                placeholderTextColor={colors.muted}
+                editable={!busy}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>PASSWORD</Text>
+              <TextInput
+                style={styles.textInput}
+                value={reviewerPass}
+                onChangeText={setReviewerPass}
+                autoCapitalize="none"
+                autoCorrect={false}
+                secureTextEntry={false}
+                placeholder="AppleReview2026!"
+                placeholderTextColor={colors.muted}
+                editable={!busy}
+              />
+            </View>
+
+            <View style={styles.modalNotice}>
+              <Icon name="wallet-outline" size={15} color={colors.brand} />
+              <Text style={styles.modalNoticeText}>
+                Pre-funded demo wallet (10,000 AUSD testnet balance) on Monad Testnet. Bypasses device biometrics for review.
+              </Text>
+            </View>
+
+            <View style={styles.modalActions}>
+              <PrimaryButton
+                label={busy ? "Signing In..." : "Sign In to Demo Account"}
+                onPress={async () => {
+                  setShowReviewerModal(false);
+                  await run(loginAsReviewer, "Demo review login failed");
+                }}
+                disabled={busy}
+              />
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </Screen>
   );
 }
@@ -404,24 +503,128 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   reviewerSection: {
-    alignItems: "center",
-    marginTop: 2,
+    marginTop: 4,
   },
-  reviewerBtn: {
+  reviewerCard: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "rgba(214, 255, 63, 0.05)",
+    borderWidth: 1,
+    borderColor: "rgba(214, 255, 63, 0.25)",
+    borderRadius: radius.md,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  reviewerCardLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    flex: 1,
+  },
+  reviewerBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "rgba(214, 255, 63, 0.12)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  reviewerCardMeta: {
+    gap: 2,
+    flex: 1,
+  },
+  reviewerCardTitle: {
+    color: colors.ink,
+    fontFamily: type.medium,
+    fontSize: 13,
+  },
+  reviewerCardSub: {
+    color: colors.muted,
+    fontFamily: type.body,
+    fontSize: 11,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.75)",
+    justifyContent: "center",
+    paddingHorizontal: space.lg,
+  },
+  modalDismissOverlay: {
+    ...StyleSheet.absoluteFill,
+  },
+  modalContent: {
+    backgroundColor: colors.bgElevated,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
+    padding: space.lg,
+    gap: 14,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  modalHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  modalTitle: {
+    color: colors.ink,
+    fontFamily: "BebasNeue_400Regular",
+    fontSize: 20,
+    letterSpacing: 0.8,
+  },
+  modalCloseBtn: {
+    padding: 4,
+  },
+  modalDesc: {
+    color: colors.muted,
+    fontFamily: type.body,
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  inputGroup: {
     gap: 6,
-    paddingVertical: 7,
-    paddingHorizontal: 12,
-    borderRadius: radius.sm,
+  },
+  inputLabel: {
+    color: colors.muted,
+    fontFamily: type.data,
+    fontSize: 10,
+    letterSpacing: 1,
+  },
+  textInput: {
     backgroundColor: "rgba(255, 255, 255, 0.04)",
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.08)",
-  },
-  reviewerBtnText: {
-    color: colors.muted,
+    borderColor: colors.line,
+    borderRadius: radius.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: colors.ink,
     fontFamily: type.medium,
+    fontSize: 13,
+  },
+  modalNotice: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "rgba(214, 255, 63, 0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(214, 255, 63, 0.25)",
+    borderRadius: radius.sm,
+    padding: 10,
+  },
+  modalNoticeText: {
+    color: colors.muted,
+    fontFamily: type.body,
     fontSize: 11,
+    lineHeight: 15,
+    flex: 1,
+  },
+  modalActions: {
+    marginTop: 4,
   },
   errorBox: {
     flexDirection: "row",
