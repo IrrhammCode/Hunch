@@ -10,7 +10,7 @@
       "env": {
         "EXPO_PUBLIC_USE_MOCK": "0",
         "EXPO_PUBLIC_API_URL": "http://192.168.100.4:8787",
-        "EXPO_PUBLIC_MONAD_RPC_URL": "https://burned-dark-dew.monad-testnet.quiknode.pro/7395b16eed6376221df2d512d023088235eef259/",
+        "EXPO_PUBLIC_MONAD_RPC_URL": "https://testnet-rpc.monad.xyz",
         "EXPO_PUBLIC_MERA_RP_ID": "accounts.hunch.app",
         "EXPO_PUBLIC_PRIVY_APP_ID": "cmu5d79n703nn0bla6xx0220n",
         "EXPO_PUBLIC_PRIVY_CLIENT_ID": "client-WY6dnsoC1aSvve8RBfKswQCXK7mMboA9A9DE549UPFsRD"
@@ -35,7 +35,7 @@
       "env": {
         "EXPO_PUBLIC_USE_MOCK": "0",
         "EXPO_PUBLIC_API_URL": "https://hunch-api-monad-d4f580656994.herokuapp.com",
-        "EXPO_PUBLIC_MONAD_RPC_URL": "https://burned-dark-dew.monad-testnet.quiknode.pro/7395b16eed6376221df2d512d023088235eef259/",
+        "EXPO_PUBLIC_MONAD_RPC_URL": "https://testnet-rpc.monad.xyz",
         "EXPO_PUBLIC_MERA_RP_ID": "accounts.hunch.app",
         "EXPO_PUBLIC_PRIVY_APP_ID": "cmu5d79n703nn0bla6xx0220n",
         "EXPO_PUBLIC_PRIVY_CLIENT_ID": "client-WY6dnsoC1aSvve8RBfKswQCXK7mMboA9A9DE549UPFsRD"
@@ -52,7 +52,7 @@
       "env": {
         "EXPO_PUBLIC_USE_MOCK": "0",
         "EXPO_PUBLIC_API_URL": "https://hunch-api-monad-d4f580656994.herokuapp.com",
-        "EXPO_PUBLIC_MONAD_RPC_URL": "https://burned-dark-dew.monad-testnet.quiknode.pro/7395b16eed6376221df2d512d023088235eef259/",
+        "EXPO_PUBLIC_MONAD_RPC_URL": "https://testnet-rpc.monad.xyz",
         "EXPO_PUBLIC_MERA_RP_ID": "accounts.hunch.app",
         "EXPO_PUBLIC_PRIVY_APP_ID": "cmu5d79n703nn0bla6xx0220n",
         "EXPO_PUBLIC_PRIVY_CLIENT_ID": "client-WY6dnsoC1aSvve8RBfKswQCXK7mMboA9A9DE549UPFsRD"
